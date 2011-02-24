@@ -1,0 +1,6 @@
+Prototyping bot algorithms for multiplayer (board or card) games.
+
+This is written in Haskell because I like it and find it good for
+rapid prototyping.  The results will be used in a codebase of
+ActionScript, JavaScript, and Java, because people at work don't use
+Haskell.
