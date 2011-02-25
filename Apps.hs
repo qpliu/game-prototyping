@@ -1,4 +1,8 @@
-module Apps(chatApp,echoApp,gameApp,nullGameApp) where
+module Apps
+    (GameApp(..),gameApp,
+     App,UserId,
+     chatApp,chatGameApp,echoApp)
+where
 
 import Control.Concurrent
     (MVar,modifyMVar_,newMVar,putMVar,readMVar,takeMVar,
@@ -183,13 +187,13 @@ gameApp game = do
         putMVar gameState newGame
         notify users defaultMessage specificMessages
 
-nullGameApp :: IO App
-nullGameApp = gameApp NullGame
+chatGameApp :: IO App
+chatGameApp = gameApp ChatGame
 
-data NullGame = NullGame
+data ChatGame = ChatGame
 
-instance GameApp NullGame where
-    gameName _ = "nullGame"
+instance GameApp ChatGame where
+    gameName _ = "chatGame"
     gameAddPlayer g uid getName _ = (g,[getName uid ++ " has joined"],[])
     gameRemovePlayer g uid getName _ = (g,[getName uid ++ " has left"],[])
     gameCommands = []
