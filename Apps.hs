@@ -27,7 +27,7 @@ chatApp :: IO App
 chatApp = do
     users <- newMVar empty
     return App {
-        appName = "chat",
+        appName = "oldChat",
         appHelp = [],
         appAddUser = chatAddUser users,
         appRemoveUser = chatRemoveUser users,
@@ -106,14 +106,13 @@ class GameApp game where
 gameApp :: GameApp game => game -> IO App
 gameApp game = do
     gameState <- newMVar game
-    pollThread <- newMVar Nothing
     users <- newMVar empty
     return App {
         appName = gameName game,
         appHelp = map fst gameAppCmds,
-        appAddUser = gameAppAddUser users gameState pollThread,
-        appRemoveUser = gameAppRemoveUser users gameState pollThread,
-        appProcessLine = gameAppProcessLine users gameState pollThread,
+        appAddUser = gameAppAddUser users gameState,
+        appRemoveUser = gameAppRemoveUser users gameState,
+        appProcessLine = gameAppProcessLine users gameState,
         appUserRenamed = gameAppUserRenamed users
         }
   where
@@ -127,34 +126,34 @@ gameApp game = do
                     maybe (show uid) userName (Data.Map.lookup uid userMap))
              (readMVar users)
     gameAppCmds = gameCommands
-    gameAppAddUser users gameState pollThread user = do
+    gameAppAddUser users gameState user = do
         modifyMVar_ users (return . insert (userId user) user)
         nameMap <- getNameMap users
         utcTime <- getCurrentTime
         game <- takeMVar gameState
         let (newGame,defaultMessage,specificMessages) =
                 gameAddPlayer game (userId user) nameMap utcTime
-        updatePoll users gameState newGame pollThread utcTime
+        updatePoll users gameState newGame utcTime
         putMVar gameState newGame
         notify users defaultMessage specificMessages
-    gameAppRemoveUser users gameState pollThread uid = do
+    gameAppRemoveUser users gameState uid = do
         nameMap <- getNameMap users
         utcTime <- getCurrentTime
         game <- takeMVar gameState
         let (newGame,defaultMessage,specificMessages) =
                 gameRemovePlayer game uid nameMap utcTime
-        updatePoll users gameState newGame pollThread utcTime
+        updatePoll users gameState newGame utcTime
         putMVar gameState newGame
         notify users defaultMessage specificMessages
         modifyMVar_ users (return . delete uid)
-    gameAppProcessLine users gameState pollThread user line = do
+    gameAppProcessLine users gameState user line = do
         utcTime <- getCurrentTime
         game <- takeMVar gameState
         (newGame,defaultMessage,specificMessages) <-
             maybe (return (game,[userName user ++ ":" ++ line],[]))
                   (runCommand users user utcTime (drop 1 (words line)) game)
                   (findCommand (words line))
-        updatePoll users gameState newGame pollThread utcTime
+        updatePoll users gameState newGame utcTime
         putMVar gameState newGame
         notify users defaultMessage specificMessages
     gameAppUserRenamed users user oldName = do
@@ -166,16 +165,11 @@ gameApp game = do
     runCommand users user utcTime args game cmd = do
         nameMap <- getNameMap users
         return (cmd game (userId user) nameMap utcTime args)
-    updatePoll users gameState game pollThread utcTime = do
-        oldThreadId <- takeMVar pollThread
-        maybe (return ()) killThread oldThreadId
-        newThreadId <-
-            maybe (return Nothing)
-                  (fmap Just . forkIO
-                             . schedulePoll users gameState pollThread utcTime)
-                  (gamePollTime game utcTime)
-        putMVar pollThread newThreadId
-    schedulePoll users gameState pollThread startTime pollTime = do
+    updatePoll users gameState game utcTime = do
+        maybe (return ())
+              ((>> return ()) . forkIO . schedulePoll users gameState utcTime)
+              (gamePollTime game utcTime)
+    schedulePoll users gameState startTime pollTime = do
         if startTime < pollTime
             then threadDelay $ fromIntegral $ round
                              $ 1000000 * diffUTCTime pollTime startTime
@@ -183,7 +177,7 @@ gameApp game = do
         utcTime <- getCurrentTime
         game <- takeMVar gameState
         let (newGame,defaultMessage,specificMessages) = gamePoll game utcTime
-        updatePoll users gameState newGame pollThread utcTime
+        updatePoll users gameState newGame utcTime
         putMVar gameState newGame
         notify users defaultMessage specificMessages
 
@@ -193,7 +187,7 @@ chatGameApp = gameApp ChatGame
 data ChatGame = ChatGame
 
 instance GameApp ChatGame where
-    gameName _ = "chatGame"
+    gameName _ = "chat"
     gameAddPlayer g uid getName _ = (g,[getName uid ++ " has joined"],[])
     gameRemovePlayer g uid getName _ = (g,[getName uid ++ " has left"],[])
     gameCommands = []
