@@ -55,7 +55,7 @@ instance GameApp PicoGame where
         [("/play",picoPlay),
          ("/game",picoGameState)]
     gamePollTime game time = Nothing
-    gamePoll game time = (game,[],[])
+    gamePoll game getName time = (game,[],[])
 
 picoPlay :: PicoGame -> UserId -> (UserId -> String) -> UTCTime -> [String]
                      -> (PicoGame,[String],[(UserId,[String])])

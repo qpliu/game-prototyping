@@ -98,10 +98,12 @@ class GameApp game where
     -- gamePoll
     -- parameters:
     --    game state
+    --    get current user name from UserId
     --    current time
     -- result:
     --    (updated game state,public message,messages to specific players)
-    gamePoll :: game -> UTCTime -> (game,[String],[(UserId,[String])])
+    gamePoll :: game -> (UserId -> String) -> UTCTime
+                     -> (game,[String],[(UserId,[String])])
 
 gameApp :: GameApp game => game -> IO App
 gameApp game = do
@@ -174,9 +176,11 @@ gameApp game = do
             then threadDelay $ fromIntegral $ round
                              $ 1000000 * diffUTCTime pollTime startTime
             else return ()
+        nameMap <- getNameMap users
         utcTime <- getCurrentTime
         game <- takeMVar gameState
-        let (newGame,defaultMessage,specificMessages) = gamePoll game utcTime
+        let (newGame,defaultMessage,specificMessages) =
+                gamePoll game nameMap utcTime
         updatePoll users gameState newGame utcTime
         putMVar gameState newGame
         notify users defaultMessage specificMessages
@@ -192,4 +196,4 @@ instance GameApp ChatGame where
     gameRemovePlayer g uid getName _ = (g,[getName uid ++ " has left"],[])
     gameCommands = []
     gamePollTime _ _ = Nothing
-    gamePoll g _ = (g,[],[])
+    gamePoll g _ _ = (g,[],[])
