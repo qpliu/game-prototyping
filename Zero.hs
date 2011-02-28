@@ -131,6 +131,8 @@ cmdPlay game uid getName time args
 cmdStart :: Zero -> UserId -> (UserId -> String) -> UTCTime -> [String]
                  -> (Zero,[String],[(UserId,[String])])
 cmdStart game uid getName time args
+  | not $ null (zeroCards game) =
+        (game,[],[(uid,["The game has already started."])])
   | not $ uid `elem` (map playerId (zeroPlayers game)) =
         (game,[],[(uid,["You are not playing."])])
   | length (zeroPlayers game) < 3 =
@@ -155,6 +157,8 @@ cmdKnock :: Zero -> UserId -> (UserId -> String) -> UTCTime -> [String]
 cmdKnock game uid getName time args
   | not $ uid `elem` (map playerId (zeroPlayers game)) =
         (game,[],[(uid,["You are not playing."])])
+  | null (zeroCards game) =
+        (game,[],[(uid,["The game has not started.  /start to start it."])])
   | uid /= playerId (zeroPlayers game !! zeroCurrentPlayer game) =
         (game,[],[(uid,["It's not your turn."])])
   | not (zeroKnock game) =
@@ -173,6 +177,8 @@ cmdSwap :: Zero -> UserId -> (UserId -> String) -> UTCTime -> [String]
 cmdSwap game uid getName time args
   | not $ uid `elem` (map playerId (zeroPlayers game)) =
         (game,[],[(uid,["You are not playing."])])
+  | null (zeroCards game) =
+        (game,[],[(uid,["The game has not started.  /start to start it."])])
   | uid /= playerId currentPlayer =
         (game,[],[(uid,["It's not your turn."])])
   | length args /= 2 || maybeHandCard == Nothing || maybeTableCard == Nothing =
