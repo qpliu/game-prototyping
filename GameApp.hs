@@ -1,7 +1,7 @@
 module GameApp
     (GameApp(..),gameApp,
      Game,gameGetName,gameGetTime,gameGetState,gameSetState,gameUpdateState,
-     gameMessageToAll,gameMessageToUser,
+     gameMessageToAll,gameMessageToAllExcept,gameMessageToUser,
      App,UserId,chatGameApp)
 where
 
@@ -54,21 +54,28 @@ gameGetTime = do
     gameState <- gameAppGetGameState
     return (gameStateTime gameState)
 
-gameMessageToUser :: UserId -> String -> Game ga ()
+gameMessageToUser :: UserId -> [String] -> Game ga ()
 gameMessageToUser uid message = do
     gameState <- gameAppGetGameState
-    let messages = gameStateMessages gameState
-    let userMessages = maybe [message] (++ [message]) (lookup uid messages)
+    let messageList = gameStateMessages gameState
+    let userMessages = maybe message (++ message) (lookup uid messageList)
     gameAppSetGameState gameState {
                             gameStateMessages =
                                 (uid,userMessages) : filter ((/= uid) . fst)
-                                                            messages
+                                                            messageList
                             }
 
-gameMessageToAll :: String -> Game ga ()
+gameMessageToAll :: [String] -> Game ga ()
 gameMessageToAll message = do
     gameState <- gameAppGetGameState
     let userIds = map userId (gameStateUsers gameState)
+    sequence_ (map (flip gameMessageToUser message) userIds)
+
+gameMessageToAllExcept :: [UserId] -> [String] -> Game ga ()
+gameMessageToAllExcept excluded message = do
+    gameState <- gameAppGetGameState
+    let userIds = filter (not . (`elem` excluded))
+                         (map userId (gameStateUsers gameState))
     sequence_ (map (flip gameMessageToUser message) userIds)
 
 gameGetState :: Game ga ga
@@ -191,10 +198,10 @@ instance GameApp Chat where
     gameAppName _ = "chat"
     gameAppAddPlayer uid = do
         name <- gameGetName uid
-        gameMessageToAll (name ++ " has joined.")
+        gameMessageToAll [name ++ " has joined."]
     gameAppRemovePlayer uid = do
         name <- gameGetName uid
-        gameMessageToAll (name ++ " has left.")
+        gameMessageToAll [name ++ " has left."]
     gameAppCommands = []
     gameAppPollTime _ = Nothing
     gameAppPoll = return ()
