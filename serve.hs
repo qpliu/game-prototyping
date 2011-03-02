@@ -1,7 +1,7 @@
 import Server(serve)
 import GameApp(chatGameApp)
 import CantStop(cantStopApp)
-import PicoApp(picoApp)
+import Pico(picoApp)
 import Zero(zeroApp)
 
 main :: IO ()
