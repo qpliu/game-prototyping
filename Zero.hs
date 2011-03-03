@@ -4,7 +4,12 @@ import Data.List(find,nub,sortBy)
 import Data.Time(UTCTime)
 import System.Random(StdGen,getStdGen)
 
-import Apps(GameApp(..),gameApp,App,UserId)
+import GameApp
+    (GameApp(..),gameApp,
+     Game,gameGetName,gameGetTime,
+     gameGetState,gameGetStateAttr,gameSetState,gameUpdateState,
+     gameMessageToAll,gameMessageToAllExcept,gameMessageToUser,
+     App,UserId)
 import Shuffle(shuffle)
 
 zeroApp :: IO App
@@ -16,7 +21,7 @@ zeroGame stdGen = Zero {
     zeroCurrentPlayer = 0,
     zeroKnock = False,
     zeroCards = [],
-    zeroHands = 0,
+    zeroRound = 0,
     zeroStdGen = stdGen
     }
 
@@ -25,7 +30,7 @@ data Zero = Zero {
     zeroCurrentPlayer :: Int,
     zeroKnock :: Bool,
     zeroCards :: [Card],
-    zeroHands :: Int,
+    zeroRound :: Int,
     zeroStdGen :: StdGen
     }
 
@@ -74,214 +79,272 @@ deal game = game {
         (player { playerCards = take 9 cards, playerKnock = False } : players,
          drop 9 cards)
 
-resetGame :: Zero -> Zero
-resetGame game =
-    game { zeroPlayers = [], zeroKnock = False, zeroCards = [], zeroHands = 0 }
-
-instance GameApp Zero where
-    gameName game = "Zero"
-    gameAddPlayer game uid getName time =
-        (game,[getName uid ++ " arrives."],
-         [(uid,["Welcome to Zero.","/play to join the game",
-                "/game to see the game",
-                "/start to start the game",
-                "When playing, /knock or /swap, and /hand to see your hand"])])
-    gameRemovePlayer game uid getName time
-      | not (uid `elem` (map playerId (zeroPlayers game))) =
-        (game,[getName uid ++ " leaves."],[])
-      | null (zeroCards game) =
-        (game {zeroPlayers = filter ((/= uid) . playerId) (zeroPlayers game)},
-         [getName uid ++ " leaves."],[])
-      | otherwise =
-        (resetGame game,[getName uid ++ " leaves, ending the game."],[])
-    gameCommands = [("/game",cmdGame),
-                    ("/play",cmdPlay),
-                    ("/start",cmdStart),
-                    ("/hand",cmdHand),
-                    ("/knock",cmdKnock),
-                    ("/swap",cmdSwap)]
-    gamePollTime game time = Nothing
-    gamePoll game getName time = (game,[],[])
-
-cmdGame :: Zero -> UserId -> (UserId -> String) -> UTCTime -> [String]
-                -> (Zero,[String],[(UserId,[String])])
-cmdGame game uid getName _ _ =
-    (game,[],[(uid,showGame game (Just uid) getName)])
-
-cmdPlay :: Zero -> UserId -> (UserId -> String) -> UTCTime -> [String]
-                -> (Zero,[String],[(UserId,[String])])
-cmdPlay game uid getName time args
-  | uid `elem` (map playerId (zeroPlayers game)) =
-        (game,[],[(uid,["You are already in the game."])])
-  | not $ null (zeroCards game) =
-        (game,[],[(uid,["The game has already started."])])
-  | length (zeroPlayers game) >= 5 =
-        (game,[],[(uid,["The game is already full."])])
-  | otherwise =
-        (game {
-            zeroPlayers = Player {
-                            playerId = uid,
-                            playerCards = [],
-                            playerKnock = False,
-                            playerScore = 0
-                            } : zeroPlayers game
-            },
-         [getName uid ++ " is playing."],[])
-
-cmdStart :: Zero -> UserId -> (UserId -> String) -> UTCTime -> [String]
-                 -> (Zero,[String],[(UserId,[String])])
-cmdStart game uid getName time args
-  | not $ null (zeroCards game) =
-        (game,[],[(uid,["The game has already started."])])
-  | not $ uid `elem` (map playerId (zeroPlayers game)) =
-        (game,[],[(uid,["You are not playing."])])
-  | length (zeroPlayers game) < 3 =
-        (game,[],[(uid,["The game requires at least 3 players."])])
-  | otherwise =
-        (newGame,showGame newGame Nothing getName,
-         map (showPlayerNewGame . playerId) (zeroPlayers game))
-  where
-    newGame = deal game { zeroCurrentPlayer = 0, zeroHands = 1 }
-    showPlayerNewGame uid = (uid,showGame newGame (Just uid) getName)
-
-cmdHand :: Zero -> UserId -> (UserId -> String) -> UTCTime -> [String]
-                 -> (Zero,[String],[(UserId,[String])])
-cmdHand game uid _ _ _ = (game,[],[(uid,[response])])
-  where
-    response = maybe "You are not playing."
-                     (("Your hand: " ++) . unwords . map show . playerCards)
-                     (find ((uid ==) . playerId) (zeroPlayers game))
-
-cmdKnock :: Zero -> UserId -> (UserId -> String) -> UTCTime -> [String]
-                -> (Zero,[String],[(UserId,[String])])
-cmdKnock game uid getName time args
-  | not $ uid `elem` (map playerId (zeroPlayers game)) =
-        (game,[],[(uid,["You are not playing."])])
-  | null (zeroCards game) =
-        (game,[],[(uid,["The game has not started.  /start to start it."])])
-  | uid /= playerId (zeroPlayers game !! zeroCurrentPlayer game) =
-        (game,[],[(uid,["It's not your turn."])])
-  | not (zeroKnock game) =
-        finishTurn game { zeroKnock = True } getName
-                   (getName uid ++ " knocks.")
-  | otherwise =
-        finishTurn game { zeroPlayers = map updatePlayer (zeroPlayers game) }
-                   getName (getName uid ++ " knocks.")
-  where
-    updatePlayer player@Player { playerId = uid2 }
-      | uid == uid2 = player { playerKnock = True }
-      | otherwise = player
-
-cmdSwap :: Zero -> UserId -> (UserId -> String) -> UTCTime -> [String]
-                -> (Zero,[String],[(UserId,[String])])
-cmdSwap game uid getName time args
-  | not $ uid `elem` (map playerId (zeroPlayers game)) =
-        (game,[],[(uid,["You are not playing."])])
-  | null (zeroCards game) =
-        (game,[],[(uid,["The game has not started.  /start to start it."])])
-  | uid /= playerId currentPlayer =
-        (game,[],[(uid,["It's not your turn."])])
-  | length args /= 2 || maybeHandCard == Nothing || maybeTableCard == Nothing =
-        (game,[],[(uid,["/swap card-from-hand card-from-table"])])
-  | otherwise =
-        finishTurn game {
-            zeroPlayers = map updatePlayer (zeroPlayers game),
-            zeroCards = map (updateCards tableCard handCard) (zeroCards game)
-            }
-            getName
-            (getName uid ++ " swaps " ++ show tableCard
-                         ++ " with " ++ show handCard)
-  where
-    currentPlayer = zeroPlayers game !! zeroCurrentPlayer game
-    updateCards oldCard newCard card
-      | oldCard == card = newCard
-      | otherwise = card
-    updatePlayer player@Player { playerId = uid2, playerCards = cards }
-      | uid == uid2 =
-            player { playerCards = map (updateCards handCard tableCard) cards }
-      | otherwise = player
-    maybeHandCard = find ((args !! 0 ==) . show) (playerCards currentPlayer)
-    maybeTableCard = find ((args !! 1 ==) . show) (zeroCards game)
-    Just handCard = maybeHandCard
-    Just tableCard = maybeTableCard
-
-showGame :: Zero -> Maybe UserId -> (UserId -> String) -> [String]
-showGame game maybeUid getName
-  | zeroHands game == 0 =
-        ["The game has not started.  Players: "
-         ++ unwords (map (getName . playerId) (zeroPlayers game))]
-  | otherwise =
-    ["Hand " ++ show (zeroHands game) ++ " of "
-             ++ show (length (zeroPlayers game)),
-     "Scores:"]
-    ++ showScores game getName
-    ++ showTable game getName
-    ++ maybe [] showHand
-             (find ((maybeUid ==) . Just . playerId) (zeroPlayers game))
-  where
-    showHand Player { playerCards = cards } =
-        ["Your hand (" ++ show (scoreHand cards) ++ "): "
-                       ++ unwords (map show cards)]
-
-showScores :: Zero -> (UserId -> String) -> [String]
-showScores game getName =
-    map showScore (sortBy compareScore (zeroPlayers game))
-  where
-    compareScore p1 p2 = compare (playerScore p1) (playerScore p2)
-    showScore p =
-        " " ++ getName (playerId p) ++ ": " ++ show (playerScore p)
-
-showTable :: Zero -> (UserId -> String) -> [String]
-showTable game getName =
-    ["Table: " ++ unwords (map show (zeroCards game)),
-     "Current player: "
-     ++ (getName $ playerId $ zeroPlayers game !! zeroCurrentPlayer game)]
-
-finishTurn :: Zero -> (UserId -> String) -> String
-                   -> (Zero,[String],[(UserId,[String])])
-finishTurn game getName message
-  | scoreHand (playerCards currentPlayer) == 0 =
-        finishHand game getName
-                   [message,getName (playerId currentPlayer) ++ " gets zero."]
-  | zeroKnock game && playerKnock nextPlayer =
-        finishHand game getName [message]
-  | otherwise = (newGame,[message],map getMessage (zeroPlayers game))
-  where
-    currentPlayer = zeroPlayers game !! zeroCurrentPlayer game
-    nextPlayerIndex
-        = (zeroCurrentPlayer game + 1) `mod` length (zeroPlayers game)
-    nextPlayer = zeroPlayers game !! nextPlayerIndex
-    newGame = game { zeroCurrentPlayer = nextPlayerIndex }
-    getMessage player =
-        (playerId player,
-         (message : showTable newGame getName)
-         ++ ["Your hand (" ++ show (scoreHand (playerCards player)) ++ "): "
-                           ++ unwords (map show (playerCards player))])
-
-finishHand :: Zero -> (UserId -> String) -> [String]
-                   -> (Zero,[String],[(UserId,[String])])
-finishHand game getName messages
-  | zeroHands game >= length (zeroPlayers game) =
-        (game {
-             zeroPlayers = [],
-             zeroCurrentPlayer = 0,
-             zeroKnock = False,
-             zeroCards = [],
-             zeroHands = 0
-             },messages ++ ["Game over:"] ++ showScores newGame getName,[])
-  | otherwise =
-        (newGame,
-         messages ++ ["Hand over:"] ++ showGame newGame Nothing getName,
-         map (showPlayerNewGame . playerId) (zeroPlayers game))
-  where
-    newGame = deal game {
-        zeroPlayers = map updateScore (zeroPlayers game),
-        zeroCurrentPlayer = zeroHands game,
-        zeroHands = zeroHands game + 1
+finishRound :: Zero -> Zero
+finishRound game =
+    game {
+        zeroPlayers = map addScore (zeroPlayers game),
+        zeroCurrentPlayer = zeroRound game,
+        zeroKnock = False,
+        zeroCards = [],
+        zeroRound = zeroRound game + 1
         }
-    updateScore player =
+  where
+    addScore player =
         player {
+            playerCards = [],
+            playerKnock = False,
             playerScore = playerScore player + scoreHand (playerCards player)
             }
-    showPlayerNewGame uid =
-        (uid,messages ++ "Hand over:" : showGame newGame (Just uid) getName)
+
+isLastRound :: Zero -> Bool
+isLastRound game = zeroRound game >= length (zeroPlayers game)
+
+resetGame :: Zero -> Zero
+resetGame game =
+    game { zeroPlayers = [], zeroKnock = False, zeroCards = [], zeroRound = 0 }
+
+removePlayer :: UserId -> Zero -> Zero
+removePlayer uid game =
+    game { zeroPlayers = filter ((/= uid) . playerId) (zeroPlayers game) }
+
+addPlayer :: UserId -> Zero -> Zero
+addPlayer uid game =
+    game { zeroPlayers = newPlayer : zeroPlayers game }
+  where
+    newPlayer = Player {
+                    playerId = uid,
+                    playerCards = [],
+                    playerKnock = False,
+                    playerScore = 0
+                    }
+
+inGame :: UserId -> Zero -> Bool
+inGame uid game = uid `elem` map playerId (zeroPlayers game)
+
+isCurrentPlayer :: UserId -> Zero -> Bool
+isCurrentPlayer uid game = uid == playerId (currentPlayer game)
+
+currentPlayer :: Zero -> Player
+currentPlayer game = zeroPlayers game !! zeroCurrentPlayer game
+
+updatePlayer :: Player -> Zero -> Zero
+updatePlayer player game =
+    game { zeroPlayers = map update (zeroPlayers game) }
+  where
+    update p | playerId p == playerId player = player | otherwise = p
+
+nextTurn :: Zero -> Zero
+nextTurn game =
+    game {
+        zeroCurrentPlayer =
+            (zeroCurrentPlayer game + 1) `mod` length (zeroPlayers game)
+        }
+
+gameStarted :: Zero -> Bool
+gameStarted game = not (null (zeroCards game))
+
+gameFull :: Zero -> Bool
+gameFull game = length (zeroPlayers game) >= 5
+
+gameCanStart :: Zero -> Bool
+gameCanStart game = length (zeroPlayers game) >= 3
+
+instance GameApp Zero where
+    gameAppName game = "Zero"
+    gameAppAddPlayer uid = do
+        name <- gameGetName uid
+        gameMessageToAllExcept [uid] [name ++ " arrives."]
+        gameMessageToUser uid
+            ["Welcome to Zero.",
+             "/play to join the game",
+             "/start to start the game",
+             "/game to see the game state",
+             "When playing, /knock or /swap, and /hand to see your hand."]
+        cmdGame uid []
+    gameAppRemovePlayer uid = do
+        name <- gameGetName uid
+        cond [(gameGetStateAttr (not . inGame uid),
+               gameMessageToAll [name ++ " leaves."]),
+              (return True,
+               cond [(gameGetStateAttr gameStarted,
+                      do gameUpdateState resetGame
+                         gameMessageToAll
+                             [name ++ " leaves, ending the game."]),
+                     (return True,
+                      do gameUpdateState (removePlayer uid)
+                         gameMessageToAll [name ++ " leaves."])])]
+    gameAppCommands = [("/play",cmdPlay),("/game",cmdGame),("/start",cmdStart),
+                       ("/knock",cmdKnock),("/swap",cmdSwap),("/hand",cmdHand)]
+    gameAppPollTime _ = Nothing
+    gameAppPoll = return ()
+
+cond :: Monad m => [(m Bool,m ())] -> m ()
+cond [] = return ()
+cond ((test,body):rest) = do
+    result <- test
+    if result
+        then body
+        else cond rest
+
+cmdPlay :: UserId -> [String] -> Game Zero ()
+cmdPlay uid _ =
+    cond [(gameGetStateAttr (inGame uid),
+           gameMessageToUser uid ["You are already playing."]),
+          (gameGetStateAttr gameStarted,
+           gameMessageToUser uid ["The game has already started."]),
+          (gameGetStateAttr gameFull,
+           gameMessageToUser uid ["The game is full."]),
+          (return True,
+           do gameUpdateState (addPlayer uid)
+              name <- gameGetName uid
+              gameMessageToAll [name ++ " is playing."])]
+
+cmdGame :: UserId -> [String] -> Game Zero ()
+cmdGame uid _ =
+    cond [(gameGetStateAttr (not . gameStarted),
+           do players <- gameGetStateAttr zeroPlayers
+              names <- sequence (map (gameGetName . playerId) players)
+              gameMessageToUser uid
+                  ["The game has not started.  Players: " ++ unwords names]),
+          (return True,
+           do game <- gameGetState
+              gameMessageToUser uid
+                  ["Round " ++ show (zeroRound game) ++ " of "
+                           ++ show (length (zeroPlayers game))]
+              showScores (gameMessageToUser uid)
+              showTable (gameMessageToUser uid)
+              (cond [(gameGetStateAttr (inGame uid),cmdHand uid [])]))]
+
+showScores :: ([String] -> Game Zero ()) -> Game Zero ()
+showScores showMessage = do
+    players <- gameGetStateAttr zeroPlayers
+    sequence_ (map showScore players)
+  where
+    showScore player = do
+        name <- gameGetName (playerId player)
+        showMessage [name ++ ": " ++ show (playerScore player)]
+
+showTable :: ([String] -> Game Zero ()) -> Game Zero ()
+showTable showMessage = do
+    cards <- gameGetStateAttr zeroCards
+    showMessage ["Table: " ++ unwords (map show cards)]
+
+showHand :: UserId -> Game Zero ()
+showHand uid = do
+    Just Player { playerCards = cards } <-
+        gameGetStateAttr (find ((== uid) . playerId) . zeroPlayers)
+    gameMessageToUser uid
+        ["Your hand (" ++  show (scoreHand cards) ++ "): "
+                       ++ unwords (map show cards)]
+
+cmdStart :: UserId -> [String] -> Game Zero ()
+cmdStart uid _ =
+    cond [(gameGetStateAttr (not . inGame uid),
+           gameMessageToUser uid ["You are not in the game."]),
+          (gameGetStateAttr (not . gameCanStart),
+           gameMessageToUser uid ["There aren't enough players to start."]),
+          (return True,
+           do name <- gameGetName uid
+              gameMessageToAll [name ++ " starts the game."]
+              gameUpdateState
+                  (\ g -> deal g { zeroCurrentPlayer = 0, zeroRound = 1 })
+              startTurn)]
+
+startTurn :: Game Zero ()
+startTurn = do
+    showTable gameMessageToAll
+    playerIds <- gameGetStateAttr (map playerId . zeroPlayers)
+    sequence_ (map showHand playerIds)
+    currentPlayerId <- gameGetStateAttr (playerId . currentPlayer)
+    gameMessageToUser currentPlayerId ["It is your turn."]
+
+cmdKnock :: UserId -> [String] -> Game Zero ()
+cmdKnock uid _ =
+    cond [(gameGetStateAttr (not . inGame uid),
+           gameMessageToUser uid ["You are not in the game."]),
+          (gameGetStateAttr (not . gameCanStart),
+           gameMessageToUser uid ["There aren't enough players to start."]),
+          (gameGetStateAttr (not . isCurrentPlayer uid),
+           gameMessageToUser uid ["It is not your turn."]),
+          (gameGetStateAttr (not . zeroKnock),
+           do name <- gameGetName uid
+              gameMessageToAll [name ++ " knocks.  (First knock.)"]
+              gameUpdateState (\ g -> g { zeroKnock = True })
+              gameUpdateState nextTurn
+              startTurn),
+          (return True,
+           do name <- gameGetName uid
+              gameMessageToAll [name ++ " knocks.  (Last knock.)"]
+              player <- gameGetStateAttr currentPlayer
+              gameUpdateState (updatePlayer player { playerKnock = True })
+              gameUpdateState nextTurn
+              cond [(gameGetStateAttr (not . playerKnock . currentPlayer),
+                     startTurn),
+                    (gameGetStateAttr (not . isLastRound),
+                     do gameUpdateState (deal . finishRound)
+                        gameMessageToAll ["End of round."]
+                        showScores gameMessageToAll
+                        startTurn),
+                    (return True,
+                     do gameUpdateState finishRound
+                        gameMessageToAll ["Game over."]
+                        showScores gameMessageToAll
+                        gameUpdateState resetGame)])]
+
+cmdSwap :: UserId -> [String] -> Game Zero ()
+cmdSwap uid [card1,card2] =
+    cond [(gameGetStateAttr (not . inGame uid),
+           gameMessageToUser uid ["You are not in the game."]),
+          (gameGetStateAttr (not . gameCanStart),
+           gameMessageToUser uid ["There aren't enough players to start."]),
+          (gameGetStateAttr (not . isCurrentPlayer uid),
+           gameMessageToUser uid ["It is not your turn."]),
+          (gameGetStateAttr
+               (not . elem card1 . map show . playerCards . currentPlayer),
+           gameMessageToUser uid [card1 ++ " is not in your hand."]),
+          (gameGetStateAttr (not . elem card2 . map show . zeroCards),
+           gameMessageToUser uid [card2 ++ " is not on the table."]),
+          (return True,
+           do game <- gameGetState
+              player <- gameGetStateAttr currentPlayer
+              let [c1] = filter ((== card1) . show) (playerCards player)
+              let [c2] = filter ((== card2) . show) (zeroCards game)
+              let hand = map (swap c1 c2) (playerCards player)
+              let table = map (swap c2 c1) (zeroCards game)
+              gameSetState game { zeroCards = table }
+              gameUpdateState (updatePlayer player { playerCards = hand })
+              name <- gameGetName uid
+              if scoreHand hand == 0
+                  then do
+                      gameMessageToAll
+                          [name ++ " swaps " ++ card1 ++ " for " ++ card2
+                                ++ ", scoring zero."]
+                      if isLastRound game
+                          then do
+                              gameUpdateState finishRound
+                              gameMessageToAll ["Game over."]
+                              showScores gameMessageToAll
+                              gameUpdateState resetGame
+                          else do
+                              gameUpdateState (deal . finishRound)
+                              gameMessageToAll ["End of round."]
+                              showScores gameMessageToAll
+                              startTurn
+                  else do
+                      gameMessageToAll
+                          [name ++ " swaps " ++ card1 ++ " for " ++ card2
+                                ++ "."]
+                      gameUpdateState nextTurn
+                      startTurn)]
+  where
+    swap old new item | item == old = new | otherwise = item
+cmdSwap uid _ = gameMessageToUser uid ["/swap card-from-hand card-from-table"]
+
+cmdHand :: UserId -> [String] -> Game Zero ()
+cmdHand uid _ =
+    cond [(gameGetStateAttr (not . inGame uid),
+           gameMessageToUser uid ["You are not playing."]),
+          (gameGetStateAttr (not . gameStarted),
+           gameMessageToUser uid ["The game has not been started.",
+                                  "/start to start it."]),
+          (return True,showHand uid)]
