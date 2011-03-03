@@ -1,12 +1,12 @@
 module Pico(picoApp) where
 
-import Data.List(find,partition)
+import Data.List(find)
 import Data.Time(UTCTime)
 import System.Random(StdGen,getStdGen)
 
 import GameApp
     (GameApp(..),gameApp,
-     Game,gameGetName,gameGetTime,gameGetState,gameSetState,gameUpdateState,
+     Game,gameGetName,gameGetState,gameSetState,gameUpdateState,
      gameMessageToAll,gameMessageToAllExcept,gameMessageToUser,
      App,UserId)
 import Shuffle(shuffle)
