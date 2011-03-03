@@ -175,7 +175,7 @@ instance GameApp Zero where
                          gameMessageToAll [name ++ " leaves."])])]
     gameAppCommands = [("/play",cmdPlay),("/game",cmdGame),("/start",cmdStart),
                        ("/knock",cmdKnock),("/swap",cmdSwap),("/hand",cmdHand)]
-    gameAppPollTime _ = Nothing
+    gameAppPollTime _ _ = Nothing
     gameAppPoll = return ()
 
 cond :: Monad m => [(m Bool,m ())] -> m ()

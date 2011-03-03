@@ -75,7 +75,7 @@ instance GameApp PicoGame where
                         (return True, gameMessageToAll [name ++ " leaves."])]),
               (return True, gameMessageToAll [name ++ " leaves."])]
     gameAppCommands = [("/play",playCmd),("/game",gameCmd)]
-    gameAppPollTime _ = Nothing
+    gameAppPollTime _ _ = Nothing
     gameAppPoll = return ()
 
 cond :: Monad m => [(m Bool,m ())] -> m ()

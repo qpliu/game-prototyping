@@ -28,7 +28,7 @@ class GameApp ga where
     gameAppAddPlayer :: UserId -> Game ga ()
     gameAppRemovePlayer :: UserId -> Game ga ()
     gameAppCommands :: [(String,UserId -> [String] -> Game ga ())]
-    gameAppPollTime :: ga -> Maybe UTCTime
+    gameAppPollTime :: ga -> UTCTime -> Maybe UTCTime
     gameAppPoll :: Game ga ()
 
 data GameState ga = GameState {
@@ -104,12 +104,13 @@ gameApp :: GameApp ga => ga -> IO App
 gameApp ga = do
     gameApp <- newMVar ga
     users <- newMVar []
+    savedPollTime <- newMVar Nothing
     return App {
         appName = gameAppName ga,
         appHelp = map fst cmds,
-        appAddUser = addUser gameApp users,
-        appRemoveUser = removeUser gameApp users,
-        appProcessLine = processLine gameApp users,
+        appAddUser = addUser gameApp users savedPollTime,
+        appRemoveUser = removeUser gameApp users savedPollTime,
+        appProcessLine = processLine gameApp users savedPollTime,
         appUserRenamed = userRenamed users
         }
   where
@@ -128,27 +129,27 @@ gameApp ga = do
                         gameStateMessages = []
                         }
         in  (newGa,messages)
-    addUser gameApp users user = do
+    addUser gameApp users savedPollTime user = do
         ga <- takeMVar gameApp
         userList <- fmap (user:) (takeMVar users)
         utcTime <- getCurrentTime
         let (newGa,messages) = stateTransition ga userList utcTime
                                                (gameAppAddPlayer (userId user))
-        updatePoller gameApp users ga newGa utcTime
+        updatePoller gameApp users savedPollTime newGa utcTime
         putMVar users userList
         putMVar gameApp newGa
         notify userList messages
-    removeUser gameApp users uid = do
+    removeUser gameApp users savedPollTime uid = do
         ga <- takeMVar gameApp
         userList <- takeMVar users
         utcTime <- getCurrentTime
         let (newGa,messages) = stateTransition ga userList utcTime
                                                (gameAppRemovePlayer uid)
-        updatePoller gameApp users ga newGa utcTime
+        updatePoller gameApp users savedPollTime newGa utcTime
         putMVar users (filter ((/= uid) . userId) userList)
         putMVar gameApp newGa
         notify userList messages
-    processLine gameApp users user line = do
+    processLine gameApp users savedPollTime user line = do
         ga <- takeMVar gameApp
         userList <- readMVar users
         utcTime <- getCurrentTime
@@ -157,6 +158,7 @@ gameApp ga = do
                               (repeat [userName user ++ ":" ++ line]))
                       (stateTransition ga userList utcTime)
                       (findCommand (userId user) (words line))
+        updatePoller gameApp users savedPollTime newGa utcTime
         putMVar gameApp newGa
         notify userList messages
     findCommand userId args
@@ -169,31 +171,44 @@ gameApp ga = do
         notify userList (zip (map userId userList )
                              (repeat [oldName ++ " is renamed to "
                                               ++ userName user]))
-    updatePoller gameApp users oldGa newGa startTime =
-        maybe (return ()) forkPoller newPollTime
+    updatePoller gameApp users savedPollTime newGa utcTime = do
+        oldPollTime <- takeMVar savedPollTime
+        let newPollTime =
+                getNewPollTime oldPollTime (gameAppPollTime newGa utcTime)
+        if newPollTime /= oldPollTime
+            then maybe (return ()) (forkPoller savedPollTime) newPollTime
+            else return ()
+        putMVar savedPollTime newPollTime
       where
-        newPollTime = maybe Nothing newPollTimeIfSooner (gameAppPollTime newGa)
-        newPollTimeIfSooner newTime =
-            maybe (Just newTime)
-                  (chooseSoonerTime newTime) (gameAppPollTime oldGa)
-        chooseSoonerTime newTime oldTime
-          | newTime < oldTime = Just newTime
-          | otherwise = Nothing
-        forkPoller pollTime = forkIO (schedulePoller pollTime) >> return ()
-        schedulePoller pollTime = do
-            if startTime < pollTime
+        getNewPollTime Nothing newPollTime = newPollTime
+        getNewPollTime oldPollTime Nothing = oldPollTime
+        getNewPollTime (Just oldTime) (Just newTime) =
+            Just (min oldTime newTime)
+        forkPoller savedPollTime pollTime =
+            forkIO (schedulePoll savedPollTime pollTime) >> return ()
+        schedulePoll savedPollTime pollTime = do
+            if utcTime < pollTime
                 then threadDelay $ fromIntegral $ round
-                                 $ 1000000 * diffUTCTime pollTime startTime
+                                 $ 1000000 * diffUTCTime pollTime utcTime
                 else return ()
             ga <- takeMVar gameApp
             userList <- takeMVar users
-            utcTime <- getCurrentTime
-            let (updatedGa,messages) =
-                    stateTransition ga userList utcTime gameAppPoll
-            updatePoller gameApp users ga updatedGa utcTime
-            putMVar users userList
-            putMVar gameApp updatedGa
-            notify userList messages
+            currentTime <- getCurrentTime
+            savedTime <- takeMVar savedPollTime
+            if savedTime == Just pollTime
+                then do
+                    let (updatedGa,messages) =
+                            stateTransition ga userList currentTime gameAppPoll
+                    putMVar savedPollTime Nothing
+                    updatePoller gameApp users savedPollTime
+                                 updatedGa currentTime
+                    putMVar users userList
+                    putMVar gameApp newGa
+                    notify userList messages
+                else do
+                    putMVar savedPollTime savedTime
+                    putMVar users userList
+                    putMVar gameApp ga
 
 chatGameApp :: IO App
 chatGameApp = gameApp Chat
@@ -209,5 +224,5 @@ instance GameApp Chat where
         name <- gameGetName uid
         gameMessageToAll [name ++ " has left."]
     gameAppCommands = []
-    gameAppPollTime _ = Nothing
+    gameAppPollTime _ _ = Nothing
     gameAppPoll = return ()
