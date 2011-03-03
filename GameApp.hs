@@ -1,6 +1,7 @@
 module GameApp
     (GameApp(..),gameApp,
-     Game,gameGetName,gameGetTime,gameGetState,gameSetState,gameUpdateState,
+     Game,gameGetName,gameGetTime,
+     gameGetState,gameGetStateAttr,gameSetState,gameUpdateState,
      gameMessageToAll,gameMessageToAllExcept,gameMessageToUser,
      App,UserId,chatGameApp)
 where
@@ -93,6 +94,11 @@ gameUpdateState update = do
     gameState <- gameAppGetGameState
     gameAppSetGameState
         gameState { gameStateGameApp = update (gameStateGameApp gameState) }
+
+gameGetStateAttr :: (ga -> a) -> Game ga a
+gameGetStateAttr attr = do
+    gameState <- gameGetState
+    return (attr gameState)
 
 gameApp :: GameApp ga => ga -> IO App
 gameApp ga = do
