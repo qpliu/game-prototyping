@@ -203,7 +203,7 @@ gameApp ga = do
                     updatePoller gameApp users savedPollTime
                                  updatedGa currentTime
                     putMVar users userList
-                    putMVar gameApp newGa
+                    putMVar gameApp updatedGa
                     notify userList messages
                 else do
                     putMVar savedPollTime savedTime
