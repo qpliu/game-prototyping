@@ -1,12 +1,16 @@
 module CantStop(cantStopApp) where
 
-import Data.List(find)
-import qualified Data.Map
+import Data.List(find,nub)
 import Data.Maybe(catMaybes)
 import Data.Time(UTCTime,addUTCTime,diffUTCTime)
 import System.Random(StdGen,getStdGen,randomR)
 
-import Apps(GameApp(..),gameApp,App,UserId)
+import GameApp
+    (GameApp(..),gameApp,
+     Game,gameGetName,gameGetTime,
+     gameGetState,gameGetStateAttr,gameSetState,gameUpdateState,
+     gameMessageToAll,gameMessageToAllExcept,gameMessageToUser,
+     App,UserId)
 
 cantStopApp :: IO App
 cantStopApp = getStdGen >>= gameApp . cantStop
@@ -36,19 +40,90 @@ data Track = Track {
     trackPlayers :: [(UserId,(Int,Int))]
     }
 
-getPlayer :: CantStop -> UserId -> Maybe Player
-getPlayer game uid = find ((== uid) . playerId) (cantStopPlayers game)
+getPlayer :: UserId -> CantStop -> Maybe Player
+getPlayer uid game = find ((== uid) . playerId) (cantStopPlayers game)
 
-inGame :: CantStop -> UserId -> Bool
-inGame game uid = maybe False (const True) (getPlayer game uid)
+inGame :: UserId -> CantStop -> Bool
+inGame uid game = maybe False (const True) (getPlayer uid game)
 
-playerLockedout :: CantStop -> UserId -> Bool
-playerLockedout game uid =
-    maybe False (not . null . playerLockoutCountdown) (getPlayer game uid)
+gameStarted :: CantStop -> Bool
+gameStarted game = not (null (cantStopTracks game))
 
-updatePlayers :: CantStop -> ([Player] -> [Player]) -> CantStop
-updatePlayers game update =
-    game { cantStopPlayers = update (cantStopPlayers game) }
+gameReset :: CantStop -> CantStop
+gameReset game = game { cantStopPlayers = [], cantStopTracks = [] }
+
+gameStart :: UTCTime -> CantStop -> CantStop
+gameStart utcTime game =
+    foldl setCountdown game { cantStopTracks = initialTracks }
+          (cantStopPlayers game)
+  where
+    setCountdown game player =
+        setPlayerCountdown (playerId player) utcTime game
+
+newPlayer :: UserId -> Player
+newPlayer uid =
+    Player {
+        playerId = uid,
+        playerLockoutCountdown = [],
+        playerRoll = []
+        }
+
+playerLockedout :: UserId -> CantStop -> Bool
+playerLockedout uid game =
+    maybe False (not . null . playerLockoutCountdown) (getPlayer uid game)
+
+addPlayer :: Player -> CantStop -> CantStop
+addPlayer player game =
+    game { cantStopPlayers = player : cantStopPlayers game }
+
+updatePlayerCountdown :: UserId -> [UTCTime] -> CantStop -> CantStop
+updatePlayerCountdown uid countdown game =
+    game { cantStopPlayers = map updatePlayer (cantStopPlayers game) }
+  where
+    updatePlayer player
+      | playerId player == uid = player { playerLockoutCountdown = countdown }
+      | otherwise = player
+
+setPlayerCountdown :: UserId -> UTCTime -> CantStop -> CantStop
+setPlayerCountdown uid utcTime game =
+    updatePlayerCountdown uid (map (flip addUTCTime utcTime) [1,2,3,4,5]) game
+
+playerRolls :: UserId -> CantStop -> CantStop
+playerRolls uid game =
+    game {
+        cantStopPlayers = map updatePlayer (cantStopPlayers game),
+        cantStopStdGen = newStdGen
+        }
+  where
+    (newStdGen,roll) = head $ drop 4 $ iterate roll1 (cantStopStdGen game,[])
+    roll1 (stdGen,rolls) = let (nextRoll,nextGen) = randomR (1,6) stdGen
+                           in  (nextGen,nextRoll:rolls)
+    updatePlayer player
+      | playerId player == uid = player { playerRoll = roll }
+      | otherwise = player
+
+getPlayerRoll :: UserId -> CantStop -> [Int]
+getPlayerRoll uid game = maybe [] playerRoll (getPlayer uid game)
+
+takeOptions :: UserId -> CantStop -> [Int]
+takeOptions uid game
+  | length takenTracks < 3 = options openTracks
+  | otherwise = options openTakenTracks
+  where
+    roll = getPlayerRoll uid game
+    takenTracks = filter (trackTaken uid) (cantStopTracks game)
+    openTracks = filter (trackOpen uid) (cantStopTracks game)
+    openTakenTracks = filter (trackOpen uid) takenTracks
+    rolledOptions =
+        [fst a + fst b | a <- zip roll [1..], b <- zip roll [1..], a /= b ]
+    options availableTracks =
+        filter (`elem` rolledOptions) (map trackNumber availableTracks)
+
+clearRoll :: UserId -> CantStop -> CantStop
+clearRoll uid game =
+    game { cantStopPlayers = map updatePlayer (cantStopPlayers game) }
+  where
+    updatePlayer p | playerId p == uid = p { playerRoll = [] } | otherwise = p
 
 initialTracks :: [Track]
 initialTracks =
@@ -58,6 +133,16 @@ initialTracks =
 trackLength :: Track -> Int
 trackLength (Track { trackNumber = n }) = min (n + 1) (15 - n)
 
+getTracks :: (Track -> Bool) -> CantStop -> [Track]
+getTracks test game = filter test (cantStopTracks game)
+
+updateTracks :: (Track -> Track) -> CantStop -> CantStop
+updateTracks update game =
+    game { cantStopTracks = map update (cantStopTracks game) }
+
+trackNumbered :: [Int] -> Track -> Bool
+trackNumbered numbers track = trackNumber track `elem` numbers
+
 trackWon :: UserId -> Track -> Bool
 trackWon uid track = maybe False (uid ==) (trackWinner track)
 
@@ -66,6 +151,12 @@ trackOpen uid track
   | trackWinner track /= Nothing = False
   | otherwise = maybe True ((< trackLength track) . snd)
                       (lookup uid (trackPlayers track))
+
+trackProgress :: UserId -> Track -> Int
+trackProgress uid track = maybe 0 snd (lookup uid (trackPlayers track))
+
+trackStoppedAt :: UserId -> Track -> Int
+trackStoppedAt uid track = maybe 0 fst (lookup uid (trackPlayers track))
 
 trackTaken :: UserId -> Track -> Bool
 trackTaken uid track
@@ -80,7 +171,7 @@ trackTake uid number track
   | otherwise = track { trackPlayers = map takeT (trackPlayers track) }
   where
     takeT p@(uid2,(stopAt,taken))
-      | uid2 == uid && taken < trackLength track = (uid2,(stopAt,taken + 1))
+      | uid2 == uid = (uid2,(stopAt,min (taken + 1) (trackLength track)))
       | otherwise = p
 
 trackFail :: UserId -> Track -> Track
@@ -112,251 +203,259 @@ trackRemovePlayer uid track
         track { trackPlayers = filter ((uid /=) . fst) (trackPlayers track) }
 
 instance GameApp CantStop where
-    gameName _ = "CantStop"
-    gameAddPlayer game uid getName time =
-        (game,
-         [getName uid ++ " has arrived."],
-         [(uid,["Welcome to Can't Stop",
-                "/play to start playing",
-                "/start to start the game",
-                "When playing: /roll, /take number, /stop"])])
-    gameRemovePlayer game uid getName time =
-        (removePlayer game uid,[getName uid ++ " has left."],[])
-    gameCommands =
-        [("/play",cantStopPlay),
-         ("/game",cantStopGameState),
-         ("/start",cantStopStart),
-         ("/roll",cantStopRoll),
-         ("/take",cantStopTake),
-         ("/stop",cantStopStop)]
-    gamePollTime game time =
-        let times = filter (> time) (concatMap playerLockoutCountdown
+    gameAppName _ = "CantStop"
+    gameAppAddPlayer uid = do
+        name <- gameGetName uid
+        gameMessageToAllExcept [uid] [name ++ " arrives."]
+        gameMessageToUser uid
+            ["Welcome to Can't Stop.",
+             "/play to join the game",
+             "/start to start the game",
+             "When playing /roll, /take number, /stop"]
+    gameAppRemovePlayer uid = do
+        name <- gameGetName uid
+        cond [(gameGetStateAttr (not . inGame uid),
+               gameMessageToAll [name ++ " leaves."]),
+              (gameGetStateAttr (not . gameStarted),
+               do gameUpdateState (removePlayer uid)
+                  gameMessageToAll [name ++ " leaves."]),
+              (gameGetStateAttr
+                   (null . filter (trackWon uid) . cantStopTracks),
+               do gameUpdateState (removePlayer uid)
+                  gameMessageToAll [name ++ " leaves."]),
+              (return True,
+               do openTracks <-
+                      gameGetStateAttr (filter (trackWon uid) . cantStopTracks)
+                  gameUpdateState (removePlayer uid)
+                  gameMessageToAll
+                      [name ++ " leaves.  Tracks now open: "
+                            ++ unwords (map (show . trackNumber) openTracks)])]
+    gameAppCommands = [("/play",cmdPlay),("/game",cmdGame),("/start",cmdStart),
+                       ("/roll",cmdRoll),("/take",cmdTake),("/stop",cmdStop)]
+    gameAppPollTime game time =
+        if null times then Nothing else Just (minimum times)
+      where times = filter (> time) (concatMap playerLockoutCountdown
                                                (cantStopPlayers game))
-        in  if null times then Nothing else Just (minimum times)
-    gamePoll game getName time = doCountdown getName time (game,[],[])
+    gameAppPoll = doPoll
 
-removePlayer :: CantStop -> UserId -> CantStop
-removePlayer game uid
+cond :: Monad m => [(m Bool,m ())] -> m ()
+cond [] = return ()
+cond ((test,body):rest) = do
+    result <- test
+    if result
+        then body
+        else cond rest
+
+removePlayer :: UserId -> CantStop -> CantStop
+removePlayer uid game
   | null (cantStopPlayers newGame) = newGame { cantStopTracks = [] }
   | otherwise = newGame
   where
-    newGame = updatePlayers game {
-                        cantStopTracks =
-                            map (trackRemovePlayer uid) (cantStopTracks game)
-                        }
-                    (filter ((/= uid) . playerId))
-
-doCountdown :: (UserId -> String) -> UTCTime
-                       -> (CantStop,[String],[(UserId,[String])])
-                       -> (CantStop,[String],[(UserId,[String])])
-doCountdown getName time (game,defaultMessage,specificMessages) =
-    (game { cantStopPlayers = updatedPlayers },
-     defaultMessage,catMaybes updatedSpecificMessages)
-  where
-    (updatedPlayers,updatedSpecificMessages) =
-        unzip (map updatePlayer (cantStopPlayers game))
-    updatePlayer player
-      | any (<= time) (playerLockoutCountdown player) =
-            (player {
-                playerLockoutCountdown =
-                    filter (> time) (playerLockoutCountdown player)
-                },
-             addCountdownToMessage
-                 (playerId player)
-                 (length (filter (> time) (playerLockoutCountdown player))))
-      | otherwise = (player,fmap ((,) (playerId player))
-                            (lookup (playerId player) specificMessages))
-    addCountdownToMessage uid 0 =
-        Just (uid,getUserMessage uid ++ showState game getName ++ ["Go!"])
-    addCountdownToMessage uid n =
-        Just (uid,getUserMessage uid ++ [show n ++ "..."])
-    getUserMessage uid = maybe defaultMessage id (lookup uid specificMessages)
-
-cantStopPlay :: CantStop -> UserId -> (UserId -> String) -> UTCTime -> [String]
-                         -> (CantStop,[String],[(UserId,[String])])
-cantStopPlay game uid getName time args
-  | inGame game uid = (game,[],[])
-  | length (cantStopPlayers game) >= 4 =
-        (game,[],[(uid,["The game is full."])])
-  | null (cantStopTracks game) =
-        (updatePlayers game (Player {
-                                playerId = uid,
-                                playerLockoutCountdown = [],
-                                playerRoll = []
-                                }
-                              :),
-         [getName uid ++ " is playing."],[(uid,["You are in the game."])])
-  | otherwise =
-        (updatePlayers game (Player {
-                                playerId = uid,
-                                playerLockoutCountdown =
-                                    map (flip addUTCTime time) [1,2,3,4,5],
-                                playerRoll = []
-                                }
-                             :),
-         [getName uid ++ " joins the game."],
-         [(uid,["You are in the game.  /roll after the countdown."])])
-
-cantStopGameState :: CantStop -> UserId -> (UserId -> String)
-                              -> UTCTime -> [String]
-                              -> (CantStop,[String],[(UserId,[String])])
-cantStopGameState game uid getName time args =
-    (game,[],[(uid,showState game getName)])
-
-cantStopStart :: CantStop -> UserId -> (UserId -> String)
-                          -> UTCTime -> [String]
-                          -> (CantStop,[String],[(UserId,[String])])
-cantStopStart game uid getName time args
-  | not (inGame game uid) = (game,[],[(uid,["You are not playing."])])
-  | not (null (cantStopTracks game)) =
-        (game,[],[(uid,["The game has already started."])])
-  | otherwise =
-        (updatePlayers game { cantStopTracks = initialTracks }
-                       (map setCountdown),
-         [getName uid
-          ++ " starts the game.  Play starts after the countdown."],
-         [])
-  where
-    setCountdown player =
-        player {
-            playerLockoutCountdown = map (flip addUTCTime time) [1,2,3,4,5]
+    newGame = game {
+        cantStopPlayers = filter ((/= uid) . playerId) (cantStopPlayers game),
+        cantStopTracks = map (trackRemovePlayer uid) (cantStopTracks game)
         }
 
-cantStopRoll :: CantStop -> UserId -> (UserId -> String) -> UTCTime -> [String]
-                         -> (CantStop,[String],[(UserId,[String])])
-cantStopRoll game uid getName time args
-  | not (inGame game uid) = (game,[],[(uid,["You are not playing."])])
-  | null (cantStopTracks game) =
-        (game,[],[(uid,["The game has not started.  /start to start it."])])
-  | playerLockedout game uid =
-        (game,[],[(uid,["Wait for the countdown to finish."])])
-  | not (null oldRoll) =
-        (game,[],
-         [(uid,["You already rolled " ++ showNumbers oldRoll,
-                "You can take "
-                    ++ showNumbers (takeOptions game uid oldRoll)])])
-  | null newOptions =
-        (game {
-            cantStopStdGen = newStdGen,
-            cantStopTracks = map (trackFail uid) (cantStopTracks game)
-         },
-         [getName uid ++ " rolls " ++ showNumbers newRoll ++ ", which fails"],
-         [(uid,["You roll " ++ showNumbers newRoll ++ ", which fails"])])
-  | otherwise =
-        (updatePlayers game { cantStopStdGen = newStdGen } (map addNewRoll),
-         [getName uid ++ " rolls " ++ showNumbers newRoll],
-         [(uid,["You roll " ++ showNumbers newRoll,
-                "You can take " ++ showNumbers newOptions])])
-  where
-    Just player = getPlayer game uid
-    oldRoll = playerRoll player
-    (newStdGen,newRoll) = doRoll (cantStopStdGen game)
-    newOptions = takeOptions game uid newRoll
-    addNewRoll player2
-      | uid /= playerId player2 = player2
-      | otherwise = player2 { playerRoll = newRoll }
+cmdPlay :: UserId -> [String] -> Game CantStop ()
+cmdPlay uid _ =
+    cond [(gameGetStateAttr (inGame uid),
+           gameMessageToUser uid ["You are already playing."]),
+          (gameGetStateAttr (not . gameStarted),
+           do name <- gameGetName uid
+              gameMessageToAll [name ++ " is playing."]
+              gameUpdateState (addPlayer (newPlayer uid))),
+         (return True,
+           do name <- gameGetName uid
+              utcTime <- gameGetTime
+              gameMessageToAll [name ++ " enters the game."]
+              gameUpdateState (addPlayer (newPlayer uid))
+              gameUpdateState (setPlayerCountdown uid utcTime))]
 
-cantStopTake :: CantStop -> UserId -> (UserId -> String) -> UTCTime -> [String]
-                         -> (CantStop,[String],[(UserId,[String])])
-cantStopTake game uid getName time args
-  | not (inGame game uid) = (game,[],[(uid,["You are not playing."])])
-  | null (cantStopTracks game) =
-        (game,[],[(uid,["The game has not started.  /start to start it."])])
-  | playerLockedout game uid =
-        (game,[],[(uid,["Wait for the countdown to finish."])])
-  | null roll =
-        (game,[],[(uid,["You have not rolled.  /roll to roll."])])
-  | null args && (length options == 1 || sum options == sum roll) =
-        cantStopTake game uid getName time [show (head options)]
-  | length args /= 1 || not (concat args `elem` map show options) =
-        (game,[],[(uid,["You can take " ++ showNumbers options])])
-  | not (otherTake `elem` options)
-    || (length taken == 3 && not (otherTake `elem` taken))
-    || (length taken == 2 && not (take `elem` taken)
-                          && not (otherTake `elem` taken)) =
-        (doTake take $ updatePlayers game (map clearRoll),
-         [getName uid ++ " takes " ++ show take],
-         [(uid,["You take " ++ show take])])
-  | otherwise =
-        (doTake otherTake $ doTake take $ updatePlayers game (map clearRoll),
-         [getName uid ++ " takes " ++ show take ++ " and " ++ show otherTake],
-         [(uid,["You take " ++ show take ++ " and " ++ show otherTake])])
+cmdGame :: UserId -> [String] -> Game CantStop ()
+cmdGame uid _ =
+    cond [(gameGetStateAttr (not . gameStarted),
+           do players <- gameGetStateAttr cantStopPlayers
+              if null players
+                  then gameMessageToUser uid ["Nobody is playing."]
+                  else do
+                    playerNames <-
+                        sequence (map (gameGetName . playerId) players)
+                    gameMessageToUser uid
+                        ("The game is not started.  Players:"
+                         : map ("  " ++) playerNames)),
+          (return True,
+           do tracks <- gameGetStateAttr cantStopTracks
+              trackInfo <- sequence (map showTrack tracks)
+              gameMessageToUser uid (concat trackInfo))]
   where
-    Just player = getPlayer game uid
-    roll = playerRoll player
-    options = takeOptions game uid roll
-    take = read (head args)
-    otherTake = sum roll - take
-    taken = map trackNumber $ filter (trackTaken uid) (cantStopTracks game)
-    doTake track game =
-        game {
-            cantStopTracks = map (trackTake uid track) (cantStopTracks game)
-        }
-    clearRoll p@(Player { playerId = uid2 })
-      | uid2 == uid = p { playerRoll = [] }
-      | otherwise = p
+    showTrack track = do
+        trackPlayerInfo <- maybe (showTrackPlayers track)
+                                 showTrackWinner (trackWinner track)
+        return (("Track " ++ show (trackNumber track) ++ " ("
+                          ++ show (trackLength track) ++ ")")
+                : trackPlayerInfo)
+    showTrackWinner winnerId = do
+        winner <- gameGetName winnerId
+        return ["  won by: " ++ winner]
+    showTrackPlayers track =
+        sequence (map showTrackPlayer (trackPlayers track))
+    showTrackPlayer (pid,(stoppedAt,progress)) = do
+        name <- gameGetName pid
+        return (name ++ ": " ++ show stoppedAt
+                     ++ if progress > stoppedAt
+                            then " -> " ++ show progress
+                            else "")
 
-cantStopStop :: CantStop -> UserId -> (UserId -> String) -> UTCTime -> [String]
-                         -> (CantStop,[String],[(UserId,[String])])
-cantStopStop game uid getName time args
-  | not (inGame game uid) = (game,[],[(uid,["You are not playing."])])
-  | null (cantStopTracks game) =
-        (game,[],[(uid,["The game has not started.  /start to start it."])])
-  | playerLockedout game uid =
-        (game,[],[(uid,["Wait for the countdown to finish."])])
-  | not $ null (playerRoll player) =
-        (game,[],[(uid,["You have to take your roll.  /take to take."])])
-  | null $ filter (trackTaken uid) $ cantStopTracks game =
-        (game,[],[(uid,["You have no progress to stop at.  /roll to roll."])])
-  | length wonTracks >= 3 =
-        (game { cantStopPlayers = [], cantStopTracks = [] },
-         [getName uid ++ " wins with " ++ showNumbers wonTracks],[])
-  | otherwise =
-        (updatePlayers newGame (map setCountdown),
-         [getName uid ++ " stops."],[])
+cmdStart :: UserId -> [String] -> Game CantStop ()
+cmdStart uid _ =
+    cond [(gameGetStateAttr (not . inGame uid),
+           gameMessageToUser uid
+               ["You are not in the game.","/play to join the game."]),
+          (gameGetStateAttr gameStarted,
+           gameMessageToUser uid ["The game has already been started."]),
+          (return True,
+           do name <- gameGetName uid
+              utcTime <- gameGetTime
+              gameMessageToAll [name ++ " starts the game.",
+                                "Start playing after the countdown."]
+              gameUpdateState (gameStart utcTime))]
+
+cmdRoll :: UserId -> [String] -> Game CantStop ()
+cmdRoll uid _ =
+    cond [(gameGetStateAttr (not . inGame uid),
+           gameMessageToUser uid
+               ["You are not in the game.","/play to join the game."]),
+          (gameGetStateAttr (not . gameStarted),
+           gameMessageToUser uid
+               ["The game has not been started.","/start to start the game."]),
+          (gameGetStateAttr (playerLockedout uid),
+           gameMessageToUser uid ["Try again after the countdown finishes."]),
+          (gameGetStateAttr (not . null . getPlayerRoll uid),
+           do roll <- gameGetStateAttr (getPlayerRoll uid)
+              canTake <- gameGetStateAttr (takeOptions uid)
+              gameMessageToUser uid
+                  ["You already rolled: " ++ showNumbers roll,
+                   "You can take: " ++ showNumbers canTake]),
+          (return True,
+           do gameUpdateState (playerRolls uid)
+              roll <- gameGetStateAttr (getPlayerRoll uid)
+              canTake <- gameGetStateAttr (takeOptions uid)
+              if null canTake
+                  then do
+                      gameUpdateState (updateTracks (trackFail uid))
+                      gameUpdateState (clearRoll uid)
+                      gameMessageToUser uid
+                           ["You roll: " ++ showNumbers roll
+                                         ++ ", which fails."]
+                  else gameMessageToUser uid
+                           ["You roll: " ++ showNumbers roll,
+                            "You can take: " ++ showNumbers canTake])]
+
+cmdTake :: UserId -> [String] -> Game CantStop ()
+cmdTake uid [number] =
+    cond [(gameGetStateAttr (not . inGame uid),
+           gameMessageToUser uid
+               ["You are not in the game.","/play to join the game."]),
+          (gameGetStateAttr (not . gameStarted),
+           gameMessageToUser uid
+               ["The game has not been started.","/start to start the game."]),
+          (gameGetStateAttr (playerLockedout uid),
+           gameMessageToUser uid ["Try again after the countdown finishes."]),
+          (gameGetStateAttr (null . getPlayerRoll uid),
+           gameMessageToUser uid ["You have not rolled.","/roll to roll."]),
+          (gameGetStateAttr (not . (number `elem`)
+                                 . map show . takeOptions uid),
+           do roll <- gameGetStateAttr (getPlayerRoll uid)
+              canTake <- gameGetStateAttr (takeOptions uid)
+              gameMessageToUser uid
+                  ["Invalid option.",
+                   "You roll: " ++ showNumbers roll,
+                   "You can take: " ++ showNumbers canTake]),
+          (return True,
+           do roll <- gameGetStateAttr (getPlayerRoll uid)
+              canTake <- gameGetStateAttr (takeOptions uid)
+              let taken2 = read number : filter (== (sum roll - read number))
+                                                canTake
+              alreadyTaken <- gameGetStateAttr
+                                (map trackNumber . getTracks (trackTaken uid))
+              let taken = if length (nub (alreadyTaken ++ taken2)) > 3
+                              then take 1 taken2
+                              else taken2
+              gameUpdateState (clearRoll uid)
+              sequence_ (map takeTrack taken)
+              name <- gameGetName uid
+              takenTracks <- gameGetStateAttr (getTracks (trackNumbered taken))
+              gameMessageToAll (map (showTakenTrack name) takenTracks))]
   where
-    Just player = getPlayer game uid
-    newGame =
-        game { cantStopTracks = map (trackStop uid) (cantStopTracks game) }
-    wonTracks =
-        map trackNumber (filter (trackWon uid) (cantStopTracks newGame))
-    setCountdown p@Player { playerId = uid2 }
-      | uid == uid2 = p {
-            playerLockoutCountdown = map (flip addUTCTime time) [1,2,3,4,5]
-            }
-      | otherwise = p
+    takeTrack trackNumber =
+        gameUpdateState (updateTracks (trackTake uid trackNumber))
+    showTakenTrack name track =
+        name ++ " takes " ++ show (trackNumber track)
+             ++ ": " ++ show (trackStoppedAt uid track)
+             ++ " -> " ++ show (trackProgress uid track)
+             ++ "/" ++ show (trackLength track) ++ "."
+
+cmdTake uid _ = gameMessageToUser uid ["/take NUMBER"]
+
+cmdStop :: UserId -> [String] -> Game CantStop ()
+cmdStop uid _ =
+    cond [(gameGetStateAttr (not . inGame uid),
+           gameMessageToUser uid
+               ["You are not in the game.","/play to join the game."]),
+          (gameGetStateAttr (not . gameStarted),
+           gameMessageToUser uid
+               ["The game has not been started.","/start to start the game."]),
+          (gameGetStateAttr (playerLockedout uid),
+           gameMessageToUser uid ["Try again after the countdown finishes."]),
+          (gameGetStateAttr (not . null . getPlayerRoll uid),
+           do roll <- gameGetStateAttr (getPlayerRoll uid)
+              canTake <- gameGetStateAttr (takeOptions uid)
+              gameMessageToUser uid
+                  ["You need to take your tracks.",
+                   "You have rolled: " ++ showNumbers roll,
+                   "You can take: " ++ showNumbers canTake]),
+          (return True,
+           do name <- gameGetName uid
+              utcTime <- gameGetTime
+              takenTracks <- gameGetStateAttr (getTracks (trackTaken uid))
+              gameUpdateState (updateTracks (trackStop uid))
+              wonTracks <- gameGetStateAttr (getTracks (trackWon uid))
+              gameMessageToAll (map (showTakenTrack name) takenTracks)
+              if length wonTracks >= 3
+                  then do
+                      gameMessageToAll
+                          [name ++ " wins with "
+                                ++ showNumbers (map trackNumber wonTracks)
+                                ++ "."]
+                      gameUpdateState gameReset
+                  else
+                      gameUpdateState (setPlayerCountdown uid utcTime))]
+  where
+    showTakenTrack name track
+      | trackProgress uid track >= trackLength track =
+        name ++ " stops and wins " ++ show (trackNumber track) ++ "."
+      | otherwise =
+        name ++ " stops on " ++ show (trackNumber track)
+             ++ ": " ++ show (trackStoppedAt uid track)
+             ++ " -> " ++ show (trackProgress uid track)
+             ++ "/" ++ show (trackLength track) ++ "."
+
+doPoll :: Game CantStop ()
+doPoll = do
+    utcTime <- gameGetTime
+    players <- gameGetStateAttr cantStopPlayers
+    sequence_ (map (pollPlayer utcTime) players)
+  where
+    pollPlayer utcTime player
+      | any (<= utcTime) (playerLockoutCountdown player) = do
+            let newLockout = filter (> utcTime) (playerLockoutCountdown player)
+            gameUpdateState
+                (updatePlayerCountdown (playerId player) newLockout)
+            gameMessageToUser (playerId player)
+                [if null newLockout
+                     then "Go!"
+                     else show (length newLockout) ++ "..."]
+      | otherwise = return ()
 
 showNumbers :: [Int] -> String
 showNumbers numbers = unwords (map show numbers)
-
-doRoll :: StdGen -> (StdGen,[Int])
-doRoll stdGen = head $ drop 4 $ iterate roll1 (stdGen,[])
-  where
-    roll1 (stdGen,rolls) = let (nextRoll,nextGen) = randomR (1,6) stdGen
-                           in  (nextGen,nextRoll:rolls)
-
-takeOptions :: CantStop -> UserId -> [Int] -> [Int]
-takeOptions game uid dice
-  | length takenTracks < 3 = options openTracks
-  | otherwise = options openTakenTracks
-  where
-    takenTracks = filter (trackTaken uid) (cantStopTracks game)
-    openTracks = filter (trackOpen uid) (cantStopTracks game)
-    openTakenTracks = filter (trackOpen uid) takenTracks
-    rolledOptions =
-        [fst a + fst b | a <- zip dice [1..], b <- zip dice [1..], a /= b ]
-    options availableTracks =
-        filter (`elem` rolledOptions) (map trackNumber availableTracks)
-
-showState :: CantStop -> (UserId -> String) -> [String]
-showState game getName = concatMap showTrack (cantStopTracks game)
-  where
-    showTrack track = ["Track " ++ show (trackNumber track) ++ ": length: "
-                                ++ show (trackLength track)]
-                      ++ maybe (map showTrackPlayer (trackPlayers track))
-                               ((:[]) . ("won by "++) . getName)
-                               (trackWinner track)
-    showTrackPlayer (uid,(stopAt,taken)) =
-        " " ++ getName uid
-            ++ " stopped at: " ++ show stopAt
-            ++ if taken > stopAt then " progress to: " ++ show taken else ""
