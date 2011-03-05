@@ -1,7 +1,8 @@
 > module Thunderstone
 > where
 
-> import Data.Maybe(catMaybes)
+> import Control.Monad(mapM_,replicateM,unless)
+> import Data.Maybe(catMaybes,listToMaybe)
 > import System.Random(StdGen)
 
 > import qualified Shuffle
@@ -173,7 +174,7 @@ Setup:
    a. Draw Starting Party Deck
    b. Shuffle and draw starting hand
 
-> setup :: Int -> Chooser -> Thunderstone ()
+> setup :: Int -> Chooser -> Thunderstone [PlayerId]
 > setup playerCount chooser = do
 >     (monsters,heroes,village) <- chooser
 >     dungeon <- dungeonDeck monsters
@@ -186,7 +187,8 @@ Setup:
 >         thunderstoneResources = map basicStack [minBound..maxBound]
 >                              ++ map villageStack village
 >         }
->     sequence_ (map setupPlayer [0..playerCount-1])
+>     mapM_ (setupPlayer . PlayerId) [0..playerCount-1]
+>     return (map PlayerId [0..playerCount-1])
 >   where
 >     newPlayer = Player {
 >         playerHand = [],
@@ -199,23 +201,17 @@ Setup:
 Draw Starting Party Deck:
 Each player draws six Militia, two Daggers, two Iron Rations, and two Torches.
 
-Militia is resource 0.
-Dagger is resource 1.
-IronRation is resource 2.
-Torch is resource 3.
-
 Shuffle and draw the top six cards from your Party Deck to form
 your starting hand.
 
->     setupPlayer playerNumber = do
->         militia <- sequence (replicate 6 (drawResource 0))
->         dagger <- sequence (replicate 2 (drawResource 1))
->         ironRation <- sequence (replicate 2 (drawResource 2))
->         torch <- sequence (replicate 2 (drawResource 3))
->         cards <- shuffle (militia ++ dagger ++ ironRation ++ torch)
->         discard playerNumber cards
->         hand <- drawCards playerNumber 6
->         setHand playerNumber hand
+>     setupPlayer playerId = do
+>         militia <- multiple 6 $ drawResource (Basic Militia)
+>         dagger <- multiple 2 $ drawResource (Basic Dagger)
+>         ironRations <- multiple 2 $ drawResource (Basic IronRations)
+>         torch <- multiple 2 $ drawResource (Basic Torch)
+>         discard playerId (militia ++ dagger ++ ironRations ++ torch)
+>         hand <- multiple 6 $ drawCard playerId
+>         setHand playerId hand
 
 There are ten cards for each class.  Take all 30 Monster cards that match
 the three selected classes and shuffle them together.  This becomes the
@@ -237,17 +233,17 @@ cards on top of those.  This will create a stack of Hero cards with all
 level 3 cards on the bottom, the level 2 cards in the middle, and the
 level 1 cards on top.
 
->     heroStack :: HeroType -> [Card]
->     heroStack hero = replicate 6 (Hero hero (HeroLevel 1))
->                   ++ replicate 4 (Hero hero (HeroLevel 2))
->                   ++ replicate 2 (Hero hero (HeroLevel 3))
+>     heroStack :: HeroType -> (HeroType,[Card])
+>     heroStack hero = (hero, replicate 6 (Hero hero (HeroLevel 1))
+>                          ++ replicate 4 (Hero hero (HeroLevel 2))
+>                          ++ replicate 2 (Hero hero (HeroLevel 3)))
 
 Village stack:
 
 There are eight of each village card.
 
->     villageStack :: VillageType -> [Card]
->     villageStack village = replicate 8 (Village village)
+>     villageStack :: VillageType -> (Card,Int)
+>     villageStack village = (Village village,8)
 
 Basic stack:
 
@@ -255,20 +251,22 @@ There are eighteen(?) of each basic card.
 (Or should there be more militia?)
 (The rules say there are 90 basic cards, including Disease.)
 
->     basicStack :: BasicType -> [Card]
->     basicStack basic = replicate 18 (Basic basic)
+>     basicStack :: BasicType -> (Card,Int)
+>     basicStack basic = (Basic basic,18)
 
 Game state:
 
 > type Thunderstone a = StateTransformer ThunderstoneState a
+
+> newtype PlayerId = PlayerId Int
 
 > data ThunderstoneState = ThunderstoneState {
 >     thunderstoneStdGen :: StdGen,
 >     thunderstoneCurrentPlayer :: Int,
 >     thunderstonePlayers :: [Player],
 >     thunderstoneDungeon :: [Card],
->     thunderstoneHeroes :: [[Card]],
->     thunderstoneResources :: [[Card]]
+>     thunderstoneHeroes :: [(HeroType,[Card])],
+>     thunderstoneResources :: [(Card,Int)]
 >     }
 
 > data Player = Player {
@@ -334,13 +332,13 @@ Low level game state transformations.
 >     setState state { thunderstoneStdGen = stdGen }
 >     return shuffledCards
 
-> getPlayer :: Int -> Thunderstone Player
-> getPlayer playerNumber = do
+> getPlayer :: PlayerId -> Thunderstone Player
+> getPlayer (PlayerId playerNumber) = do
 >     state <- getState
 >     return (thunderstonePlayers state !! playerNumber)
 
-> setPlayer :: Int -> Player -> Thunderstone ()
-> setPlayer playerNumber player = do
+> setPlayer :: PlayerId -> Player -> Thunderstone ()
+> setPlayer (PlayerId playerNumber) player = do
 >     state <- getState
 >     let players = thunderstonePlayers state
 >     setState state {
@@ -348,27 +346,27 @@ Low level game state transformations.
 >                            ++ player : drop (playerNumber + 1) players
 >         }
 
-> getHand :: Int -> Thunderstone [Card]
-> getHand playerNumber = fmap playerHand (getPlayer playerNumber)
+> getHand :: PlayerId -> Thunderstone [Card]
+> getHand playerId = fmap playerHand (getPlayer playerId)
 
-> setHand :: Int -> [Card] -> Thunderstone ()
-> setHand playerNumber cards = do
->     player <- getPlayer playerNumber
->     setPlayer playerNumber player { playerHand = cards }
+> setHand :: PlayerId -> [Card] -> Thunderstone ()
+> setHand playerId cards = do
+>     player <- getPlayer playerId
+>     setPlayer playerId player { playerHand = cards }
 
-> discard :: Int -> [Card] -> Thunderstone ()
-> discard playerNumber cards = do
->     player <- getPlayer playerNumber
->     setPlayer playerNumber
+> discard :: PlayerId -> [Card] -> Thunderstone ()
+> discard playerId cards = do
+>     player <- getPlayer playerId
+>     setPlayer playerId
 >               player { playerDiscard = cards ++ playerDiscard player }
 
 The discard deck is only shuffled when no cards remain in your deck and
 you need to draw cards.  All cards in the discard pile are shuffled
 together.
 
-> drawCard :: Int -> Thunderstone (Maybe Card)
-> drawCard playerNumber = do
->     player <- getPlayer playerNumber
+> drawCard :: PlayerId -> Thunderstone (Maybe Card)
+> drawCard playerId = do
+>     player <- getPlayer playerId
 >     if null (playerDeck player)
 >       then
 >         if null (playerDiscard player)
@@ -376,36 +374,72 @@ together.
 >             return Nothing
 >           else do
 >             deck <- shuffle (playerDiscard player)
->             setPlayer playerNumber
+>             setPlayer playerId
 >                       player { playerDeck = deck, playerDiscard = [] }
->             drawCard playerNumber
+>             drawCard playerId
 >       else do
->         setPlayer playerNumber
+>         setPlayer playerId
 >                   player { playerDeck = tail (playerDeck player) }
 >         return (Just (head (playerDeck player)))
 
-> drawCards :: Int -> Int -> Thunderstone [Card]
-> drawCards playerNumber cardCount =
->     fmap catMaybes (sequence (replicate cardCount (drawCard playerNumber)))
+> getResources :: Thunderstone [(Card,Int)]
+> getResources = do
+>     state <- getState
+>     return (thunderstoneResources state)
 
-> getResources :: Thunderstone [[Card]]
-> getResources = fmap thunderstoneResources getState
+More briefly: fmap thunderstoneResources getState
 
-> getResource :: Int -> Thunderstone [Card]
-> getResource resourceNumber =
->     fmap ((!! resourceNumber) . thunderstoneResources) getState
+> getResourceCount :: Card -> Thunderstone Int
+> getResourceCount card = do
+>     resources <- getResources
+>     maybe (return 0) return (lookup card resources)
 
-> setResource :: Int -> [Card] -> Thunderstone ()
-> setResource resourceNumber cards = do
+More briefly: fmap (maybe 0 id . lookup card) getResources
+
+> setResourceCount :: Card -> Int -> Thunderstone ()
+> setResourceCount card count = do
 >     state <- getState
 >     let resources = thunderstoneResources state
 >     setState state {
->         thunderstoneResources = take resourceNumber resources
->                              ++ cards : drop (resourceNumber + 1) resources
+>         thunderstoneResources = map setCount (thunderstoneResources state)
 >         }
+>   where
+>     setCount resource@(resourceCard,_)
+>       | resourceCard == card = (resourceCard,count)
+>       | otherwise = resource
 
-> drawResource :: Int -> Thunderstone Card
-> drawResource resourceNumber = do
->     cards <- getResource resourceNumber
->     setResource resourceNumber (tail cards)
->     return (head cards)
+> drawResource :: Card -> Thunderstone (Maybe Card)
+> drawResource card = do
+>     count <- getResourceCount card
+>     if count > 0
+>       then do
+>         setResourceCount card (count - 1)
+>         return (Just card)
+>       else
+>         return Nothing
+
+> topHero :: HeroType -> Thunderstone (Maybe Card)
+> topHero heroType = do
+>     state <- getState
+>     let maybeStack = lookup heroType (thunderstoneHeroes state)
+>     return (maybe Nothing listToMaybe maybeStack)
+
+More briefly:
+fmap (maybe Nothing listToMaybe . lookup heroType . thunderstoneHeros) getState
+
+> drawHero :: HeroType -> Thunderstone (Maybe Card)
+> drawHero heroType = do
+>     maybeHero <- topHero heroType
+>     unless (maybeHero == Nothing) (do
+>         state <- getState
+>         setState state {
+>             thunderstoneHeroes = map updateHeroes (thunderstoneHeroes state)
+>             })
+>     return maybeHero
+>   where
+>     updateHeroes heroes@(hero,stack)
+>       | hero == heroType = (hero,drop 1 stack)
+>       | otherwise = heroes
+
+> multiple :: (Functor m, Monad m) => Int -> m (Maybe a) -> m [a]
+> multiple count action = fmap catMaybes (replicateM count action)
