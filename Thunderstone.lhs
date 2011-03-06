@@ -441,5 +441,28 @@ fmap (maybe Nothing listToMaybe . lookup heroType . thunderstoneHeros) getState
 >       | hero == heroType = (hero,drop 1 stack)
 >       | otherwise = heroes
 
+> drawHeroWithLevel :: HeroType -> HeroLevel -> Thunderstone (Maybe Card)
+> drawHeroWithLevel heroType heroLevel = do
+>     state <- getState
+>     let maybeStack = lookup heroType (thunderstoneHeroes state)
+>     maybe (return Nothing) drawCard maybeStack
+>   where
+>     card = Hero heroType heroLevel
+>     drawCard stack
+>       | card `elem` stack = do
+>           state <- getState
+>           setState state {
+>               thunderstoneHeroes =
+>                   map updateHeroes (thunderstoneHeroes state)
+>               }
+>           return (Just card)
+>       | otherwise = return Nothing
+>     updateHeroes heroes@(hero,stack)
+>       | hero == heroType = (hero,updateStack stack)
+>       | otherwise = heroes
+>     updateStack stack =
+>         let (top,bottom) = span (/= card) stack
+>         in  top ++ drop 1 bottom
+
 > multiple :: (Functor m, Monad m) => Int -> m (Maybe a) -> m [a]
 > multiple count action = fmap catMaybes (replicateM count action)
