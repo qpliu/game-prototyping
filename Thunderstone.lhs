@@ -1,7 +1,8 @@
 > module Thunderstone
 > where
 
-> import Control.Monad(mapM_,replicateM,unless)
+> import Control.Monad(mapM,mapM_,replicateM,unless,when)
+> import Data.List(find,findIndices,nub,subsequences,(\\))
 > import Data.Maybe(catMaybes,listToMaybe)
 > import System.Random(StdGen)
 
@@ -135,15 +136,15 @@ Game setup:
 For the first game, a specific set of cards is chosen.
 Otherwise, the Randomizer cards are used to select a random set of cards.
 
-> type Chooser = Thunderstone ([MonsterType],[HeroType],[VillageType])
+> type GameSetup = Thunderstone ([MonsterType],[HeroType],[VillageType])
 
 Cards for the first game:
 
-> firstGame :: Chooser
-> firstGame = return (monsters,heros,village)
+> firstGame :: GameSetup
+> firstGame = return (monsters,heroes,village)
 >   where
 >     monsters = [Enchanted, Ooze, UndeadDoom]
->     heros = [Elf, Lorigg, Regian, Thyrian]
+>     heroes = [Elf, Lorigg, Regian, Thyrian]
 >     village = [BattleFury, Fireball, FlamingSword, LightstoneGem,
 >                MagicalAura, ShortSword, Spear, TownGuard]
 
@@ -152,17 +153,32 @@ random heros, and eight village cards.
 
 For a longer game, try four or more monsters.
 
-> randomizer :: Int -> Chooser
+> randomizer :: Int -> GameSetup
 > randomizer monsterCount = do
 >     monsters <- randomize monsterCount
->     heros <- randomize 4
+>     heroes <- randomize 4
 >     village <- randomize 8
->     return (monsters,heros,village)
+>     return (monsters,heroes,village)
 >   where
 >     randomize count = do
 >         shuffled <- shuffle [minBound..maxBound]
 >         return (take count shuffled)
 
+For playing with specific cards, with random cards added if not enough
+cards are specified.
+
+> specificCards :: Int -> [MonsterType] -> [HeroType] -> [VillageType]
+>               -> GameSetup
+> specificCards monsterCount monsters heroes village = do
+>     monsters' <- randomize monsterCount monsters
+>     heroes' <- randomize 4 heroes
+>     village' <- randomize 8 village
+>     return (monsters',heroes',village')
+>   where
+>     randomize count specified = do
+>         included <- shuffle (nub specified)
+>         randoms <- shuffle ([minBound..maxBound] \\ included)
+>         return (take count (included ++ randoms))
 
 Setup:
 1. Populate the Dungeon
@@ -174,28 +190,31 @@ Setup:
    a. Draw Starting Party Deck
    b. Shuffle and draw starting hand
 
-> setup :: Int -> Chooser -> Thunderstone [PlayerId]
-> setup playerCount chooser = do
->     (monsters,heroes,village) <- chooser
+> setup :: Int -> GameSetup -> Thunderstone [PlayerId]
+> setup numberOfPlayers gameSetup = do
+>     (monsters,heroes,village) <- gameSetup
 >     dungeon <- dungeonDeck monsters
 >     state <- getState
 >     setState state {
 >         thunderstoneCurrentPlayer = 0,
->         thunderstonePlayers = replicate playerCount newPlayer,
+>         thunderstonePlayers = replicate numberOfPlayers newPlayer,
 >         thunderstoneDungeon = dungeon,
 >         thunderstoneHeroes = map heroStack heroes,
 >         thunderstoneResources = map basicStack [minBound..maxBound]
 >                              ++ map villageStack village
 >         }
->     mapM_ (setupPlayer . PlayerId) [0..playerCount-1]
->     return (map PlayerId [0..playerCount-1])
+>     playerIds <- getPlayerIds
+>     mapM_ setupPlayer playerIds
+>     currentPlayerId <- getCurrentPlayerId
+>     setPlayerState currentPlayerId StartingTurn
+>     return playerIds
 >   where
 >     newPlayer = Player {
 >         playerHand = [],
 >         playerDeck = [],
 >         playerDiscard = [],
 >         playerXP = 0,
->         playerActions = []
+>         playerState = Waiting
 >         }
 
 Draw Starting Party Deck:
@@ -274,10 +293,29 @@ Game state:
 >     playerDeck :: [Card],
 >     playerDiscard :: [Card],
 >     playerXP :: Int,
->     playerActions :: [PlayerAction]
+>     playerState :: PlayerState
 >     }
 
-PlayerActions are actions the player needs to take before the turn ends.
+> data PlayerState =
+>     StartingTurn
+
+>   | UsingVillageEffects {
+>         villageEffectsUsedCards :: [Card],
+>         villageEffectsNumberOfBuys :: Int,
+>         villageEffectsGold :: Int
+>         }
+>   | Purchasing {
+>         purchasingNumberOfBuys :: Int,
+>         purchasingGold :: Int
+>         }
+>   | LevelingUpHeroes
+
+>   | UsingDungeonEffects
+>   | AttackingMonster
+>   | TakingSpoils
+
+>   | Waiting
+>   deriving (Eq)
 
 Nonactive players may need to take actions due to card effects.
 
@@ -309,18 +347,112 @@ Rest
 2. End turn
 
 > data PlayerAction =
->     StartTurn
-
->   | UseVillageEffects
->   | Purchase Int Int
->   | LevelUpHeros
-
->   | UseDungeonEffects
->   | AttackMonster
-
->   | DestroyCard
-
+>     VisitVillage
+>   | UseVillageEffects Card
+>   | PurchaseHero HeroType
+>   | PurchaseBasic BasicType
+>   | PurchaseResource VillageType
+>   | LevelUpHero Card
 >   | EndTurn
+
+>   | EnterDungeon
+>   | EquipHero Card Card
+>   | AttackMonster DungeonRank
+
+>   | Rest (Maybe Card)
+
+> newtype DungeonRank = DungeonRank Int
+
+Game mechanics
+
+> isGameOver :: Thunderstone Bool
+> isGameOver = undefined
+
+> getScores :: Thunderstone [(PlayerId,Int)]
+> getScores = undefined
+
+> takeAction :: PlayerId -> PlayerAction -> Thunderstone Bool
+> takeAction playerId playerAction = do
+>     gameOver <- isGameOver
+>     if gameOver
+>       then return False
+>       else do
+>         playerState <- getPlayerState playerId
+>         status <- performAction playerState playerAction
+>         gameOver <- isGameOver
+>         unless gameOver maybeFinishTurn
+>         return status
+
+>   where
+
+>     performAction :: PlayerState -> PlayerAction -> Thunderstone Bool
+>     performAction StartingTurn VisitVillage = do
+>         setPlayerState playerId
+>                        UsingVillageEffects {
+>                            villageEffectsUsedCards = [],
+>                            villageEffectsNumberOfBuys = 0,
+>                            villageEffectsGold = 0
+>                            }
+>         return True
+>     performAction StartingTurn EnterDungeon = do
+>         setPlayerState playerId
+>                        UsingDungeonEffects
+>         return True
+>     performAction StartingTurn (Rest (Just card)) = do
+>         hand <- getHand playerId
+>         if card `elem` hand
+>           then do
+>             setHand playerId (remove1 card hand)
+>             endTurn
+>             return True
+>           else return False
+>     performAction StartingTurn (Rest Nothing) = do
+>         endTurn
+>         return True
+>     performAction StartingTurn _ = return False
+
+... more actions ...
+
+End your turn by discarding all cards face up on your discard pile,
+and draw six new cards to form a new hand.
+
+>     endTurn = do
+>         hand <- getHand playerId
+>         discard playerId hand
+>         handSize <- getHandSize playerId
+>         hand <- multiple handSize $ drawCard playerId
+>         setHand playerId hand
+
+>     maybeFinishTurn :: Thunderstone ()
+>     maybeFinishTurn = do
+>         turnFinished <- isTurnFinished
+>         when turnFinished (do
+>             state <- getState
+>             setState state {
+>                 thunderstoneCurrentPlayer =
+>                     thunderstoneCurrentPlayer state + 1
+>                         `mod` length (thunderstonePlayers state)
+>                 }
+>             currentPlayerId <- getCurrentPlayerId
+>             setPlayerState currentPlayerId StartingTurn)
+
+>     isTurnFinished :: Thunderstone Bool
+>     isTurnFinished = do
+>         playerIds <- getPlayerIds
+>         playerStates <- mapM getPlayerState playerIds
+>         return (all (== Waiting) playerStates)
+
+Low level game mechanics
+
+> getCurrentPlayerId :: Thunderstone PlayerId
+> getCurrentPlayerId = do
+>     state <- getState
+>     return (PlayerId (thunderstoneCurrentPlayer state))
+
+> getPlayerIds :: Thunderstone [PlayerId]
+> getPlayerIds = do
+>     state <- getState
+>     return (map PlayerId [0..length (thunderstonePlayers state) - 1])
 
 Low level game state transformations.
 
@@ -353,6 +485,14 @@ Low level game state transformations.
 > setHand playerId cards = do
 >     player <- getPlayer playerId
 >     setPlayer playerId player { playerHand = cards }
+
+> getPlayerState :: PlayerId -> Thunderstone PlayerState
+> getPlayerState playerId = fmap playerState (getPlayer playerId)
+
+> setPlayerState:: PlayerId -> PlayerState -> Thunderstone ()
+> setPlayerState playerId state = do
+>      player <- getPlayer playerId
+>      setPlayer playerId player { playerState = state }
 
 > discard :: PlayerId -> [Card] -> Thunderstone ()
 > discard playerId cards = do
@@ -441,6 +581,14 @@ fmap (maybe Nothing listToMaybe . lookup heroType . thunderstoneHeros) getState
 >       | hero == heroType = (hero,drop 1 stack)
 >       | otherwise = heroes
 
+When you level up, destroy the Hero card in your hand and pay the level
+cost of the Hero card in Experience Points.  Then, search the stack of
+matching Hero cards in the Village and find the card showing the next
+higher level for the Hero type you destroyed.  Place this card on the
+top of your discard pile.  Level 1 Heroes level up to 2, and Level 2
+level up to 3.  However, you may not level the same Hero card twice in
+one turn, i.e. from Level 1 to 3, and you may never skip a Level.
+
 > drawHeroWithLevel :: HeroType -> HeroLevel -> Thunderstone (Maybe Card)
 > drawHeroWithLevel heroType heroLevel = do
 >     state <- getState
@@ -458,11 +606,25 @@ fmap (maybe Nothing listToMaybe . lookup heroType . thunderstoneHeros) getState
 >           return (Just card)
 >       | otherwise = return Nothing
 >     updateHeroes heroes@(hero,stack)
->       | hero == heroType = (hero,updateStack stack)
+>       | hero == heroType = (hero,remove1 card stack)
 >       | otherwise = heroes
->     updateStack stack =
->         let (top,bottom) = span (/= card) stack
->         in  top ++ drop 1 bottom
+
+> getHandSize :: PlayerId -> Thunderstone Int
+> getHandSize playerId = return 6
 
 > multiple :: (Functor m, Monad m) => Int -> m (Maybe a) -> m [a]
 > multiple count action = fmap catMaybes (replicateM count action)
+
+> remove1 :: Eq a => a -> [a] -> [a]
+> remove1 item items = before ++ drop 1 after
+>   where
+>     (before,after) = span (/= item) items
+
+> select :: Show a => [a] -> String -> Maybe a
+> select items name =
+>     maybe selectBySubstring Just (find ((== name) . show) items)
+>   where
+>     selectBySubstring
+>       | length matchingIndices == 1 = Just (items !! head matchingIndices)
+>       | otherwise = Nothing
+>     matchingIndices = findIndices ((name `elem`) . subsequences . show) items
