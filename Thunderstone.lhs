@@ -1,7 +1,8 @@
 > module Thunderstone
 > where
 
-> import Control.Monad(mapM,mapM_,replicateM,unless,when)
+> import Control.Monad(foldM,mapM,mapM_,replicateM,unless,when)
+> import Data.Either(lefts,rights)
 > import Data.List(find,findIndices,nub,subsequences,(\\))
 > import Data.Maybe(catMaybes,listToMaybe)
 > import System.Random(StdGen)
@@ -12,25 +13,57 @@
 Data type that represents all the Thunderstone playing cards.
 
 > data Card =
->     Thunderstone
->   | Monster MonsterCard
+>     Dungeon DungeonCard
 >   | Basic BasicType
->   | Hero HeroType HeroLevel
+>   | Hero HeroCard
 >   | Village VillageType
->   | Disease
+>   | Disease DiseaseType
 >   deriving (Eq,Show)
 
 Data types that represent card types, as well as the Randomizer cards.
 
+> data ThunderstoneType =
+>     StoneOfMystery
+
+Wrath expansion:
+
+>   | StoneOfAgony
+
+Doomgate expansion:
+
+>   | StoneOfAvarice
+
+Dragonspire expansion:
+
+>   deriving (Eq,Show)
+
 > data MonsterType =
 >     Abyssal
->   | Doomknight
+>   | DoomknightHumanoid
 >   | Dragon
 >   | Enchanted
 >   | Humanoid
 >   | Ooze
 >   | UndeadDoom
 >   | UndeadSpirit
+
+Wrath expansion:
+
+>   | ElementalNature
+>   | ElementalPain
+>   | Golem
+>   | Horde
+
+Doomgate expansion:
+
+>   | AbyssalThunderspawn
+>   | CultistHumanoid
+>   | EvilDruidHumanoid
+>   | TheSwarm
+>   | UndeadStormwraith
+
+Dragonspire expansion:
+
 >   deriving (Bounded,Enum,Eq,Show)
 
 > data BasicType =
@@ -52,6 +85,34 @@ Data types that represent card types, as well as the Randomizer cards.
 >   | Regian
 >   | Selurin
 >   | Thyrian
+
+Promotional:
+
+>   | Clan
+>   | Harruli
+
+Wrath expansion:
+
+>   | Blind
+>   | Diin
+>   | Divine
+>   | Gangland
+>   | Gohlen
+>   | Runespawn
+>   | Toryn
+
+Doomgate expansion:
+
+>   | Deep
+>   | Drunari
+>   | Sidhe
+>   | Slynn
+>   | Tempest
+>   | Tholis
+>   | Verdan
+
+Dragonspire expansion:
+
 >   deriving (Bounded,Enum,Eq,Show)
 
 > data VillageType =
@@ -74,56 +135,243 @@ Data types that represent card types, as well as the Randomizer cards.
 >   | TownGuard
 >   | Trainer
 >   | Warhammer
+
+Wrath expansion:
+
+>   | Ambrosia
+>   | AmuletOfPower
+>   | Blacksmith
+>   | Claymore
+>   | CreepingDeath
+>   | CursedMace
+>   | ForesightElixir
+>   | IllusoryBlade
+>   | MagiStaff
+>   | MagicMissile
+>   | Sage
+>   | ShortBow
+>   | TaxCollector
+
+Doomgate expansion:
+
+>   | BlessedHammer
+>   | BorderGuard
+>   | Cyclone
+>   | DivineStaff
+>   | DoomgateSquire
+>   | FlaskOfOil
+>   | FortuneTeller
+>   | Glowberries
+>   | GreedBlade
+>   | PiousChaplain
+>   | SoulJar
+>   | SpiritBlast
+>   | SpiritHunter
+
+Dragonspire expansion:
+
 >   deriving (Bounded,Enum,Eq,Show)
 
+> data DiseaseType =
+>     DungeonRot
+
+Doomgate expansion:
+
+>   | BalefulPlague
+>   | Fatigue
+>   | Leprosy
+>   | Malaise
+>   | ThundersCurse
+
+>   deriving (Bounded,Enum,Eq,Show)
+
+> data DungeonFeatureType =
+>     PickTwo
+>   | Guardian
+
+Wrath expansion:
+
+>   | DeathTraps
+>   | DireTraps
+
+Doomgate expansion:
+
+>   | AmuletTreasures
+>   | UlbricksTreasures
+>   deriving (Eq,Show)
+
+Dragonspire expansion:
+
+
 Hero cards have three levels.
+
+> data HeroCard = HeroCard HeroType HeroLevel
+>   deriving (Eq,Show)
 
 > newtype HeroLevel = HeroLevel Int
 >   deriving (Eq,Show)
 
-The specific monsters for each monster type.
+> data HeroParameters = HeroParameters {
+>     heroName :: String,
+>     heroGoldValue :: Int,
+>     heroStrength :: Int,
+>     heroPurchaseCost :: Int,
+>     heroClass :: [HeroClass],
+>     heroLight :: Int,
+>     heroXPCost :: Int,
+>     heroVictoryPoints :: Int
+>     }
 
-> data MonsterCard =
->     ArchdukeOfPain
->   | BlackSlime
->   | BlinkDog
->   | BloodskullOrc
->   | DeadboneTroll
->   | EbonFume
->   | FirebrandCyclops
->   | Ghost
->   | GrayOoze
->   | GreenBlob
->   | GrayskinLizard
->   | GriknackGoblin
->   | Griffon
->   | Grudgebeast
->   | Haunt
->   | Knightmare
->   | LordOfDeath
->   | LordMortis
->   | Mythlurian
->   | Nixie
->   | NoxiousSlag
->   | Pegasus
->   | Prince
->   | RedJelly
->   | Revenant
->   | Skaladak
->   | Spectre
->   | Sphinx
->   | Succubus
->   | Suffering
->   | Tormentor
->   | TyxrTheOld
->   | Unchained
->   | UyrilUnending
->   | Wraith
+> data HeroClass =
+>     Archer
+>   | Cleric
+>   | Fighter
+>   | Thief
+>   | Wizard
 >   deriving (Eq,Show)
 
-> monsterCards :: MonsterType -> [MonsterCard]
+> heroParameters :: HeroCard -> HeroParameters
+
+> heroParameters (HeroCard Amazon (HeroLevel 1)) = HeroParameters {
+>     heroName = "Amazon Archer",
+>     heroGoldValue = 0,
+>     heroStrength = 4,
+>     heroPurchaseCost = 6,
+>     heroClass = [Fighter, Archer],
+>     heroLight = 0,
+>     heroXPCost = 2,
+>     heroVictoryPoints = 0
+>     }
+
+Amazon Archer effects:
+  ATTACK +1
+  DUNGEON: ATTACK +2 at Rank 2 or 3
+    This Hero's Dungeon Effect is an Attack Bonus in addition to the
+    Amazon's normal Attack.
+
+> heroParameters (HeroCard Amazon (HeroLevel 2)) = HeroParameters {
+>     heroName = "Amazon Huntress",
+>     heroGoldValue = 0,
+>     heroStrength = 5,
+>     heroPurchaseCost = 9,
+>     heroClass = [Fighter, Archer],
+>     heroLight = 0,
+>     heroXPCost = 3,
+>     heroVictoryPoints = 0
+>     }
+
+Amazon Huntress effects:
+  ATTACK +2
+  DUNGEON: ATTACK +3 at Rank 2 or 3
+    This Hero's Dungeon Effect is an Attack Bonus in addition to the
+    Amazon's normal Attack.
+
+> heroParameters (HeroCard Amazon (HeroLevel 3)) = HeroParameters {
+>     heroName = "Amazon Queen",
+>     heroGoldValue = 0,
+>     heroStrength = 6,
+>     heroPurchaseCost = 11,
+>     heroClass = [Fighter, Archer],
+>     heroLight = 0,
+>     heroXPCost = 0,
+>     heroVictoryPoints = 0
+>     }
+
+Amazon Queen effects:
+  ATTACK +2
+  DUNGEON: ATTACK +4 at Rank 2 or 3
+    This Hero's Dungeon Effect is an Attack Bonus in addition to the
+    Amazon's normal Attack.
+
+The specific dungeon cards.
+
+> data DungeonCard =
+
+>     Thunderstone ThunderstoneType
+
+>   | ArchdukeOfPain
+>   | Grudgebeast
+>   | Succcubus
+>   | TheUnchained
+>   | Tormentor
+
+>   | Darkness
+>   | Judgement
+>   | Knightmare
+>   | LordMortis
+>   | ThePrince
+
+>   | EbonFume
+>   | UyrilUnending
+>   | Mythlurian
+>   | TyxrTheOld
+>   | Skaladak
+
+>   | BlinkDog
+>   | Griffon
+>   | Nixie
+>   | Pegasus
+>   | Sphinx
+
+>   | BloodskullOrc
+>   | DeadboneTroll
+>   | FirebrandCyclops
+>   | GrayskinLizard
+>   | GriknackGoblin
+
+>   | BlackSlime
+>   | GrayOooze
+>   | GreenBlob
+>   | NoxiousSlag
+>   | RedJelly
+
+>   | Famine
+>   | Harbinger
+>   | LordOfDeath
+>   | Suffering
+
+>   | Ghost
+>   | Haunt
+>   | Revenant
+>   | Spectre
+>   | Wraith
+
+Wrath expansion:
+
+>   | AirWrath
+>   | EarthWrath
+>   | FireWrath
+>   | WaterWrath
+
+>   | BloodTorment
+>   | LavaTorment
+>   | ShadowTorment
+>   | SmokeTorment
+>   | SteamTorment
+
+>   | BronzeGolem
+>   | ClayGolem
+>   | Colossus
+>   | IronGolem
+>   | StoneGolem
+
+>   | HordeHumanoid Int
+
+>   | DarkChampion
+
+Doomgate expansion:
+
+>   | Swarm Int
+
+>   | UnholyGuardian
+
+Dragonspire expansion:
+
+>   deriving (Eq,Show)
+
+> monsterCards :: MonsterType -> [DungeonCard]
 > monsterCards Abyssal = []
-> monsterCards Doomknight = []
+> monsterCards DoomknightHumanoid = []
 > monsterCards Dragon = []
 > monsterCards Enchanted = []
 > monsterCards Humanoid = []
@@ -131,54 +379,176 @@ The specific monsters for each monster type.
 > monsterCards UndeadDoom = []
 > monsterCards UndeadSpirit = []
 
+> dungeonFeatureCards :: DungeonFeatureType -> [DungeonCard]
+> dungeonFeatureCards = undefined
+
 Game setup:
 
 For the first game, a specific set of cards is chosen.
 Otherwise, the Randomizer cards are used to select a random set of cards.
 
-> type GameSetup = Thunderstone ([MonsterType],[HeroType],[VillageType])
+> type GameSetup = Thunderstone ([DungeonCard],[HeroType],[VillageType])
 
 Cards for the first game:
 
 > firstGame :: GameSetup
-> firstGame = return (monsters,heroes,village)
+> firstGame = do
+>     dungeon <- dungeonSetup 1 thunderstones 3 monsters
+>                             0 dungeonFeatures guardians
+>     return (dungeon,heroes,village)
 >   where
+>     thunderstones = [StoneOfMystery]
 >     monsters = [Enchanted, Ooze, UndeadDoom]
 >     heroes = [Elf, Lorigg, Regian, Thyrian]
 >     village = [BattleFury, Fireball, FlamingSword, LightstoneGem,
 >                MagicalAura, ShortSword, Spear, TownGuard]
+>     dungeonFeatures = []
+>     guardians = []
 
 Use the Randomizer cards to choose three random monsters, four
 random heros, and eight village cards. 
 
 For a longer game, try four or more monsters.
 
-> randomizer :: Int -> GameSetup
-> randomizer monsterCount = do
->     monsters <- randomize monsterCount
->     heroes <- randomize 4
->     village <- randomize 8
->     return (monsters,heroes,village)
+> basicGame :: GameSetup
+> basicGame = do
+>     dungeon <- dungeonSetup 1 thunderstones 3 monsters
+>                             0 dungeonFeatures guardians
+>     heroTypes <- shuffle heroes
+>     villageTypes <- shuffle village
+>     return (dungeon,take 4 heroTypes,take 8 villageTypes)
 >   where
->     randomize count = do
->         shuffled <- shuffle [minBound..maxBound]
->         return (take count shuffled)
+>     thunderstones = [StoneOfMystery]
+>     monsters = [Abyssal .. UndeadSpirit]
+>     heroes = [Amazon .. Thyrian]
+>     village = [ArcaneEnergies .. Warhammer]
+>     dungeonFeatures = []
+>     guardians = []
 
-For playing with specific cards, with random cards added if not enough
-cards are specified.
+Cards for the first Wrath of the Elements game:
 
-> specificCards :: Int -> [MonsterType] -> [HeroType] -> [VillageType]
->               -> GameSetup
-> specificCards monsterCount monsters heroes village = do
->     monsters' <- randomize monsterCount monsters
->     heroes' <- randomize 4 heroes
->     village' <- randomize 8 village
->     return (monsters',heroes',village')
+> firstWrathGame :: GameSetup
+> firstWrathGame = do
+>     dungeon <- dungeonSetup 1 thunderstones 3 monsters
+>                             2 dungeonFeatures guardians
+>     return (dungeon,heroes,village)
 >   where
->     randomize count specified = do
->         included <- shuffle (nub specified)
->         randoms <- shuffle ([minBound..maxBound] \\ included)
->         return (take count (included ++ randoms))
+>     thunderstones = [StoneOfAgony]
+>     monsters = [Horde, ElementalNature, UndeadDoom]
+>     heroes = [Chalice, Feayn, Diin, Toryn]
+>     village = [CursedMace, ForesightElixir, Lantern, MagiStaff, MagicMissile,
+>                Sage, ShortBow, TownGuard]
+>     dungeonFeatures = [DireTraps, Guardian]
+>     guardians = [DarkChampion]
+
+Wrath of Elements plus basic set:
+
+> wrathGame :: GameSetup
+> wrathGame = do
+>     dungeon <- dungeonSetup 1 thunderstones 3 monsters
+>                             0 dungeonFeatures guardians
+>     heroTypes <- shuffle heroes
+>     villageTypes <- shuffle village
+>     return (dungeon,take 4 heroTypes,take 8 villageTypes)
+>   where
+>     thunderstones = [StoneOfMystery,StoneOfAgony]
+>     monsters = [Abyssal .. UndeadSpirit] ++ [ElementalNature .. Horde]
+>     heroes = [Amazon .. Thyrian] ++ [Blind .. Toryn]
+>     village = [ArcaneEnergies .. Warhammer] ++ [Ambrosia .. TaxCollector]
+>     dungeonFeatures = [PickTwo, Guardian, Guardian, DeathTraps, DireTraps]
+>     guardians = [DarkChampion]
+
+Cards for the first Doomgate Legion game:
+
+> firstDoomgateGame :: GameSetup
+> firstDoomgateGame = do
+>     dungeon <- dungeonSetup 1 thunderstones 3 monsters
+>                             2 dungeonFeatures guardians
+>     return (dungeon,heroes,village)
+>   where
+>     thunderstones = [StoneOfAvarice]
+>     monsters = [AbyssalThunderspawn, CultistHumanoid, EvilDruidHumanoid]
+>     heroes = [Chalice, Feayn, Diin, Toryn]
+>     village = [CursedMace, ForesightElixir, Lantern, MagiStaff, MagicMissile,
+>                Sage, ShortBow, TownGuard]
+>     dungeonFeatures = [AmuletTreasures, Guardian]
+>     guardians = [UnholyGuardian]
+
+Doomgate Legion plus basic set:
+
+> doomgateGame :: GameSetup
+> doomgateGame = undefined
+
+Cards for the first Dragonspire game:
+
+> firstDragonspireGame :: GameSetup
+> firstDragonspireGame = undefined
+
+Dragonspire plus basic set:
+
+> dragonspireGame :: GameSetup
+> dragonspireGame = undefined
+
+There are ten cards for each class.  Take all 30 Monster cards that match
+the three selected classes and shuffle them together.  This becomes the
+Dungeon Deck.  Count off ten Monster cards (without revealing them) and
+shuffle them together with the special Thunderstone card.  Place these
+eleven cards at the bottom of the Dungeon Deck.
+
+A few cards sow a large question mark and say "Dungeon Feature" at the
+top.  These will add special features like traps to the dungeon, and are
+mixed in with the Monster Randomizers.
+
+Turn over cards from the stack of Monster Randomizers one at a time until
+you turn over a total of three different Monster cards, plus any number
+of Dungeon Feature Randomizers.
+
+If you draw any Dungeon Feature Randomizers, shuffle the "Dungeon Feature"
+cards.  Take one card from the Dungeon Feature pile for each special
+Randomizer you drew.
+
+> dungeonSetup :: Int -> [ThunderstoneType] -> Int -> [MonsterType]
+>              -> Int -> [DungeonFeatureType] -> [DungeonCard]
+>              -> Thunderstone [DungeonCard]
+> dungeonSetup numberOfThunderstones thunderstones
+>              numberOfMonsterTypes monsterTypes
+>              minimumNumberOfDungeonFeatures dungeonFeatureTypes
+>              guardians = do
+>     randomizers <- shuffle (map Left monsterTypes
+>                             ++ map Right dungeonFeatureTypes)
+>     let drawnRandomizers =
+>             head $ (++ [randomizers]) -- if bad input, use everything
+>                  $ dropWhile insufficient
+>                  $ map (flip drop randomizers)
+>                        [numberOfMonsterTypes .. length randomizers]
+>     let dungeonFeatures =
+>             concatMap dungeonFeatureCards (rights drawnRandomizers)
+>     let monsters = concatMap monsterCards (lefts drawnRandomizers)
+>     deck <- shuffle (dungeonFeatures ++ monsters)
+>     let deckWithProgressiveMonsters = setProgressiveMonsters deck
+>     let numberOfGuardians =
+>             length (filter (== Guardian) (rights drawnRandomizers))
+>     deckWithGuardians <- foldM shuffleInGuardian deckWithProgressiveMonsters
+>                                (take numberOfGuardians guardians)
+>     shuffledThunderstones <- shuffle thunderstones
+>     shuffleToBottom 10 deckWithGuardians
+>         (take numberOfThunderstones (map Thunderstone shuffledThunderstones))
+>   where
+>     insufficient cards =
+>       length (lefts cards) < numberOfMonsterTypes
+>       || length (rights cards) < minimumNumberOfDungeonFeatures
+>                                  + length (filter (== PickTwo)
+>                                                   (rights cards))
+>     shuffleInGuardian deck guardian =
+>         shuffleToBottom 10 deck [guardian]
+>     setProgressiveMonsters deck =
+>         setProgressiveCards (map progressTheHorde [3..12])
+>       $ setProgressiveCards (map progressTheSwarm [4..13]) deck
+>     progressTheHorde n (HordeHumanoid _) =
+>         Just (HordeHumanoid n)
+>     progressTheHorde _ _ = Nothing
+>     progressTheSwarm n (Swarm _) = Just (Swarm n)
+>     progressTheSwarm _ _ = Nothing
 
 Setup:
 1. Populate the Dungeon
@@ -192,13 +562,12 @@ Setup:
 
 > setup :: Int -> GameSetup -> Thunderstone [PlayerId]
 > setup numberOfPlayers gameSetup = do
->     (monsters,heroes,village) <- gameSetup
->     dungeon <- dungeonDeck monsters
+>     (dungeonCards,heroes,village) <- gameSetup
 >     state <- getState
 >     setState state {
 >         thunderstoneCurrentPlayer = 0,
 >         thunderstonePlayers = replicate numberOfPlayers newPlayer,
->         thunderstoneDungeon = dungeon,
+>         thunderstoneDungeon = map Dungeon dungeonCards,
 >         thunderstoneHeroes = map heroStack heroes,
 >         thunderstoneResources = map basicStack [minBound..maxBound]
 >                              ++ map villageStack village
@@ -232,18 +601,6 @@ your starting hand.
 >         hand <- multiple 6 $ drawCard playerId
 >         setHand playerId hand
 
-There are ten cards for each class.  Take all 30 Monster cards that match
-the three selected classes and shuffle them together.  This becomes the
-Dungeon Deck.  Count off ten Monster cards (without revealing them) and
-shuffle them together with the special Thunderstone card.  Place these
-eleven cards at the bottom of the Dungeon Deck.
-
->     dungeonDeck :: [MonsterType] -> Thunderstone [Card]
->     dungeonDeck monsters = do
->         cards <- shuffle (map Monster (concatMap monsterCards monsters))
->         bottomOfTheDeck <- shuffle (Thunderstone : take 10 cards)
->         return (drop 10 cards ++ bottomOfTheDeck)
-
 Hero stack:
 
 Place both level 3 Hero cards in the stack.  Next, place all four level
@@ -252,10 +609,10 @@ cards on top of those.  This will create a stack of Hero cards with all
 level 3 cards on the bottom, the level 2 cards in the middle, and the
 level 1 cards on top.
 
->     heroStack :: HeroType -> (HeroType,[Card])
->     heroStack hero = (hero, replicate 6 (Hero hero (HeroLevel 1))
->                          ++ replicate 4 (Hero hero (HeroLevel 2))
->                          ++ replicate 2 (Hero hero (HeroLevel 3)))
+>     heroStack :: HeroType -> (HeroType,[HeroCard])
+>     heroStack hero = (hero, replicate 6 (HeroCard hero (HeroLevel 1))
+>                          ++ replicate 4 (HeroCard hero (HeroLevel 2))
+>                          ++ replicate 2 (HeroCard hero (HeroLevel 3)))
 
 Village stack:
 
@@ -266,12 +623,15 @@ There are eight of each village card.
 
 Basic stack:
 
-There are eighteen(?) of each basic card.
-(Or should there be more militia?)
-(The rules say there are 90 basic cards, including Disease.)
+The base game has 90 basic cards, including disease cards.
+
+30 Militia, 15 each of Torch, Dagger, Iron Rations, and disease.
+
+The Wrath expansion has 30 replacement Militia, and 12 special disease cards.
 
 >     basicStack :: BasicType -> (Card,Int)
->     basicStack basic = (Basic basic,18)
+>     basicStack Militia = (Basic Militia,30)
+>     basicStack basic = (Basic basic,15)
 
 Game state:
 
@@ -284,7 +644,7 @@ Game state:
 >     thunderstoneCurrentPlayer :: Int,
 >     thunderstonePlayers :: [Player],
 >     thunderstoneDungeon :: [Card],
->     thunderstoneHeroes :: [(HeroType,[Card])],
+>     thunderstoneHeroes :: [(HeroType,[HeroCard])],
 >     thunderstoneResources :: [(Card,Int)]
 >     }
 
@@ -300,6 +660,7 @@ Game state:
 >     StartingTurn
 
 >   | UsingVillageEffects {
+>         villageEffectsUnusedCards :: [Card],
 >         villageEffectsUsedCards :: [Card],
 >         villageEffectsNumberOfBuys :: Int,
 >         villageEffectsGold :: Int
@@ -380,15 +741,17 @@ Game mechanics
 >         playerState <- getPlayerState playerId
 >         status <- performAction playerState playerAction
 >         gameOver <- isGameOver
->         unless gameOver maybeFinishTurn
+>         unless gameOver startNextTurnIfTurnFinished
 >         return status
 
 >   where
 
 >     performAction :: PlayerState -> PlayerAction -> Thunderstone Bool
 >     performAction StartingTurn VisitVillage = do
+>         hand <- getHand playerId
 >         setPlayerState playerId
 >                        UsingVillageEffects {
+>                            villageEffectsUnusedCards = hand,
 >                            villageEffectsUsedCards = [],
 >                            villageEffectsNumberOfBuys = 0,
 >                            villageEffectsGold = 0
@@ -423,8 +786,8 @@ and draw six new cards to form a new hand.
 >         hand <- multiple handSize $ drawCard playerId
 >         setHand playerId hand
 
->     maybeFinishTurn :: Thunderstone ()
->     maybeFinishTurn = do
+>     startNextTurnIfTurnFinished :: Thunderstone ()
+>     startNextTurnIfTurnFinished = do
 >         turnFinished <- isTurnFinished
 >         when turnFinished (do
 >             state <- getState
@@ -457,12 +820,16 @@ Low level game mechanics
 Low level game state transformations.
 
 > shuffle :: [a] -> Thunderstone [a]
-> shuffle cards = do
+> shuffle deck = do
 >     state <- getState
->     let (stdGen,shuffledCards) =
->             Shuffle.shuffle (thunderstoneStdGen state) cards
+>     let (stdGen,shuffled) = Shuffle.shuffle (thunderstoneStdGen state) deck
 >     setState state { thunderstoneStdGen = stdGen }
->     return shuffledCards
+>     return shuffled
+
+> shuffleToBottom :: Int -> [a] -> [a] -> Thunderstone [a]
+> shuffleToBottom count cards deck = do
+>     bottom <- shuffle (cards ++ take count deck)
+>     return (drop count deck ++ bottom)
 
 > getPlayer :: PlayerId -> Thunderstone Player
 > getPlayer (PlayerId playerNumber) = do
@@ -532,7 +899,7 @@ More briefly: fmap thunderstoneResources getState
 > getResourceCount :: Card -> Thunderstone Int
 > getResourceCount card = do
 >     resources <- getResources
->     maybe (return 0) return (lookup card resources)
+>     return (maybe 0 id (lookup card resources))
 
 More briefly: fmap (maybe 0 id . lookup card) getResources
 
@@ -558,7 +925,7 @@ More briefly: fmap (maybe 0 id . lookup card) getResources
 >       else
 >         return Nothing
 
-> topHero :: HeroType -> Thunderstone (Maybe Card)
+> topHero :: HeroType -> Thunderstone (Maybe HeroCard)
 > topHero heroType = do
 >     state <- getState
 >     let maybeStack = lookup heroType (thunderstoneHeroes state)
@@ -567,7 +934,7 @@ More briefly: fmap (maybe 0 id . lookup card) getResources
 More briefly:
 fmap (maybe Nothing listToMaybe . lookup heroType . thunderstoneHeros) getState
 
-> drawHero :: HeroType -> Thunderstone (Maybe Card)
+> drawHero :: HeroType -> Thunderstone (Maybe HeroCard)
 > drawHero heroType = do
 >     maybeHero <- topHero heroType
 >     unless (maybeHero == Nothing) (do
@@ -589,13 +956,13 @@ top of your discard pile.  Level 1 Heroes level up to 2, and Level 2
 level up to 3.  However, you may not level the same Hero card twice in
 one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 
-> drawHeroWithLevel :: HeroType -> HeroLevel -> Thunderstone (Maybe Card)
+> drawHeroWithLevel :: HeroType -> HeroLevel -> Thunderstone (Maybe HeroCard)
 > drawHeroWithLevel heroType heroLevel = do
 >     state <- getState
 >     let maybeStack = lookup heroType (thunderstoneHeroes state)
 >     maybe (return Nothing) drawCard maybeStack
 >   where
->     card = Hero heroType heroLevel
+>     card = HeroCard heroType heroLevel
 >     drawCard stack
 >       | card `elem` stack = do
 >           state <- getState
@@ -622,9 +989,22 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 
 > select :: Show a => [a] -> String -> Maybe a
 > select items name =
->     maybe selectBySubstring Just (find ((== name) . show) items)
+>     maybe (selectBySubstring matchingIndices)
+>           Just (find ((== name) . show) items)
 >   where
->     selectBySubstring
->       | length matchingIndices == 1 = Just (items !! head matchingIndices)
->       | otherwise = Nothing
+>     selectBySubstring [index] = Just (items !! index)
+>     selectBySubstring _ = Nothing
 >     matchingIndices = findIndices ((name `elem`) . subsequences . show) items
+
+For the Horde and the Swarm: add progressive stats to the cards
+once they are shuffled into the dungeon deck.
+
+> setProgressiveCards :: [a -> Maybe a] -> [a] -> [a]
+> setProgressiveCards setStats deck =
+>     reverse $ fst $ foldl updateCard ([],setStats) deck
+>   where
+>     updateCard (cards,[]) card = (card:cards,[])
+>     updateCard (cards,setStats@(setStat:remainingSetStats)) card =
+>         case setStat card of
+>             Just newCard -> (newCard:cards,remainingSetStats)
+>             Nothing -> (card:cards,setStats)
