@@ -35,6 +35,9 @@ Doomgate expansion:
 
 Dragonspire expansion:
 
+>   | StoneOfScorn
+>   | StoneOfTerror
+
 >   deriving (Eq,Show)
 
 > data MonsterType =
@@ -63,6 +66,14 @@ Doomgate expansion:
 >   | UndeadStormwraith
 
 Dragonspire expansion:
+
+>   | BanditHumanoid
+>   | DarkEnchanted
+>   | ElementalFireGiant
+>   | HydraDragon
+>   | OrcHumanoid
+>   | UndeadLich
+>   | UndeadPlague
 
 >   deriving (Bounded,Enum,Eq,Show)
 
@@ -112,6 +123,18 @@ Doomgate expansion:
 >   | Verdan
 
 Dragonspire expansion:
+
+>   | Belzur
+>   | Cabal
+>   | Chulian
+>   | Evoker
+>   | Flame
+>   | Gorinth
+>   | HalfOrc
+>   | Phalanx
+>   | Stoneguard
+>   | Terakian
+>   | Veteran
 
 >   deriving (Bounded,Enum,Eq,Show)
 
@@ -170,10 +193,29 @@ Doomgate expansion:
 
 Dragonspire expansion:
 
+>   | BluefireStaff
+>   | BurntOffering
+>   | ChieftainsDrum
+>   | FrostBolt
+>   | FrostGiantAxe
+>   | GuardianBlade
+>   | Guide
+>   | Quartermaster
+>   | Polymorph
+>   | RecurveBow
+>   | Scout
+>   | Silverstorm
+>   | Skullbreaker
+>   | SoulGem
+>   | SpoiledFood
+>   | ThunderRing
+>   | TorynGauntlet
+>   | Trader
+
 >   deriving (Bounded,Enum,Eq,Show)
 
 > data DiseaseType =
->     DungeonRot
+>     DefaultDisease
 
 Doomgate expansion:
 
@@ -184,6 +226,19 @@ Doomgate expansion:
 >   | ThundersCurse
 
 >   deriving (Bounded,Enum,Eq,Show)
+
+> data Setting =
+>     DefaultSetting
+
+Dragonspire expansion:
+
+>   | Barrowsdale
+>   | Doomgate
+>   | Dragonspire
+>   | Dreadwatch
+>   | FeaynSwamp
+>   | Grimhold
+>   | RegianCove
 
 > data DungeonFeatureType =
 >     PickTwo
@@ -198,10 +253,14 @@ Doomgate expansion:
 
 >   | AmuletTreasures
 >   | UlbricksTreasures
->   deriving (Eq,Show)
 
 Dragonspire expansion:
 
+>   | DraconicTraps
+>   | FigurineTreasures
+>   | Settings
+
+>   deriving (Eq,Show)
 
 Hero cards have three levels.
 
@@ -219,7 +278,8 @@ Hero cards have three levels.
 >     heroClass :: [HeroClass],
 >     heroLight :: Int,
 >     heroXPCost :: Int,
->     heroVictoryPoints :: Int
+>     heroVictoryPoints :: Player -> Int,
+>     heroStackSize :: Int
 >     }
 
 > data HeroClass =
@@ -240,7 +300,8 @@ Hero cards have three levels.
 >     heroClass = [Fighter, Archer],
 >     heroLight = 0,
 >     heroXPCost = 2,
->     heroVictoryPoints = 0
+>     heroVictoryPoints = const 0,
+>     heroStackSize = 6
 >     }
 
 Amazon Archer effects:
@@ -257,7 +318,8 @@ Amazon Archer effects:
 >     heroClass = [Fighter, Archer],
 >     heroLight = 0,
 >     heroXPCost = 3,
->     heroVictoryPoints = 0
+>     heroVictoryPoints = const 0,
+>     heroStackSize = 4
 >     }
 
 Amazon Huntress effects:
@@ -274,7 +336,8 @@ Amazon Huntress effects:
 >     heroClass = [Fighter, Archer],
 >     heroLight = 0,
 >     heroXPCost = 0,
->     heroVictoryPoints = 0
+>     heroVictoryPoints = const 2,
+>     heroStackSize = 2
 >     }
 
 Amazon Queen effects:
@@ -292,8 +355,8 @@ The specific dungeon cards.
 >   | ArchdukeOfPain
 >   | Grudgebeast
 >   | Succcubus
->   | TheUnchained
 >   | Tormentor
+>   | TheUnchained
 
 >   | Darkness
 >   | Judgement
@@ -336,6 +399,10 @@ The specific dungeon cards.
 >   | Spectre
 >   | Wraith
 
+Promotional:
+
+>   | DeathSentinel
+
 Wrath expansion:
 
 >   | AirWrath
@@ -357,15 +424,117 @@ Wrath expansion:
 
 >   | HordeHumanoid Int
 
->   | DarkChampion
+>   | TheCage
+>   | DeliriumRoom
+>   | PoisonGasTrap
+
+>   | PitTrap
+>   | RollingBoulder
+
+>   | DoomknightGuardian
 
 Doomgate expansion:
 
+>   | TheBloodless
+>   | Razorback
+>   | Regicide
+>   | TendrilMinion
+>   | Usurper
+
+>   | TheAuthority
+>   | TheCleansed
+>   | TheDevout
+>   | TheFaithful
+>   | TheVoice
+>   | TheVision -- promotional
+
+>   | Arachnea
+>   | CrowTalker
+>   | GaiasCurse
+>   | MonarchDruid
+>   | NaturesMistress
+>   | Mammoth -- promotional
+
 >   | Swarm Int
+
+>   | Deathchill
+>   | Hellstorm
+>   | LightningsGaze
+>   | MurderWind
+>   | Rage
+
+>   | GreedAmulet
+>   | NaturesAmulet
+>   | StrengthAmulet
+
+>   | UlbricksArmor
+>   | UlbricksGauntlets
+>   | UlbricksHelmet
 
 >   | UnholyGuardian
 
 Dragonspire expansion:
+
+>   | Assassin
+>   | Cutthroat
+>   | Highwayman
+>   | Stalker
+>   | Thug
+
+>   | Basilisk
+>   | Harpy
+>   | Manticore
+>   | Medusa
+>   | Minotaur
+
+>   | Blaze
+>   | ChokingSmoke
+>   | Ember
+>   | Flare
+>   | Inferno
+
+>   | FireGiant
+>   | FrostGiant
+>   | MountainGiant
+>   | StoneGiant
+>   | Titan
+
+>   | EarthTempest
+>   | FlameRage
+>   | Hydra
+>   | WaterWrathHydra
+>   | WindFury
+
+>   | HalfOgre
+>   | OrcBlademaster
+>   | OrcWarlord
+>   | ShadowKiller
+>   | StandardBearer
+
+>   | Deathbringer
+>   | Destiny
+>   | GraveKnight
+>   | LichLord
+>   | TombHaunt
+
+>   | HungryDead
+>   | Plaguebearer
+>   | PlagueZombie
+>   | RestlessCorpse
+>   | WalkingScourge
+
+>   | DragonsClaws
+>   | DragonsJaw
+>   | DragonsTeeth
+>   | DragonsWords
+
+>   | EmeraldDragon
+>   | IvoryDragon
+>   | RubyDragon
+>   | SapphireDragon
+
+>   | GuardianOfNight
+>   | GuardianOfTorment
 
 >   deriving (Eq,Show)
 
@@ -387,23 +556,26 @@ Game setup:
 For the first game, a specific set of cards is chosen.
 Otherwise, the Randomizer cards are used to select a random set of cards.
 
-> type GameSetup = Thunderstone ([DungeonCard],[HeroType],[VillageType])
+> type GameSetup = Thunderstone ([DungeonCard],[HeroType],[VillageType],
+>                                [DiseaseType],Setting)
 
 Cards for the first game:
 
 > firstGame :: GameSetup
 > firstGame = do
->     dungeon <- dungeonSetup 1 thunderstones 3 monsters
->                             0 dungeonFeatures guardians
->     return (dungeon,heroes,village)
+>     (dungeon,setting) <- dungeonSetup 1 thunderstones 3 monsters
+>                                       0 dungeonFeatures guardians settings
+>     return (dungeon,heroes,village,diseases,setting)
 >   where
 >     thunderstones = [StoneOfMystery]
 >     monsters = [Enchanted, Ooze, UndeadDoom]
+>     dungeonFeatures = []
+>     guardians = []
+>     settings = []
 >     heroes = [Elf, Lorigg, Regian, Thyrian]
 >     village = [BattleFury, Fireball, FlamingSword, LightstoneGem,
 >                MagicalAura, ShortSword, Spear, TownGuard]
->     dungeonFeatures = []
->     guardians = []
+>     diseases = replicate 60 DefaultDisease
 
 Use the Randomizer cards to choose three random monsters, four
 random heros, and eight village cards. 
@@ -412,82 +584,95 @@ For a longer game, try four or more monsters.
 
 > basicGame :: GameSetup
 > basicGame = do
->     dungeon <- dungeonSetup 1 thunderstones 3 monsters
->                             0 dungeonFeatures guardians
+>     (dungeon,setting) <- dungeonSetup 1 thunderstones 3 monsters
+>                                       0 dungeonFeatures guardians settings
 >     heroTypes <- shuffle heroes
 >     villageTypes <- shuffle village
->     return (dungeon,take 4 heroTypes,take 8 villageTypes)
+>     return (dungeon,take 4 heroTypes,take 8 villageTypes,diseases,setting)
 >   where
 >     thunderstones = [StoneOfMystery]
 >     monsters = [Abyssal .. UndeadSpirit]
->     heroes = [Amazon .. Thyrian]
->     village = [ArcaneEnergies .. Warhammer]
 >     dungeonFeatures = []
 >     guardians = []
+>     settings = []
+>     heroes = [Amazon .. Thyrian]
+>     village = [ArcaneEnergies .. Warhammer]
+>     diseases = replicate 60 DefaultDisease
 
 Cards for the first Wrath of the Elements game:
 
 > firstWrathGame :: GameSetup
 > firstWrathGame = do
->     dungeon <- dungeonSetup 1 thunderstones 3 monsters
->                             2 dungeonFeatures guardians
->     return (dungeon,heroes,village)
+>     (dungeon,setting) <- dungeonSetup 1 thunderstones 3 monsters
+>                                       2 dungeonFeatures guardians settings
+>     return (dungeon,heroes,village,diseases,setting)
 >   where
 >     thunderstones = [StoneOfAgony]
 >     monsters = [Horde, ElementalNature, UndeadDoom]
+>     dungeonFeatures = [DireTraps, Guardian]
+>     guardians = [DoomknightGuardian]
+>     settings = []
 >     heroes = [Chalice, Feayn, Diin, Toryn]
 >     village = [CursedMace, ForesightElixir, Lantern, MagiStaff, MagicMissile,
 >                Sage, ShortBow, TownGuard]
->     dungeonFeatures = [DireTraps, Guardian]
->     guardians = [DarkChampion]
+>     diseases = replicate 60 DefaultDisease
 
 Wrath of Elements plus basic set:
 
 > wrathGame :: GameSetup
 > wrathGame = do
->     dungeon <- dungeonSetup 1 thunderstones 3 monsters
->                             0 dungeonFeatures guardians
+>     (dungeon,setting) <- dungeonSetup 1 thunderstones 3 monsters
+>                                       0 dungeonFeatures guardians settings
 >     heroTypes <- shuffle heroes
 >     villageTypes <- shuffle village
->     return (dungeon,take 4 heroTypes,take 8 villageTypes)
+>     return (dungeon,take 4 heroTypes,take 8 villageTypes,diseases,setting)
 >   where
 >     thunderstones = [StoneOfMystery,StoneOfAgony]
 >     monsters = [Abyssal .. UndeadSpirit] ++ [ElementalNature .. Horde]
+>     dungeonFeatures = [PickTwo, Guardian, Guardian, DeathTraps, DireTraps]
+>     guardians = [DoomknightGuardian]
+>     settings = []
 >     heroes = [Amazon .. Thyrian] ++ [Blind .. Toryn]
 >     village = [ArcaneEnergies .. Warhammer] ++ [Ambrosia .. TaxCollector]
->     dungeonFeatures = [PickTwo, Guardian, Guardian, DeathTraps, DireTraps]
->     guardians = [DarkChampion]
+>     diseases = replicate 60 DefaultDisease
 
 Cards for the first Doomgate Legion game:
 
 > firstDoomgateGame :: GameSetup
 > firstDoomgateGame = do
->     dungeon <- dungeonSetup 1 thunderstones 3 monsters
->                             2 dungeonFeatures guardians
->     return (dungeon,heroes,village)
+>     (dungeon,setting) <- dungeonSetup 1 thunderstones 3 monsters
+>                                       2 dungeonFeatures guardians settings
+>     return (dungeon,heroes,village,diseases,setting)
 >   where
 >     thunderstones = [StoneOfAvarice]
 >     monsters = [AbyssalThunderspawn, CultistHumanoid, EvilDruidHumanoid]
+>     dungeonFeatures = [AmuletTreasures, Guardian]
+>     guardians = [UnholyGuardian]
+>     settings = []
 >     heroes = [Chalice, Feayn, Diin, Toryn]
 >     village = [CursedMace, ForesightElixir, Lantern, MagiStaff, MagicMissile,
 >                Sage, ShortBow, TownGuard]
->     dungeonFeatures = [AmuletTreasures, Guardian]
->     guardians = [UnholyGuardian]
-
-Doomgate Legion plus basic set:
-
-> doomgateGame :: GameSetup
-> doomgateGame = undefined
+>     diseases = replicate 10 DefaultDisease
+>                ++ concatMap (replicate 3) [BalefulPlague,Fatigue,Leprosy,
+>                                            Malaise,ThundersCurse]
 
 Cards for the first Dragonspire game:
 
 > firstDragonspireGame :: GameSetup
-> firstDragonspireGame = undefined
-
-Dragonspire plus basic set:
-
-> dragonspireGame :: GameSetup
-> dragonspireGame = undefined
+> firstDragonspireGame = do
+>     (dungeon,setting) <- dungeonSetup 1 thunderstones 3 monsters
+>                                       0 dungeonFeatures guardians settings
+>     return (dungeon,heroes,village,diseases,setting)
+>   where
+>     thunderstones = [StoneOfScorn,StoneOfTerror]
+>     monsters = [DarkEnchanted, OrcHumanoid, UndeadPlague]
+>     dungeonFeatures = []
+>     guardians = []
+>     settings = []
+>     heroes = [Belzur, Gorinth, HalfOrc, Stoneguard]
+>     village = [TorynGauntlet, RecurveBow, GuardianBlade, Polymorph,
+>                Scout, FrostBolt, SoulGem, Silverstorm]
+>     diseases = replicate 60 DefaultDisease
 
 There are ten cards for each class.  Take all 30 Monster cards that match
 the three selected classes and shuffle them together.  This becomes the
@@ -508,12 +693,13 @@ cards.  Take one card from the Dungeon Feature pile for each special
 Randomizer you drew.
 
 > dungeonSetup :: Int -> [ThunderstoneType] -> Int -> [MonsterType]
->              -> Int -> [DungeonFeatureType] -> [DungeonCard]
->              -> Thunderstone [DungeonCard]
+>              -> Int -> [DungeonFeatureType]
+>              -> [DungeonCard] -> [Setting]
+>              -> Thunderstone ([DungeonCard],Setting)
 > dungeonSetup numberOfThunderstones thunderstones
 >              numberOfMonsterTypes monsterTypes
 >              minimumNumberOfDungeonFeatures dungeonFeatureTypes
->              guardians = do
+>              guardians settings = do
 >     randomizers <- shuffle (map Left monsterTypes
 >                             ++ map Right dungeonFeatureTypes)
 >     let drawnRandomizers =
@@ -523,16 +709,25 @@ Randomizer you drew.
 >                        [numberOfMonsterTypes .. length randomizers]
 >     let dungeonFeatures =
 >             concatMap dungeonFeatureCards (rights drawnRandomizers)
->     let monsters = concatMap monsterCards (lefts drawnRandomizers)
+>     let monsters = concatMap monsterCards
+>                        (take numberOfMonsterTypes (lefts drawnRandomizers))
 >     deck <- shuffle (dungeonFeatures ++ monsters)
 >     let deckWithProgressiveMonsters = setProgressiveMonsters deck
 >     let numberOfGuardians =
 >             length (filter (== Guardian) (rights drawnRandomizers))
 >     deckWithGuardians <- foldM shuffleInGuardian deckWithProgressiveMonsters
 >                                (take numberOfGuardians guardians)
->     shuffledThunderstones <- shuffle thunderstones
->     shuffleToBottom 10 deckWithGuardians
->         (take numberOfThunderstones (map Thunderstone shuffledThunderstones))
+>     shuffledThunderstones <- shuffle (map Thunderstone thunderstones)
+>     dungeonDeck <- shuffleToBottom 10 deckWithGuardians
+>                        (take numberOfThunderstones shuffledThunderstones)
+>     setting <- (do
+>         if Settings `elem` rights drawnRandomizers
+>           then do
+>             shuffledSettings <- shuffle settings
+>             return (head (shuffledSettings ++ [DefaultSetting]))
+>           else
+>             return DefaultSetting)
+>     return (dungeonDeck,setting)
 >   where
 >     insufficient cards =
 >       length (lefts cards) < numberOfMonsterTypes
@@ -562,15 +757,17 @@ Setup:
 
 > setup :: Int -> GameSetup -> Thunderstone [PlayerId]
 > setup numberOfPlayers gameSetup = do
->     (dungeonCards,heroes,village) <- gameSetup
+>     (dungeonCards,heroes,village,diseases,setting) <- gameSetup
 >     state <- getState
 >     setState state {
 >         thunderstoneCurrentPlayer = 0,
 >         thunderstonePlayers = replicate numberOfPlayers newPlayer,
->         thunderstoneDungeon = map Dungeon dungeonCards,
+>         thunderstoneDungeon = dungeonCards,
 >         thunderstoneHeroes = map heroStack heroes,
 >         thunderstoneResources = map basicStack [minBound..maxBound]
->                              ++ map villageStack village
+>                              ++ map villageStack village,
+>         thunderstoneDiseases = diseases,
+>         thunderstoneSetting = setting
 >         }
 >     playerIds <- getPlayerIds
 >     mapM_ setupPlayer playerIds
@@ -609,10 +806,19 @@ cards on top of those.  This will create a stack of Hero cards with all
 level 3 cards on the bottom, the level 2 cards in the middle, and the
 level 1 cards on top.
 
+However, a few hero types have a different mix, so simply make sure the
+bigger level numbers are lower than the smaller.
+
 >     heroStack :: HeroType -> (HeroType,[HeroCard])
->     heroStack hero = (hero, replicate 6 (HeroCard hero (HeroLevel 1))
->                          ++ replicate 4 (HeroCard hero (HeroLevel 2))
->                          ++ replicate 2 (HeroCard hero (HeroLevel 3)))
+>     heroStack hero = (hero, stackFrom 1)
+>       where
+>         card level = HeroCard hero (HeroLevel level)
+>         stackFrom level
+>           | upgradeCostOf level > 0 = stackOf level ++ stackFrom (level + 1)
+>           | otherwise = stackOf level
+>         stackOf level = replicate (countOf level) (card level)
+>         upgradeCostOf level = heroXPCost $ heroParameters $ card level
+>         countOf level = heroStackSize $ heroParameters $ card level
 
 Village stack:
 
@@ -643,9 +849,11 @@ Game state:
 >     thunderstoneStdGen :: StdGen,
 >     thunderstoneCurrentPlayer :: Int,
 >     thunderstonePlayers :: [Player],
->     thunderstoneDungeon :: [Card],
+>     thunderstoneDungeon :: [DungeonCard],
 >     thunderstoneHeroes :: [(HeroType,[HeroCard])],
->     thunderstoneResources :: [(Card,Int)]
+>     thunderstoneResources :: [(Card,Int)],
+>     thunderstoneDiseases :: [DiseaseType],
+>     thunderstoneSetting :: Setting
 >     }
 
 > data Player = Player {
