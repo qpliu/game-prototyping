@@ -695,6 +695,10 @@ Thunderstone cards:
 
 ...and the thunder of the wind shouts back.
 
+Stone of Mystery: This is the only Thunderstone card in the basic set.
+Some expansions will include other Stones, each with its own powers.
+You are welcome to use any Thunderstone card during setup.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = StoneOfMystery,
 >     cardCount = 1,
@@ -733,6 +737,9 @@ Hero cards:
 
 ATTACK +1
 
+Militia: Militia are considered Heroes for all purposes.  Militia have
+a gold value of 0.  This is a asic card included in every game.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroMilitia,
 >     cardCount = 30,
@@ -751,15 +758,15 @@ ATTACK +1
 >     levelOneHeroes = filter levelOne [minBound .. maxBound]
 >     levelOne card = (heroLevel $ cardStats $ heroDetails card) == 1
 
-Amazon: This Hero's Dungeon Effect is an Attack that is in addition
-to the Amazon's normal Attack.
-
 > heroDetails AmazonArcher = CardDetails {
 >     cardName = "Amazon Archer",
 
 ATTACK +1
 
 Additional ATTACK +2 at Rank 2 or 3.
+
+Amazon: This Hero's Dungeon Effect is an Attack that is in addition
+to the Amazon's normal Attack.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroAmazon,
@@ -783,6 +790,9 @@ ATTACK +2
 
 Additional ATTACK +3 at Rank 2 or 3.
 
+Amazon: This Hero's Dungeon Effect is an Attack that is in addition
+to the Amazon's normal Attack.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroAmazon,
 >     cardCount = 4,
@@ -805,6 +815,9 @@ ATTACK +2
 
 Additional ATTACK +4 at Rank 2 or 3.
 
+Amazon: This Hero's Dungeon Effect is an Attack that is in addition
+to the Amazon's normal Attack.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroAmazon,
 >     cardCount = 2,
@@ -820,22 +833,15 @@ Additional ATTACK +4 at Rank 2 or 3.
 >         }
 >     }
 
-Chalice Quester and Defender: You man continue to destroy Disease
-cards and draw new cards until you choose which Monster to attack.
-
-Chalice Defender: Only Items (not Weapons) that provide a Light
-bonus increase the Defender's Attack Value.
-
-Chalic Paladin: You may purchase any one Village card (including
-Basic and Hero cards) from the Village after a victorious battle,
-using the gold in your hand.
-
 > heroDetails ChaliceQuester = CardDetails {
 >     cardName = "Chalice Quester",
 
 ATTACK +2
 
 REPEAT DUNGEON: Destroy one Disease to draw one card.
+
+Chalice Quester and Defender: You man continue to destroy Disease
+cards and draw new cards until you choose which Monster to attack.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroChalice,
@@ -863,6 +869,12 @@ DUNGEON: Draw one card.
 
 REPEAT DUNGEON: Destroy one Disease to draw one card.
 
+Chalice Quester and Defender: You man continue to destroy Disease
+cards and draw new cards until you choose which Monster to attack.
+
+Chalice Defender: Only Items (not Weapons) that provide a Light
+bonus increase the Defender's Attack Value.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroChalice,
 >     cardCount = 4,
@@ -887,6 +899,10 @@ DUNGEON: Draw one card.
 
 Spoils (Village).
 
+Chalic Paladin: You may purchase any one Village card (including
+Basic and Hero cards) from the Village after a victorious battle,
+using the gold in your hand.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroChalice,
 >     cardCount = 2,
@@ -902,25 +918,17 @@ Spoils (Village).
 >         }
 >     }
 
-Dwarf Guardian: His total Attack Value if an Edged Weapon is equipped
-is +4.  This bonus is part of the Dwarf's ability which he retains even
-if the Weapon later becomes useless (due to a Monster's Battle Effect,
-for instance).
-
-Dwarf Janissary: If revealed during a Dungeon action, you may purchase
-one Weapon card from the Village after a victorious battle, using the
-gold in your hand.  His total Attack Vlaue if an Edged Weapon is
-equipped is +6.
-
-Dwarf Sentinel: His total Attack Value with an Edged Weapon equipped
-is +8.
-
 > heroDetails DwarfGuardian = CardDetails {
 >     cardName = "Dwarf Guardian",
 
 ATTACK +1
 
 Additional ATTACK +3 when equipped with an Edged Weapon.
+
+Dwarf Guardian: His total Attack Value if an Edged Weapon is equipped
+is +4.  This bonus is part of the Dwarf's ability which he retains even
+if the Weapon later becomes useless (due to a Monster's Battle Effect,
+for instance).
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroDwarf,
@@ -946,6 +954,11 @@ Additional ATTACK +4 when equipped with an Edged Weapon.
 
 Spoils (Weapon).
 
+Dwarf Janissary: If revealed during a Dungeon action, you may purchase
+one Weapon card from the Village after a victorious battle, using the
+gold in your hand.  His total Attack Vlaue if an Edged Weapon is
+equipped is +6.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroDwarf,
 >     cardCount = 4,
@@ -968,6 +981,9 @@ ATTACK +3
 
 Additional ATTACK +5 when equipped with an Edged Weapon.
 
+Dwarf Sentinel: His total Attack Value with an Edged Weapon equipped
+is +8.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroDwarf,
 >     cardCount = 2,
@@ -982,12 +998,6 @@ Additional ATTACK +5 when equipped with an Edged Weapon.
 >         heroUpgrade = (0,[])
 >         }
 >     }
-
-Elf Sorcerer/Archmage: When a Monster is returned to the bottom of
-the monster deck, refill the Dungeon Hall.  If this results in a
-Breach effect, resolve it immediately.  If the Thunderstone moves
-to Rank 1 of the Dungeon Hall, the game ends immediately; you do
-not collect the Thunderstone.
 
 > heroDetails ElfWizard = CardDetails {
 >     cardName = "Elf Wizard",
@@ -1017,6 +1027,12 @@ MAGIC ATTACK +3
 You may return one Monster to the bottom of the deck after
 defeating a monster.  (Refill the hall.)
 
+Elf Sorcerer/Archmage: When a Monster is returned to the bottom of
+the monster deck, refill the Dungeon Hall.  If this results in a
+Breach effect, resolve it immediately.  If the Thunderstone moves
+to Rank 1 of the Dungeon Hall, the game ends immediately; you do
+not collect the Thunderstone.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroElf,
 >     cardCount = 4,
@@ -1040,6 +1056,12 @@ MAGIC ATTACK +4
 DUNGEON: You may return one Monster to the bottom of the deck and
 refill the hall before the beginning of a battle.
 
+Elf Sorcerer/Archmage: When a Monster is returned to the bottom of
+the monster deck, refill the Dungeon Hall.  If this results in a
+Breach effect, resolve it immediately.  If the Thunderstone moves
+to Rank 1 of the Dungeon Hall, the game ends immediately; you do
+not collect the Thunderstone.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroElf,
 >     cardCount = 2,
@@ -1055,16 +1077,16 @@ refill the hall before the beginning of a battle.
 >         }
 >     }
 
-Feayn: If a Dungeon Actions causes you to attack a Monster in
-Rank 1, do not add the Feayn's Attack bonus to your Attack Value.
-If Feayn does not attack, his Light bonus is lost.
-
 > heroDetails FeaynArcher = CardDetails {
 >     cardName = "Feayn Archer",
 
 Cannot attack Rank 1.
 
 ATTACK +2
+
+Feayn: If a Dungeon Actions causes you to attack a Monster in
+Rank 1, do not add the Feayn's Attack bonus to your Attack Value.
+If Feayn does not attack, his Light bonus is lost.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroFeayn,
@@ -1087,6 +1109,10 @@ ATTACK +2
 Cannot attack Rank 1.
 
 ATTACK +3
+
+Feayn: If a Dungeon Actions causes you to attack a Monster in
+Rank 1, do not add the Feayn's Attack bonus to your Attack Value.
+If Feayn does not attack, his Light bonus is lost.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroFeayn,
@@ -1111,6 +1137,10 @@ Cannot attack Rank 1.
 ATTACK +4
 
 Gain +1 XP if you defeat a Monster in Rank 3.
+
+Feayn: If a Dungeon Actions causes you to attack a Monster in
+Rank 1, do not add the Feayn's Attack bonus to your Attack Value.
+If Feayn does not attack, his Light bonus is lost.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroFeayn,
@@ -1154,6 +1184,10 @@ ATTACK +2
 
 DUNGEON: All other players discard one card.
 
+Lorigg Outlaw or Rogue: Regardless of whether the battle is victorious
+or not, all other players must discard cards when this Hero enters the
+Dungeon.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroLorigg,
 >     cardCount = 4,
@@ -1175,6 +1209,10 @@ DUNGEON: All other players discard one card.
 ATTACK +2
 
 DUNGEON: All other players discard one card.
+
+Lorigg Outlaw or Rogue: Regardless of whether the battle is victorious
+or not, all other players must discard cards when this Hero enters the
+Dungeon.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroLorigg,
@@ -1222,6 +1260,9 @@ DUNGEON: Gain +1 ATTACK for each Monster card revealed from your hand.
 
 REPEAT DUNGEON: Destroy one Food for an additional ATTACK +3.
 
+Outlands Slayer or Khan: The Hero gains an Attack bonus for each
+Monster card revealed in your hand before the battle.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroOutlands,
 >     cardCount = 4,
@@ -1243,6 +1284,9 @@ REPEAT DUNGEON: Destroy one Food for an additional ATTACK +3.
 ATTACK +7
 
 DUNGEON: ATTACK +2 for each Monster card revealed from your hand.
+
+Outlands Slayer or Khan: The Hero gains an Attack bonus for each
+Monster card revealed in your hand before the battle.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroOutlands,
@@ -1286,6 +1330,10 @@ ATTACK +3
 
 DUNGEON: All other players discard one card.
 
+Redblade Assassin or Poisoner: Regardless of whether the battle is
+victorious or not, all other players must discard cards when this Hero
+enters the Dungeon.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroRedblade,
 >     cardCount = 4,
@@ -1308,6 +1356,10 @@ ATTACK +4
 
 DUNGEON: All other players discard one Hero or two cards.
 
+Redblade Assassin or Poisoner: Regardless of whether the battle is
+victorious or not, all other players must discard cards when this Hero
+enters the Dungeon.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroRedblade,
 >     cardCount = 2,
@@ -1329,6 +1381,9 @@ DUNGEON: All other players discard one Hero or two cards.
 MAGIC ATTACK +1
 
 REPEAT DUNGEON: Destroy one Disease to draw one card.
+
+Regian: You may continue to destroy Disease cards and draw new cards
+until the battle begins.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroRegian,
@@ -1354,6 +1409,9 @@ DUNGEON: Draw one card.
 
 REPEAT DUNGEON: Destroy one Disease to draw one card.
 
+Regian: You may continue to destroy Disease cards and draw new cards
+until the battle begins.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroRegian,
 >     cardCount = 4,
@@ -1378,6 +1436,9 @@ DUNGEON: Draw two cards.
 
 REPEAT DUNGEON: Destroy one Disease to draw one card.
 
+Regian: You may continue to destroy Disease cards and draw new cards
+until the battle begins.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroRegian,
 >     cardCount = 2,
@@ -1399,6 +1460,10 @@ REPEAT DUNGEON: Destroy one Disease to draw one card.
 MAGIC ATTACK +2
 
 All Items and Magic Attack Spells gain MAGIC ATTACK +1.
+
+Selurin: Each Spell with a Magic Attack bonus gains a Magic Attack bonus
+of +1.  Each Item (with the Item keyword), regardless of whether it has
+an Attack bonus or not, gains a Magic Attack bonus of +1.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroSelurin,
@@ -1422,6 +1487,15 @@ MAGIC ATTACK +2
 
 Total MAGIC ATTACK x2* (apply last)
 
+Selurin: Each Spell with a Magic Attack bonus gains a Magic Attack bonus
+of +1.  Each Item (with the Item keyword), regardless of whether it has
+an Attack bonus or not, gains a Magic Attack bonus of +1.
+
+Selurin Theurge or Warlock: The x2 multiplier of the Selurin Wizard
+affects only Magic Attack bonuses, and is applied after all Magic Attack
+bonuses have been calculated.  Multiple Wizards multiply together
+(two become x4, three become x8, etc.).
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroSelurin,
 >     cardCount = 4,
@@ -1441,10 +1515,24 @@ Total MAGIC ATTACK x2* (apply last)
 >     cardName = "Selurin Theurge",
 
 MAGIC ATTACK +2
+
 Total MAGIC ATTACK x2* (apply last)
-DUNGEON: Each player dicards one Hero or shows they have none.
+
+DUNGEON: Each player discards one Hero or shows they have none.
 You may borrow one of those discarded Heroes for the battle, returning
 it at the end.
+
+Selurin: Each Spell with a Magic Attack bonus gains a Magic Attack bonus
+of +1.  Each Item (with the Item keyword), regardless of whether it has
+an Attack bonus or not, gains a Magic Attack bonus of +1.
+
+Selurin Theurge or Warlock: The x2 multiplier of the Selurin Wizard
+affects only Magic Attack bonuses, and is applied after all Magic Attack
+bonuses have been calculated.  Multiple Wizards multiply together
+(two become x4, three become x8, etc.).
+
+Selurin Theurge: If the borrowed Hero is destroyed by a Battle Effect,
+it is not returned to the original owner.  Instead, destroy the card.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroSelurin,
@@ -1467,6 +1555,9 @@ it at the end.
 ATTACK +2
 
 DUNGEON: Destroy one Food for additional ATTACK +2.
+
+Thyrian: Food destroyed by this Dungeon Effect cannot also be used to
+gain a Strength bonus or for any other effect.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroThyrian,
@@ -1492,6 +1583,9 @@ All Militia gain ATTACK +1.
 
 DUNGEON: Destroy one Food for additional ATTACK +2.
 
+Thyrian: Food destroyed by this Dungeon Effect cannot also be used to
+gain a Strength bonus or for any other effect.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroThyrian,
 >     cardCount = 4,
@@ -1516,6 +1610,16 @@ All Heroes other than Fighters gain ATTACK +2.
 
 DUNGEON: Destroy one Food to playce one Monster from the hall
 work 1 or 2 VP into your discard pile.  Refill the hall.
+
+Thyrian: Food destroyed by this Dungeon Effect cannot also be used to
+gain a Strength bonus or for any other effect.
+
+Thyrian Lord: You may only select a Monster iwth 1 or 2 VP, and not
+0 VP.  When a Monster is placed in your discard pile, refill the
+Dungeon Hall.  If this results in a Breach effect, resolve it
+immediately.  If the Thunderstone moves to Rank 1 of the Dungeon
+Hall, the game ends immediately; you do not collect the Thunderstone.
+You do not earn any Experience Points for the Effect.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroThyrian,
@@ -1717,6 +1821,13 @@ BREACH: Destroy the top two cards from each Hero deck in the Village.
 
 BATTLE: Destroy all Clerics and Wizards.
 
+Archduke of Pain: You must have a Magic Attack of at least +1 in order
+to defeat the Archduke of Pain.  You may still choose to attack the
+Archduke, even without Magic Attack present.  If there are no Cleric
+and/or Wizard cards in the battle, there is no effect.  When the
+Archduke reaches Rank 1 of he Dungeon Hall, destroy the top two cards
+from each Hero stack in the Village, including Militia.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterAbyssal,
 >     cardCount = 1,
@@ -1732,6 +1843,8 @@ BATTLE: Destroy all Clerics and Wizards.
 
 > monsterDetails Grudgebeast = CardDetails {
 >     cardName = "Grudgebeast",
+
+Grudgebeast: This Monster has no special Effects.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterAbyssal,
@@ -1750,6 +1863,9 @@ BATTLE: Destroy all Clerics and Wizards.
 >     cardName = "Succubus",
 
 HALF-ATTACK without MAGIC ATTACK present
+
+Succubus: If you do not have at least +1 Magic Attack, the total Attack
+Value is halved, round down.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterAbyssal,
@@ -1771,6 +1887,11 @@ HALF-ATTACK without a Weapon present
 
 BATTLE: Destroy one Cleric.
 
+Tormentor: If you do not have at least one equipped Weapon in the
+battle, the total Attack Value is halved, round down.  If there are
+no Cleric cards in the battle, there is no effect.  Destroyed Cleric
+cards remain until the end of the battle.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterAbyssal,
 >     cardCount = 2,
@@ -1790,6 +1911,9 @@ BATTLE: Destroy one Cleric.
 BATTLE: Gain one Disease.
 
 * MAGIC ATTACK +1
+
+Unchained, the: Disease cards gained in battle go directly to your
+discard pile.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterAbyssal,
@@ -1811,6 +1935,11 @@ Unequipped Heroes cannot attack
 
 Light -1
 
+Darkness: Heroes without a Weapon equipped have an Attack Bonus
+of 0, but are still affected by Battle Effects.  Militia are Heroes.
+Increase the Light Penalty by 1.  Light Penalties are applied
+before the battle.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDoomknightHumanoid,
 >     cardCount = 2,
@@ -1828,6 +1957,10 @@ Light -1
 >     cardName = "Judgement",
 
 BATTLE: All Heroes suffer Strength -2 and ATTACK -1.
+
+Judgement: You may choose to decrease Attack or Magic Attack for this
+Battle Effect.  Affected Strength can cause Weapons to become unequipped.
+Militia are Heroes.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDoomknightHumanoid,
@@ -1849,6 +1982,10 @@ Light -2
 
 BATTLE: Destroy one Fighter.
 
+Knightmare: Icrease the Light Penalty of th Rank Knightmare is in by 2.
+Light Penalties are applied before the battle.  If there are no Fighters
+in the battle, there is no effect.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDoomknightHumanoid,
 >     cardCount = 2,
@@ -1866,6 +2003,9 @@ BATTLE: Destroy one Fighter.
 >     cardName = "Lord Mortis",
 
 Light -1
+
+Lord Mortis: Increase the Light Penalty of the Rank Lord Mortis is in
+by 2.  Light Penalties are applied before the battle.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDoomknightHumanoid,
@@ -1886,6 +2026,9 @@ Light -1
 BATTLE: All Heroes suffer Strength -2.
 
 BATTLE: Destroy one Fighter.
+
+Prince, the: If there are no Fighter cards in the battle, there is no
+effect.  Reduced Strength can cause Weapons to become unequipped.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDoomknightHumanoid,
@@ -1909,6 +2052,10 @@ BATTLE: Destroy one Hero with the highest Strength.
 
 * ATTACK +3
 
+Ebon Fume: Magic Attacks against Ebon FUmedo not count towards the
+total Attack Value.  If two Heroes have the highest (modified)
+Strength, you choose which to destroy.  Militia are considered Heroes.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDragon,
 >     cardCount = 1,
@@ -1927,6 +2074,10 @@ BATTLE: Destroy one Hero with the highest Strength.
 
 BATTLE: Destroy one Hero.
 
+Mythlurian: If there are no Hero cards in the battle, there is no
+effect.  Destroyed Hero cards remain until the end of the battle.
+Militia are considered Heroes.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDragon,
 >     cardCount = 2,
@@ -1944,6 +2095,9 @@ BATTLE: Destroy one Hero.
 >     cardName = "Skaladak",
 
 BATTLE: Destroy one Weapon.
+
+Skaladak: If there are no Weapon cards in the battle, there is no effect.
+Destroyed Weapons remain until the end of the battle.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDragon,
@@ -1967,6 +2121,12 @@ BATTLE: Destroy one Hero.
 
 * MAGIC ATTACK +2
 
+Tyxr the Old: If there are no Hero cards in the battle, there is no
+effect.  Destroyed Hero cards remain until the end of the battle.
+Militia are Heroes.  When Tyxr reaches Rank 1 of the Dungeon Hall,
+all players must discard two cards each, including the active player.
+This takes place before the active player refills his hand.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDragon,
 >     cardCount = 2,
@@ -1989,6 +2149,11 @@ BATTLE: Destroy one Militia.
 
 * MAGIC ATTACK +1
 
+Uyril Unending: If you do not have at least +1 Magic Attack, the total
+Attack Value is halved, round down.  If there are no Militia cards in
+the battle, there is no effect.  Destroyed Militia remain until the end
+of the battle.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDragon,
 >     cardCount = 2,
@@ -2009,6 +2174,11 @@ Light -1
 
 Cannot be attacked if a Light Penalty persists.
 
+Blink Dog: If you have a Light Penalt of 1 or more, you cannot choose
+to attack the Blink Dog.  Therefore, without sufficient light, you may
+not choose to attack it merely to move it to the bottom of the Dungeon
+Deck.  Light Penalties are applied before the battle.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterEnchanted,
 >     cardCount = 2,
@@ -2027,6 +2197,8 @@ Cannot be attacked if a Light Penalty persists.
 
 * MAGIC ATTACK +1
 
+Griffon: The Magic Attack bonus is a Trophy Effect.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterEnchanted,
 >     cardCount = 2,
@@ -2042,6 +2214,8 @@ Cannot be attacked if a Light Penalty persists.
 
 > monsterDetails Nixie = CardDetails {
 >     cardName = "Nixie",
+
+Nixie: This Monster has no special Effects.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterEnchanted,
@@ -2060,6 +2234,8 @@ Cannot be attacked if a Light Penalty persists.
 >     cardName = "Pegasus",
 
 * ATTACK +1
+
+Pegasus: The Attack bonus is a Trophy Effect.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterEnchanted,
@@ -2084,6 +2260,11 @@ cards you choose.  Discard the rest.)
 
 * MAGIC ATTACK +2
 
+Sphinx: Only Magic Attack bonuses count against the Sphinx.  The six
+cards revealed from your deck do not affect or replace your hand, and
+are drawn before any Breach or Trap Effects are resolved.  This is
+a Spoils effect.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterEnchanted,
 >     cardCount = 1,
@@ -2099,6 +2280,8 @@ cards you choose.  Discard the rest.)
 
 > monsterDetails BloodskullOrc = CardDetails {
 >     cardName = "Bloodskull Orc",
+
+Bloodskull Orc: This monster has no special Effects.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterHumanoid,
@@ -2116,6 +2299,9 @@ cards you choose.  Discard the rest.)
 > monsterDetails DeadboneTroll = CardDetails {
 >     cardName = "Deadbone Troll",
 
+Deadbone Troll: Disease cards gained in battle go directly to your
+discard pile.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterHumanoid,
 >     cardCount = 2,
@@ -2131,6 +2317,8 @@ cards you choose.  Discard the rest.)
 
 > monsterDetails FirebrandCyclops = CardDetails {
 >     cardName = "Firebrand Cyclops",
+
+Firebrand Cyclops: This Monster has no special Effects.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterHumanoid,
@@ -2148,6 +2336,9 @@ cards you choose.  Discard the rest.)
 > monsterDetails GrayskinLizard = CardDetails {
 >     cardName = "Grayskin Lizard",
 
+Grayskin Lizard: This Battle Effect makes the vulnerable to Weapons.
+They lack thick skin.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterHumanoid,
 >     cardCount = 2,
@@ -2163,6 +2354,8 @@ cards you choose.  Discard the rest.)
 
 > monsterDetails GriknackGoblin = CardDetails {
 >     cardName = "Griknack Goblin",
+
+Griknack Goblin: This Monster has no special Effects.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterHumanoid,
@@ -2181,6 +2374,9 @@ cards you choose.  Discard the rest.)
 >     cardName = "Black Slime",
 
 BATTLE: Destroy one Militia.
+
+Black Slime: If there are no Militia cards in the battle, there is
+no effect.  Destroyed Militia remain until the end of the battle.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterOoze,
@@ -2203,6 +2399,12 @@ to the Party.
 
 Spoils (Food)
 
+Gray Oooze: If at least one Hero has a Weapon equipped (or there are
+not Heroes), there is no effect.  Destroyed Hero cards remain until
+the end of the battle.  Militia are Heroes, and can be destroyed.
+After a victorious battle, you may purchase one Food card from the
+Village, using the gold in your hand.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterOoze,
 >     cardCount = 2,
@@ -2220,6 +2422,8 @@ Spoils (Food)
 >     cardName = "Green Blob",
 
 BATTLE: Destroy one Food.
+
+Green Blob: If there are no Food cards in the battle, there is no effect.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterOoze,
@@ -2241,6 +2445,10 @@ HALF-ATTACK from MAGIC ATTACK
 
 Immune to Edged Weapons
 
+Noxious Slag: Edged Weapons do not add to your total Attack Value
+against the Noxious Slag.  After calculating your total Magic Attack
+Value, cut the total in half (round down).
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterOoze,
 >     cardCount = 2,
@@ -2258,6 +2466,10 @@ Immune to Edged Weapons
 >     cardName = "Red Jelly",
 
 BATTLE: Destroy one Weapon.
+
+Red Jelly: If there are no Weapon cards in the battle, there is no effect.
+The Light bonus is a Trophy Effect.  It only applies when the defeated
+Red Jelly is revealed in your hand.  It is not a Battle Effect.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterOoze,
@@ -2277,6 +2489,9 @@ BATTLE: Destroy one Weapon.
 
 BATTLE: Gain one Disease.
 
+Famine: Disease cards gained in battle go directly to your discard
+pile.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadDoom,
 >     cardCount = 2,
@@ -2294,6 +2509,9 @@ BATTLE: Gain one Disease.
 >     cardName = "Harbinger",
 
 BATTLE: Destroy one Spell.
+
+Harbinger: If there are no Spell cards in the battle, there is no
+effect.  Destroyed Spell cards remain until the end of the battle.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadDoom,
@@ -2313,6 +2531,8 @@ BATTLE: Destroy one Spell.
 
 BATTLE: Gain one Disease.
 
+Kingdom: Disease cards gained in battle go directly to your dicard pile.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadDoom,
 >     cardCount = 3,
@@ -2330,6 +2550,9 @@ BATTLE: Gain one Disease.
 >     cardName = "Lord of Death",
 
 BATTLE: Gain two Diseases.
+
+Lord of Death: Disease cards gained in battle go directly to your discard
+pile.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadDoom,
@@ -2351,6 +2574,9 @@ BATTLE: All Heroes suffer Strength -2.
 
 BATTLE: Gain one Disease.
 
+Suffering: Reduced Strength can cause Weapons to become unequipped.
+Disease cards gained in battle go directly to your discard pile.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadDoom,
 >     cardCount = 2,
@@ -2371,6 +2597,10 @@ HALF-ATTACK without MAGIC ATTACK present
 
 BATTLE: All Heroes suffer Strength -2.
 
+Ghost: If you do not have at least +1 Magic Attack, the total
+Attack Value is halved, rounded down.  Reduced Strength can cause
+Weapons to become unequipped.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadSpirit,
 >     cardCount = 2,
@@ -2388,6 +2618,10 @@ BATTLE: All Heroes suffer Strength -2.
 >     cardName = "Haunt",
 
 BATTLE: One Hero cannot attack.
+
+Haunt: Choose one Hero (and any equipped Weapon).  All Light, Attack,
+and Magic Attack of the Hero (and Weapon) are reduced to 0.  Militia
+are Heroes.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadSpirit,
@@ -2410,6 +2644,10 @@ Magic Attack Required
 BATTLE: All Heroes suffer Strength -4.  Any Heroes with Strength 0 or
 less are Destroyed.
 
+Revenant: You must have at least +1 Magic Attack in order to kill the
+Revenant.  Heroes destroyed by the Revenant die at the end of the
+battle.  Reduce Strength can cause Weapons to become unequipped.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadSpirit,
 >     cardCount = 2,
@@ -2428,6 +2666,9 @@ less are Destroyed.
 
 BATTLE: Destroy one Militia.
 
+Spectre: If there are no Militia cards in the battle, there is no effect.
+Destroyed Militia remain until the end of the battle.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadSpirit,
 >     cardCount = 2,
@@ -2445,6 +2686,9 @@ BATTLE: Destroy one Militia.
 >     cardName = "Wraith",
 
 BATTLE: Destroy one Militia.
+
+Wraith: If there are no Militia cards in the battle, there is no effect.
+Destroyed Militia remain until the end of the battle.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadSpirit,
@@ -2646,6 +2890,9 @@ BATTLE: Destroy one Militia.
 
 ATTACK +1
 
+Dagger: This is an Edged Weapon.  It is a Basic card included in
+every game.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = Dagger,
 >     cardCount = 15,
@@ -2664,6 +2911,11 @@ ATTACK +1
 
 DUNGEON: One Hero gains Strength +2.
 
+Iron Rations: You can use multiple Iron Rations to increase the same
+Hero's Strength.  If a Dungeon Effect destroys Iron Rations, you
+cannot use it to gain the Strength bonus.  It is a Basic card included
+in every game.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = IronRations,
 >     cardCount = 15,
@@ -2679,6 +2931,9 @@ DUNGEON: One Hero gains Strength +2.
 
 > villageDetails Torch = CardDetails {
 >     cardName = "Torch",
+
+Torch: This Item always provides Light +1, even when no Hero is
+present.  It is a Basic card included in every game.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = Torch,
@@ -2698,6 +2953,9 @@ DUNGEON: One Hero gains Strength +2.
 
 DUNGEON: All ATTACKS from Heroes with Weapons equipped become
 MAGIC ATTACKS.  Draw one card.
+
+Arcane Energies: You must draw a card when you use this dungeon
+ability.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = ArcaneEnergies,
@@ -2719,6 +2977,16 @@ DUNGEON: Return one Monster to the bottom of the deck and refill
 the hall, or rearrange the hall.  Destroy one card from your hand.
 Draw one card.
 
+Banish: You must declare you are entering the Dungeon to play
+Banish, but do not choose which Monster to attack until after the
+Hall is refilled.  If Banish results in a Breach (or Trap) Effect,
+resolve it immediately.  You may rearrange the hall so as to place
+the Thunderstone in Rank 1 of the Dungeon Hall, ending the game
+immediately without collecting the Thunderstone.  Multiple Banish
+cards can be used before choosing which Monster to attack, but each
+must be completely resolved before the next can be played.  You
+must draw a card when using this Dungeon Ability.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = Banish,
 >     cardCount = 8,
@@ -2739,6 +3007,10 @@ VILLAGE: You may purchase one additional card this turn.
 
 VILLAGE: Destroy this card to gain 2 Gold.
 
+Barkeep: Each additional Barkeep allows you to purchase one 
+additional card.  You do not gain the gold value of the Barkeep when
+it is destroyed.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = Barkeep,
 >     cardCount = 8,
@@ -2756,6 +3028,9 @@ VILLAGE: Destroy this card to gain 2 Gold.
 >     cardName = "BattleFury",
 
 DUNGEON: All Heroes gain ATTACK +1.
+
+Battle Fury: Militia are Heroes, and gain the Attack bonus from this
+spell.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = BattleFury,
@@ -2775,6 +3050,9 @@ DUNGEON: All Heroes gain ATTACK +1.
 
 DUNGEON: All Heroes gain Strength +1 and ATTACK +1.
 
+Feast: Militia cards are Heroes, so they gain the Attack and Strength
+bonuses from this card.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = Feast,
 >     cardCount = 8,
@@ -2793,6 +3071,8 @@ DUNGEON: All Heroes gain Strength +1 and ATTACK +1.
 
 MAGIC ATTACK +3
 
+Fireball: You do not need Heroes present to use this Spell.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = Fireball,
 >     cardCount = 8,
@@ -2810,6 +3090,9 @@ MAGIC ATTACK +3
 >     cardName = "Flaming Sword",
 
 MAGIC ATTACK +3
+
+Flaming Sword: You only gain the Light bonus if the Flaming Sword
+is equipped to a Hero.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = FlamingSword,
@@ -2830,6 +3113,10 @@ MAGIC ATTACK +3
 DUNGEON: One Hero gains Strength +3 and ATTACK becomes MAGIC ATTACK
 for that Hero.
 
+Goodberries: After the final Attack bonus of the Hero is calculated,
+its entire bonus becomes Magic Attack.  Militia are Heroes, and may
+benefit from this card.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = Goodberries,
 >     cardCount = 8,
@@ -2848,6 +3135,8 @@ for that Hero.
 
 ATTACK +3
 
+Hatchet: This is an Edged Weapon.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = Hatchet,
 >     cardCount = 8,
@@ -2864,6 +3153,8 @@ ATTACK +3
 > villageDetails Lantern = CardDetails {
 >     cardName = "Lantern",
 
+Lantern: This Item always provides Light +2, even without a Hero present.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = Lantern,
 >     cardCount = 8,
@@ -2879,6 +3170,9 @@ ATTACK +3
 
 > villageDetails LightstoneGem = CardDetails {
 >     cardName = "Lightstone Gem",
+
+Lightstone Gem: This Item always provides Light +3, even without a Hero
+present.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = LightstoneGem,
@@ -2897,6 +3191,10 @@ ATTACK +3
 >     cardName = "Magical Aura",
 
 DUNGEON: All Weapons become Weight 0.  Draw one card.
+
+Magical Aura: When played with a Polearm, the Hero must still have a
+Strength of 8 or more to gain the +6 bonus.  You must draw a card when
+using this Dungeon Effect.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = MagicalAura,
@@ -2919,6 +3217,11 @@ plus 3 Gold.
 
 VILLAGE: Destroy this card to gain 2 Gold.
 
+Pawnbroker: You can destroy both the Pawnbroker and another card to
+produce X+5 gold in a single turn.  When you destroy a card with
+Pawnbroker, do not add its inherent gold value to your total gold
+that turn.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = Pawnbroker,
 >     cardCount = 8,
@@ -2936,6 +3239,10 @@ VILLAGE: Destroy this card to gain 2 Gold.
 >     cardName = "Polearm",
 
 ATTACK +2, or ATTACK +6 when attached to a Hero with 8 or more Strength.
+
+Polearm: A Hero with a Strength of 2 can equip the Polearm for an
+Attack bonus of +2.  A Hero with a Strength of 8 or higher gains +6
+instead.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = Polearm,
@@ -2955,6 +3262,8 @@ ATTACK +2, or ATTACK +6 when attached to a Hero with 8 or more Strength.
 
 ATTACK +4
 
+Short Sword: This is an Edged Weapon.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = ShortSword,
 >     cardCount = 8,
@@ -2972,6 +3281,10 @@ ATTACK +4
 >     cardName = "Spear",
 
 ATTACK +2
+
+Spear: If you destroy (throw) the Spear, the Attack bonus increases by
+an additional +3, for a total of +5.  However, the Spear is still
+considered equipped for the entire battle, even if you use the effect.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = Spear,
@@ -2993,6 +3306,9 @@ VILLAGE: Draw two cards.
 
 VILLAGE: Destroy this card to draw three additional cards.
 
+Town Guard: Destroying this card allows you to draw a total of five
+extra cards.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = TownGuard,
 >     cardCount = 8,
@@ -3013,6 +3329,9 @@ VILLAGE: Destroy one Militia to gain 2 XP.
 
 VILLAGE: Destroy this card to gain 2 Gold.
 
+Trainer: Each Trainer in your hand may only destroy one Militia each
+turn.
+
 >     cardSource = ThunderstoneBase,
 >     cardType = Trainer,
 >     cardCount = 8,
@@ -3032,6 +3351,9 @@ VILLAGE: Destroy this card to gain 2 Gold.
 ATTACK +3
 
 Clerics gain an additional ATTACK +3 against Doomknights and Undead.
+
+Warhammer: A Cleric attacking a Doomknight or Undead gains a total
+Attack bonus of +6.
 
 >     cardSource = ThunderstoneBase,
 >     cardType = Warhammer,
