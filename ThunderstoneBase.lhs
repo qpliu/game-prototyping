@@ -70,9 +70,8 @@ choose among the specified cards.
 >         thunderstoneCurrentPlayer = 0,
 >         thunderstonePlayers = replicate numberOfPlayers newPlayer,
 >         thunderstoneDungeon = dungeon,
->         thunderstoneHeroes = zip heroes (map heroStack heroes),
->         thunderstoneVillage =
->             zip (map VillageCard (village ++ [Dagger .. Torch])) (repeat 8)
+>         thunderstoneHeroes = map heroStack (HeroMilitia:heroes),
+>         thunderstoneVillage = map villageStack ([Dagger .. Torch] ++ village)
 >         }
 >     playerIds <- getPlayerIds
 >     mapM_ drawStartingHand playerIds
@@ -93,25 +92,14 @@ choose among the specified cards.
 
 >     drawStartingHand :: PlayerId -> Thunderstone ()
 >     drawStartingHand playerId = do
->         militia <- multiple 6 $ drawResource (HeroCard Militia)
->         dagger <- multiple 2 $ drawResource (VillageCard Dagger)
->         ironRations <- multiple 2 $ drawResource (VillageCard IronRations)
->         torch <- multiple 2 $ drawResource (VillageCard Torch)
->         discard playerId (militia ++ dagger ++ ironRations ++ torch)
+>         militia <- multiple 6 $ drawHero HeroMilitia
+>         dagger <- multiple 2 $ drawResource Dagger
+>         ironRations <- multiple 2 $ drawResource IronRations
+>         torch <- multiple 2 $ drawResource Torch
+>         discard playerId (map HeroCard militia)
+>         discard playerId (map VillageCard (dagger ++ ironRations ++ torch))
 >         hand <- multiple 6 $ drawCard playerId
 >         setHand playerId hand
-
-Place both level 3 Hero cards in the stack.  Next, place all four level
-2 Hero cards on top of the stack.  Finally, place all six level 1 Hero
-cards on top of those.  This will create a stack of Hero cards with all
-level 3 cards on the bottom, the level 2 cards in the middle, and the
-level 1 cards on top.
-
->     heroStack :: HeroType -> [HeroCard]
->     heroStack hero = sortBy level (cardsOfType heroDetails hero)
->       where
->         level a b = compare (heroLevel $ cardStats $ heroDetails a)
->                             (heroLevel $ cardStats $ heroDetails b)
 
 There are ten cards for each class.  Take all 30 Monster cards that match
 the three selected classes and shuffle them together.  This becomes the
@@ -126,6 +114,23 @@ eleven cards at the bottom of the Dungeon Deck.
 >       where
 >         cards = concatMap (cardsOfType monsterDetails) monsters
 
+Place both level 3 Hero cards in the stack.  Next, place all four level
+2 Hero cards on top of the stack.  Finally, place all six level 1 Hero
+cards on top of those.  This will create a stack of Hero cards with all
+level 3 cards on the bottom, the level 2 cards in the middle, and the
+level 1 cards on top.
+
+>     heroStack :: HeroType -> (HeroType,[HeroCard])
+>     heroStack hero = (hero,sortBy level (cardsOfType heroDetails hero))
+>       where
+>         level a b = compare (heroLevel $ cardStats $ heroDetails a)
+>                             (heroLevel $ cardStats $ heroDetails b)
+
+There are 15 of each basic card and 8 of each village card.
+
+>     villageStack :: VillageCard -> (VillageCard,Int)
+>     villageStack card = (card,length (cardsOfType villageDetails card))
+
 Game state:
 
 > type Thunderstone a = StateTransformer ThunderstoneState a
@@ -138,7 +143,7 @@ Game state:
 >     thunderstonePlayers :: [Player],
 >     thunderstoneDungeon :: [Card],
 >     thunderstoneHeroes :: [(HeroType,[HeroCard])],
->     thunderstoneVillage :: [(Card,Int)]
+>     thunderstoneVillage :: [(VillageCard,Int)]
 >     }
 
 > data Player = Player {
@@ -385,21 +390,21 @@ Low level game state transformations.
 >      player <- getPlayer playerId
 >      setPlayer playerId player { playerState = state }
 
-> getVillage :: Thunderstone [(Card,Int)]
+> getVillage :: Thunderstone [(VillageCard,Int)]
 > getVillage = do
 >     state <- getState
 >     return (thunderstoneVillage state)
 
 More briefly: fmap thunderstoneVillage getState
 
-> getResourceCount :: Card -> Thunderstone Int
+> getResourceCount :: VillageCard -> Thunderstone Int
 > getResourceCount card = do
 >     resources <- getVillage
 >     return (maybe 0 id (lookup card resources))
 
 More briefly: fmap (maybe 0 id . lookup card) getResources
 
-> setResourceCount :: Card -> Int -> Thunderstone ()
+> setResourceCount :: VillageCard -> Int -> Thunderstone ()
 > setResourceCount card count = do
 >     state <- getState
 >     let village = thunderstoneVillage state
@@ -411,7 +416,7 @@ More briefly: fmap (maybe 0 id . lookup card) getResources
 >       | resourceCard == card = (resourceCard,count)
 >       | otherwise = resource
 
-> drawResource :: Card -> Thunderstone (Maybe Card)
+> drawResource :: VillageCard -> Thunderstone (Maybe VillageCard)
 > drawResource card = do
 >     count <- getResourceCount card
 >     if count > 0
