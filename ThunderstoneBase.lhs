@@ -4,7 +4,7 @@ expansions to work out how to implement the basic mechanisms.
 > module ThunderstoneBase
 > where
 
-> import Control.Monad(mapM_,replicateM,unless)
+> import Control.Monad(mapM,mapM_,replicateM,unless,when)
 > import Data.List(nub,sortBy,(\\))
 > import Data.Maybe(catMaybes,listToMaybe)
 > import System.Random(StdGen)
@@ -223,13 +223,49 @@ Rest
 
 Game mechanics
 
-> {-
-
 > isGameOver :: Thunderstone Bool
 > isGameOver = undefined
 
 > getScores :: Thunderstone [(PlayerId,Int)]
-> getScores = undefined
+> getScores = do
+>     playerIds <- getPlayerIds
+>     scores <- mapM getScore playerIds
+>     return (zip playerIds scores)
+
+> getScore :: PlayerId -> Thunderstone Int
+> getScore playerId = do
+>     player <- getPlayer playerId
+>     return $ sum $ map cardScore
+>            $ playerHand player ++ playerDeck player ++ playerDiscard player
+
+> cardScore :: Card -> Int
+> cardScore (MonsterCard card) = cardVictoryPoints $ monsterDetails card
+> cardScore (HeroCard card) = cardVictoryPoints $ heroDetails card
+> cardScore (VillageCard card) = cardVictoryPoints $ villageDetails card
+> cardScore DiseaseCard = 0
+> cardScore (ThunderstoneCard card) =
+>     cardVictoryPoints $ thunderstoneDetails card
+
+> playerOptions :: PlayerId -> Thunderstone [PlayerAction]
+> playerOptions playerId = do
+>     gameOver <- isGameOver
+>     if gameOver
+>       then return []
+>       else do
+>         playerState <- getPlayerState playerId
+>         optionsWhen playerState
+>   where
+>     optionsWhen StartingTurn = do
+>         hand <- getHand playerId
+>         return ([VisitVillage, EnterDungeon, Rest Nothing]
+>                 ++ map (Rest . Just) hand)
+>     optionsWhen UsingVillageEffects {} = undefined
+>     optionsWhen Purchasing {} = undefined
+>     optionsWhen LevelingUpHeroes = undefined
+>     optionsWhen UsingDungeonEffects = undefined
+>     optionsWhen AttackingMonster = undefined
+>     optionsWhen TakingSpoils = undefined
+>     optionsWhen Waiting = return []
 
 > takeAction :: PlayerId -> PlayerAction -> Thunderstone Bool
 > takeAction playerId playerAction = do
@@ -278,11 +314,11 @@ Game mechanics
 End your turn by discarding all cards face up on your discard pile,
 and draw six new cards to form a new hand.
 
+>     endTurn :: Thunderstone ()
 >     endTurn = do
 >         hand <- getHand playerId
 >         discard playerId hand
->         handSize <- getHandSize playerId
->         hand <- multiple handSize $ drawCard playerId
+>         hand <- multiple 6 $ drawCard playerId
 >         setHand playerId hand
 
 >     startNextTurnIfTurnFinished :: Thunderstone ()
@@ -303,8 +339,6 @@ and draw six new cards to form a new hand.
 >         playerIds <- getPlayerIds
 >         playerStates <- mapM getPlayerState playerIds
 >         return (all (== Waiting) playerStates)
-
-> -}
 
 Low level game mechanics
 
