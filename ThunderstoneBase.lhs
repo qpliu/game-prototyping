@@ -108,13 +108,10 @@ level 3 cards on the bottom, the level 2 cards in the middle, and the
 level 1 cards on top.
 
 >     heroStack :: HeroType -> [HeroCard]
->     heroStack hero = concatMap count (sortBy level cards)
+>     heroStack hero = sortBy level (cardsOfType heroDetails hero)
 >       where
->         cards = filter ((== hero) . cardType . heroDescriptor)
->                        [minBound .. maxBound]
->         level a b = compare (heroLevel $ cardStats $ heroDescriptor a)
->                             (heroLevel $ cardStats $ heroDescriptor b)
->         count card = replicate (cardCount $ heroDescriptor card) card
+>         level a b = compare (heroLevel $ cardStats $ heroDetails a)
+>                             (heroLevel $ cardStats $ heroDetails b)
 
 There are ten cards for each class.  Take all 30 Monster cards that match
 the three selected classes and shuffle them together.  This becomes the
@@ -127,8 +124,7 @@ eleven cards at the bottom of the Dungeon Deck.
 >         dungeon <- shuffle $ map MonsterCard cards
 >         shuffleToBottom 10 [ThunderstoneCard StoneOfMystery] dungeon
 >       where
->         cards = filter ((`elem` monsters) . cardType . monsterDescriptor)
->                        [minBound .. maxBound]
+>         cards = concatMap (cardsOfType monsterDetails) monsters
 
 Game state:
 
@@ -468,7 +464,7 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 >         return (Just heroCard)
 >       else return Nothing
 >   where
->     heroType = cardType $ heroDescriptor heroCard
+>     heroType = cardType $ heroDetails heroCard
 >     containedIn card Nothing = False
 >     containedIn card (Just stack) = card `elem` stack
 >     updateHeroes heroes@(hero,stack)
