@@ -636,6 +636,7 @@ Doomgate Legion:
 >   | ClassArcher
 >   | ClassBlack
 >   | ClassBlue
+>   | ClassBlunt
 >   | ClassCleric
 >   | ClassDoom
 >   | ClassDoomknight
@@ -644,19 +645,23 @@ Doomgate Legion:
 >   | ClassEdged
 >   | ClassEnchanted
 >   | ClassFighter
+>   | ClassFood
 >   | ClassGreen
 >   | ClassGuardian
 >   | ClassHero
 >   | ClassHumanoid
 >   | ClassItem
 >   | ClassLight
+>   | ClassMagic
 >   | ClassMilitia
 >   | ClassOoze
 >   | ClassRed
+>   | ClassSpell
 >   | ClassSpirit
 >   | ClassThief
 >   | ClassThunderstone
 >   | ClassUndead
+>   | ClassVillager
 >   | ClassWeapon
 >   | ClassWhite
 >   | ClassWizard
@@ -730,7 +735,7 @@ ATTACK +1
 
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroMilitia,
->     cardCount = 0,
+>     cardCount = 30,
 >     cardClasses = [ClassMilitia,ClassHero],
 >     cardGold = 0,
 >     cardLight = 0,
@@ -1527,258 +1532,169 @@ work 1 or 2 VP into your discard pile.  Refill the hall.
 >         }
 >     }
 
-
-Wrath of the Elements:
-
 > heroDetails BlindNeophyte =
 >     undefinedCardDetails HeroBlind WrathOfTheElements
-
 > heroDetails BlindMonk =
 >     undefinedCardDetails HeroBlind WrathOfTheElements
-
 > heroDetails BlindGrandmaster =
 >     undefinedCardDetails HeroBlind WrathOfTheElements
-
 > heroDetails DiinIllusionist =
 >     undefinedCardDetails HeroDiin WrathOfTheElements
-
 > heroDetails DiinBeguiler =
 >     undefinedCardDetails HeroDiin WrathOfTheElements
-
 > heroDetails DiinEnchanter =
 >     undefinedCardDetails HeroDiin WrathOfTheElements
-
 > heroDetails DivineHealer =
 >     undefinedCardDetails HeroDivine WrathOfTheElements
-
 > heroDetails DivineChaplain =
 >     undefinedCardDetails HeroDivine WrathOfTheElements
-
 > heroDetails DivineProphet =
 >     undefinedCardDetails HeroDivine WrathOfTheElements
-
 > heroDetails GanglandThug =
 >     undefinedCardDetails HeroGangland WrathOfTheElements
-
 > heroDetails GanglandHeavy =
 >     undefinedCardDetails HeroGangland WrathOfTheElements
-
 > heroDetails GanglandCrook =
 >     undefinedCardDetails HeroGangland WrathOfTheElements
-
 > heroDetails GohlenTrapper =
 >     undefinedCardDetails HeroGohlen WrathOfTheElements
-
 > heroDetails GohlenTracker =
 >     undefinedCardDetails HeroGohlen WrathOfTheElements
-
 > heroDetails GohlenHunter =
 >     undefinedCardDetails HeroGohlen WrathOfTheElements
-
 > heroDetails RunespawnAdept =
 >     undefinedCardDetails HeroRunespawn WrathOfTheElements
-
 > heroDetails RunespawnSiren =
 >     undefinedCardDetails HeroRunespawn WrathOfTheElements
-
 > heroDetails RunespawnWitch =
 >     undefinedCardDetails HeroRunespawn WrathOfTheElements
-
 > heroDetails TorynScrapper =
 >     undefinedCardDetails HeroToryn WrathOfTheElements
-
 > heroDetails TorynDuelist =
 >     undefinedCardDetails HeroToryn WrathOfTheElements
-
 > heroDetails TorynGladiator =
 >     undefinedCardDetails HeroToryn WrathOfTheElements
 
-
-Doomgate Legion:
-
 > heroDetails DeepMiner =
 >     undefinedCardDetails HeroDeep DoomgateLegion
-
 > heroDetails DeepDigger =
 >     undefinedCardDetails HeroDeep DoomgateLegion
-
 > heroDetails DeepWrecker =
 >     undefinedCardDetails HeroDeep DoomgateLegion
-
 > heroDetails DrunariOrphan =
 >     undefinedCardDetails HeroDrunari DoomgateLegion
-
 > heroDetails DrunariVagabond =
 >     undefinedCardDetails HeroDrunari DoomgateLegion
-
 > heroDetails DrunariGypsy =
 >     undefinedCardDetails HeroDrunari DoomgateLegion
-
 > heroDetails SidheNatural =
 >     undefinedCardDetails HeroSidhe DoomgateLegion
-
 > heroDetails SidheDruid =
 >     undefinedCardDetails HeroSidhe DoomgateLegion
-
 > heroDetails SidheSpirit =
 >     undefinedCardDetails HeroSidhe DoomgateLegion
-
 > heroDetails SlynnBowman =
 >     undefinedCardDetails HeroSlynn DoomgateLegion
-
 > heroDetails SlynnBowmaster =
 >     undefinedCardDetails HeroSlynn DoomgateLegion
-
 > heroDetails SlynnLongbowman =
 >     undefinedCardDetails HeroSlynn DoomgateLegion
-
 > heroDetails TempestAvenger =
 >     undefinedCardDetails HeroTempest DoomgateLegion
-
 > heroDetails TempestReaver =
 >     undefinedCardDetails HeroTempest DoomgateLegion
-
 > heroDetails TempestWarden =
 >     undefinedCardDetails HeroTempest DoomgateLegion
-
 > heroDetails TholisMedium =
 >     undefinedCardDetails HeroTholis DoomgateLegion
-
 > heroDetails TholisClairvoyant =
 >     undefinedCardDetails HeroTholis DoomgateLegion
-
 > heroDetails TholisOracle =
 >     undefinedCardDetails HeroTholis DoomgateLegion
-
 > heroDetails VerdanMinstrel =
 >     undefinedCardDetails HeroVerdan DoomgateLegion
-
 > heroDetails VerdanBard =
 >     undefinedCardDetails HeroVerdan DoomgateLegion
-
 > heroDetails VerdanTrouadour =
 >     undefinedCardDetails HeroVerdan DoomgateLegion
 
-
-Dragonspire:
-
 > heroDetails PhalanxFootman =
 >     undefinedCardDetails HeroPhalanx Dragonspire
-
 > heroDetails PhalanxOfficer =
 >     undefinedCardDetails HeroPhalanx Dragonspire
-
 > heroDetails BelzurCurate =
 >     undefinedCardDetails HeroBelzur Dragonspire
-
 > heroDetails BelzurBishop =
 >     undefinedCardDetails HeroBelzur Dragonspire
-
 > heroDetails BelzurCardinal =
 >     undefinedCardDetails HeroBelzur Dragonspire
-
 > heroDetails CabalAstrologer =
 >     undefinedCardDetails HeroCabal Dragonspire
-
 > heroDetails CabalSage =
 >     undefinedCardDetails HeroCabal Dragonspire
-
 > heroDetails CabalMaster =
 >     undefinedCardDetails HeroCabal Dragonspire
-
 > heroDetails ChulianRat =
 >     undefinedCardDetails HeroChulian Dragonspire
-
 > heroDetails ChulianScavenger =
 >     undefinedCardDetails HeroChulian Dragonspire
-
 > heroDetails ChulianLooter =
 >     undefinedCardDetails HeroChulian Dragonspire
-
 > heroDetails EvokerAdept =
 >     undefinedCardDetails HeroEvoker Dragonspire
-
 > heroDetails EvokerScorcher =
 >     undefinedCardDetails HeroEvoker Dragonspire
-
 > heroDetails EvokerPyroclast =
 >     undefinedCardDetails HeroEvoker Dragonspire
-
 > heroDetails FlameWatch =
 >     undefinedCardDetails HeroFlame Dragonspire
-
 > heroDetails FlameGuard =
 >     undefinedCardDetails HeroFlame Dragonspire
-
 > heroDetails FlameHero =
 >     undefinedCardDetails HeroFlame Dragonspire
-
 > heroDetails GorinthAmateur =
 >     undefinedCardDetails HeroGorinth Dragonspire
-
 > heroDetails GorinthHoarder =
 >     undefinedCardDetails HeroGorinth Dragonspire
-
 > heroDetails GorinthMiser =
 >     undefinedCardDetails HeroGorinth Dragonspire
-
 > heroDetails HalfOrcRaider =
 >     undefinedCardDetails HeroHalfOrc Dragonspire
-
 > heroDetails HalfOrcMarauder =
 >     undefinedCardDetails HeroHalfOrc Dragonspire
-
 > heroDetails HalfOrcDervish =
 >     undefinedCardDetails HeroHalfOrc Dragonspire
-
 > heroDetails StoneguardBrute =
 >     undefinedCardDetails HeroStoneguard Dragonspire
-
 > heroDetails StoneguardBruiser =
 >     undefinedCardDetails HeroStoneguard Dragonspire
-
 > heroDetails StoneguardTanker =
 >     undefinedCardDetails HeroStoneguard Dragonspire
-
 > heroDetails TerakianDefender =
 >     undefinedCardDetails HeroTerakian Dragonspire
-
 > heroDetails TerakianPeer =
 >     undefinedCardDetails HeroTerakian Dragonspire
-
 > heroDetails TerakianTemplar =
 >     undefinedCardDetails HeroTerakian Dragonspire
-
 > heroDetails VeteranWarrior =
 >     undefinedCardDetails HeroVeteran Dragonspire
-
 > heroDetails VeteranBerserker =
 >     undefinedCardDetails HeroVeteran Dragonspire
-
 > heroDetails VeteranReaver =
 >     undefinedCardDetails HeroVeteran Dragonspire
-
 > heroDetails VeteranWarmonger =
 >     undefinedCardDetails HeroVeteran Dragonspire
 
-
-Promotional:
-
 > heroDetails ClanSergeant =
 >     undefinedCardDetails HeroClan Promotional
-
 > heroDetails ClanCommander =
 >     undefinedCardDetails HeroClan Promotional
-
 > heroDetails ClanChampion =
 >     undefinedCardDetails HeroClan Promotional
-
 > heroDetails HarruliInitiate =
 >     undefinedCardDetails HeroHarruli Promotional
-
 > heroDetails HarruliSpellsword =
 >     undefinedCardDetails HeroHarruli Promotional
-
 > heroDetails HarruliAvatar =
 >     undefinedCardDetails HeroHarruli Promotional
 
@@ -2543,102 +2459,181 @@ BATTLE: Destroy one Militia.
 >         }
 >     }
 
-> monsterDetails AirWrath = undefinedCardDetails MonsterElementalNature WrathOfTheElements
-> monsterDetails EarthWrath = undefinedCardDetails MonsterElementalNature WrathOfTheElements
-> monsterDetails FireWrath = undefinedCardDetails MonsterElementalNature WrathOfTheElements
-> monsterDetails ThunderWrath = undefinedCardDetails MonsterElementalNature WrathOfTheElements
-> monsterDetails WaterWrath = undefinedCardDetails MonsterElementalNature WrathOfTheElements
+> monsterDetails AirWrath =
+>     undefinedCardDetails MonsterElementalNature WrathOfTheElements
+> monsterDetails EarthWrath =
+>     undefinedCardDetails MonsterElementalNature WrathOfTheElements
+> monsterDetails FireWrath =
+>     undefinedCardDetails MonsterElementalNature WrathOfTheElements
+> monsterDetails ThunderWrath =
+>     undefinedCardDetails MonsterElementalNature WrathOfTheElements
+> monsterDetails WaterWrath =
+>     undefinedCardDetails MonsterElementalNature WrathOfTheElements
 
-> monsterDetails BloodTorment = undefinedCardDetails MonsterElementalPain WrathOfTheElements
-> monsterDetails LavaTorment = undefinedCardDetails MonsterElementalPain WrathOfTheElements
-> monsterDetails ShadowTorment = undefinedCardDetails MonsterElementalPain WrathOfTheElements
-> monsterDetails SmokeTorment = undefinedCardDetails MonsterElementalPain WrathOfTheElements
-> monsterDetails SteamTorment = undefinedCardDetails MonsterElementalPain WrathOfTheElements
+> monsterDetails BloodTorment =
+>     undefinedCardDetails MonsterElementalPain WrathOfTheElements
+> monsterDetails LavaTorment =
+>     undefinedCardDetails MonsterElementalPain WrathOfTheElements
+> monsterDetails ShadowTorment =
+>     undefinedCardDetails MonsterElementalPain WrathOfTheElements
+> monsterDetails SmokeTorment =
+>     undefinedCardDetails MonsterElementalPain WrathOfTheElements
+> monsterDetails SteamTorment =
+>     undefinedCardDetails MonsterElementalPain WrathOfTheElements
 
-> monsterDetails BronzeGolem = undefinedCardDetails MonsterGolem WrathOfTheElements
-> monsterDetails ClayGolem = undefinedCardDetails MonsterGolem WrathOfTheElements
-> monsterDetails Colossus = undefinedCardDetails MonsterGolem WrathOfTheElements
-> monsterDetails IronGolem = undefinedCardDetails MonsterGolem WrathOfTheElements
-> monsterDetails StoneGolem = undefinedCardDetails MonsterGolem WrathOfTheElements
+> monsterDetails BronzeGolem =
+>     undefinedCardDetails MonsterGolem WrathOfTheElements
+> monsterDetails ClayGolem =
+>     undefinedCardDetails MonsterGolem WrathOfTheElements
+> monsterDetails Colossus =
+>     undefinedCardDetails MonsterGolem WrathOfTheElements
+> monsterDetails IronGolem =
+>     undefinedCardDetails MonsterGolem WrathOfTheElements
+> monsterDetails StoneGolem =
+>     undefinedCardDetails MonsterGolem WrathOfTheElements
 
-> monsterDetails HordePlaceholder = undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
+> monsterDetails HordePlaceholder =
+>     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
 
-> monsterDetails TheBloodless = undefinedCardDetails MonsterAbyssalThunderspawn DoomgateLegion
-> monsterDetails Razorback = undefinedCardDetails MonsterAbyssalThunderspawn DoomgateLegion
-> monsterDetails Regicide = undefinedCardDetails MonsterAbyssalThunderspawn DoomgateLegion
-> monsterDetails TendrilMinion = undefinedCardDetails MonsterAbyssalThunderspawn DoomgateLegion
-> monsterDetails Usurper = undefinedCardDetails MonsterAbyssalThunderspawn DoomgateLegion
+> monsterDetails TheBloodless =
+>     undefinedCardDetails MonsterAbyssalThunderspawn DoomgateLegion
+> monsterDetails Razorback =
+>     undefinedCardDetails MonsterAbyssalThunderspawn DoomgateLegion
+> monsterDetails Regicide =
+>     undefinedCardDetails MonsterAbyssalThunderspawn DoomgateLegion
+> monsterDetails TendrilMinion =
+>     undefinedCardDetails MonsterAbyssalThunderspawn DoomgateLegion
+> monsterDetails Usurper =
+>     undefinedCardDetails MonsterAbyssalThunderspawn DoomgateLegion
 
-> monsterDetails TheAuthority = undefinedCardDetails MonsterCultistHumanoid DoomgateLegion
-> monsterDetails TheCleansed = undefinedCardDetails MonsterCultistHumanoid DoomgateLegion
-> monsterDetails TheDevout = undefinedCardDetails MonsterCultistHumanoid DoomgateLegion
-> monsterDetails TheFaithful = undefinedCardDetails MonsterCultistHumanoid DoomgateLegion
-> monsterDetails TheVoice = undefinedCardDetails MonsterCultistHumanoid DoomgateLegion
+> monsterDetails TheAuthority =
+>     undefinedCardDetails MonsterCultistHumanoid DoomgateLegion
+> monsterDetails TheCleansed =
+>     undefinedCardDetails MonsterCultistHumanoid DoomgateLegion
+> monsterDetails TheDevout =
+>     undefinedCardDetails MonsterCultistHumanoid DoomgateLegion
+> monsterDetails TheFaithful =
+>     undefinedCardDetails MonsterCultistHumanoid DoomgateLegion
+> monsterDetails TheVoice =
+>     undefinedCardDetails MonsterCultistHumanoid DoomgateLegion
 
-> monsterDetails Arachnea = undefinedCardDetails MonsterEvilDruid DoomgateLegion
-> monsterDetails CrowTalker = undefinedCardDetails MonsterEvilDruid DoomgateLegion
-> monsterDetails GaiasCurse = undefinedCardDetails MonsterEvilDruid DoomgateLegion
-> monsterDetails MonarchDruid = undefinedCardDetails MonsterEvilDruid DoomgateLegion
-> monsterDetails NaturesMistress = undefinedCardDetails MonsterEvilDruid DoomgateLegion
+> monsterDetails Arachnea =
+>     undefinedCardDetails MonsterEvilDruid DoomgateLegion
+> monsterDetails CrowTalker =
+>     undefinedCardDetails MonsterEvilDruid DoomgateLegion
+> monsterDetails GaiasCurse =
+>     undefinedCardDetails MonsterEvilDruid DoomgateLegion
+> monsterDetails MonarchDruid =
+>     undefinedCardDetails MonsterEvilDruid DoomgateLegion
+> monsterDetails NaturesMistress =
+>     undefinedCardDetails MonsterEvilDruid DoomgateLegion
 
-> monsterDetails SwarmPlaceholder = undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
+> monsterDetails SwarmPlaceholder =
+>     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
 
-> monsterDetails Deathchill = undefinedCardDetails MonsterUndeadStormwraith DoomgateLegion
-> monsterDetails Hellstorm = undefinedCardDetails MonsterUndeadStormwraith DoomgateLegion
-> monsterDetails LightningsGaze = undefinedCardDetails MonsterUndeadStormwraith DoomgateLegion
-> monsterDetails MurderWind = undefinedCardDetails MonsterUndeadStormwraith DoomgateLegion
-> monsterDetails Rage = undefinedCardDetails MonsterUndeadStormwraith DoomgateLegion
+> monsterDetails Deathchill =
+>     undefinedCardDetails MonsterUndeadStormwraith DoomgateLegion
+> monsterDetails Hellstorm =
+>     undefinedCardDetails MonsterUndeadStormwraith DoomgateLegion
+> monsterDetails LightningsGaze =
+>     undefinedCardDetails MonsterUndeadStormwraith DoomgateLegion
+> monsterDetails MurderWind =
+>     undefinedCardDetails MonsterUndeadStormwraith DoomgateLegion
+> monsterDetails Rage =
+>     undefinedCardDetails MonsterUndeadStormwraith DoomgateLegion
 
-> monsterDetails Assassin = undefinedCardDetails MonsterBanditHumanoid Dragonspire
-> monsterDetails Cutthroat = undefinedCardDetails MonsterBanditHumanoid Dragonspire
-> monsterDetails Highwayman = undefinedCardDetails MonsterBanditHumanoid Dragonspire
-> monsterDetails Stalker = undefinedCardDetails MonsterBanditHumanoid Dragonspire
-> monsterDetails Thug = undefinedCardDetails MonsterBanditHumanoid Dragonspire
+> monsterDetails Assassin =
+>     undefinedCardDetails MonsterBanditHumanoid Dragonspire
+> monsterDetails Cutthroat =
+>     undefinedCardDetails MonsterBanditHumanoid Dragonspire
+> monsterDetails Highwayman =
+>     undefinedCardDetails MonsterBanditHumanoid Dragonspire
+> monsterDetails Stalker =
+>     undefinedCardDetails MonsterBanditHumanoid Dragonspire
+> monsterDetails Thug =
+>     undefinedCardDetails MonsterBanditHumanoid Dragonspire
 
-> monsterDetails Basilisk = undefinedCardDetails MonsterDarkEnchanted Dragonspire
-> monsterDetails Harpy = undefinedCardDetails MonsterDarkEnchanted Dragonspire
-> monsterDetails Manticore = undefinedCardDetails MonsterDarkEnchanted Dragonspire
-> monsterDetails Medusa = undefinedCardDetails MonsterDarkEnchanted Dragonspire
-> monsterDetails Minotaur = undefinedCardDetails MonsterDarkEnchanted Dragonspire
+> monsterDetails Basilisk =
+>     undefinedCardDetails MonsterDarkEnchanted Dragonspire
+> monsterDetails Harpy =
+>     undefinedCardDetails MonsterDarkEnchanted Dragonspire
+> monsterDetails Manticore =
+>     undefinedCardDetails MonsterDarkEnchanted Dragonspire
+> monsterDetails Medusa =
+>     undefinedCardDetails MonsterDarkEnchanted Dragonspire
+> monsterDetails Minotaur =
+>     undefinedCardDetails MonsterDarkEnchanted Dragonspire
 
-> monsterDetails Blaze = undefinedCardDetails MonsterElementalFire Dragonspire
-> monsterDetails ChokingSmoke = undefinedCardDetails MonsterElementalFire Dragonspire
-> monsterDetails Ember = undefinedCardDetails MonsterElementalFire Dragonspire
-> monsterDetails Flare = undefinedCardDetails MonsterElementalFire Dragonspire
-> monsterDetails Inferno = undefinedCardDetails MonsterElementalFire Dragonspire
+> monsterDetails Blaze =
+>     undefinedCardDetails MonsterElementalFire Dragonspire
+> monsterDetails ChokingSmoke =
+>     undefinedCardDetails MonsterElementalFire Dragonspire
+> monsterDetails Ember =
+>     undefinedCardDetails MonsterElementalFire Dragonspire
+> monsterDetails Flare =
+>     undefinedCardDetails MonsterElementalFire Dragonspire
+> monsterDetails Inferno =
+>     undefinedCardDetails MonsterElementalFire Dragonspire
 
-> monsterDetails FireGiant = undefinedCardDetails MonsterGiant Dragonspire
-> monsterDetails FrostGiant = undefinedCardDetails MonsterGiant Dragonspire
-> monsterDetails MountainGiant = undefinedCardDetails MonsterGiant Dragonspire
-> monsterDetails StoneGiant = undefinedCardDetails MonsterGiant Dragonspire
-> monsterDetails Titan = undefinedCardDetails MonsterGiant Dragonspire
+> monsterDetails FireGiant =
+>     undefinedCardDetails MonsterGiant Dragonspire
+> monsterDetails FrostGiant =
+>     undefinedCardDetails MonsterGiant Dragonspire
+> monsterDetails MountainGiant =
+>     undefinedCardDetails MonsterGiant Dragonspire
+> monsterDetails StoneGiant =
+>     undefinedCardDetails MonsterGiant Dragonspire
+> monsterDetails Titan =
+>     undefinedCardDetails MonsterGiant Dragonspire
 
-> monsterDetails EarthTempest = undefinedCardDetails MonsterHydraDragon Dragonspire
-> monsterDetails FlameRage = undefinedCardDetails MonsterHydraDragon Dragonspire
-> monsterDetails Hydra = undefinedCardDetails MonsterHydraDragon Dragonspire
-> monsterDetails WaterWrathHydra = undefinedCardDetails MonsterHydraDragon Dragonspire
-> monsterDetails WindFury = undefinedCardDetails MonsterHydraDragon Dragonspire
+> monsterDetails EarthTempest =
+>     undefinedCardDetails MonsterHydraDragon Dragonspire
+> monsterDetails FlameRage =
+>     undefinedCardDetails MonsterHydraDragon Dragonspire
+> monsterDetails Hydra =
+>     undefinedCardDetails MonsterHydraDragon Dragonspire
+> monsterDetails WaterWrathHydra =
+>     undefinedCardDetails MonsterHydraDragon Dragonspire
+> monsterDetails WindFury =
+>     undefinedCardDetails MonsterHydraDragon Dragonspire
 
-> monsterDetails HalfOgre = undefinedCardDetails MonsterOrcHumanoid Dragonspire
-> monsterDetails OrcBlademaster = undefinedCardDetails MonsterOrcHumanoid Dragonspire
-> monsterDetails OrcWarlord = undefinedCardDetails MonsterOrcHumanoid Dragonspire
-> monsterDetails ShadowKiller = undefinedCardDetails MonsterOrcHumanoid Dragonspire
-> monsterDetails StandardBearer = undefinedCardDetails MonsterOrcHumanoid Dragonspire
+> monsterDetails HalfOgre =
+>     undefinedCardDetails MonsterOrcHumanoid Dragonspire
+> monsterDetails OrcBlademaster =
+>     undefinedCardDetails MonsterOrcHumanoid Dragonspire
+> monsterDetails OrcWarlord =
+>     undefinedCardDetails MonsterOrcHumanoid Dragonspire
+> monsterDetails ShadowKiller =
+>     undefinedCardDetails MonsterOrcHumanoid Dragonspire
+> monsterDetails StandardBearer =
+>     undefinedCardDetails MonsterOrcHumanoid Dragonspire
 
-> monsterDetails Deathbringer = undefinedCardDetails MonsterUndeadLich Dragonspire
-> monsterDetails Destiny = undefinedCardDetails MonsterUndeadLich Dragonspire
-> monsterDetails GraveKnight = undefinedCardDetails MonsterUndeadLich Dragonspire
-> monsterDetails LichLord = undefinedCardDetails MonsterUndeadLich Dragonspire
-> monsterDetails TombHaunt = undefinedCardDetails MonsterUndeadLich Dragonspire
+> monsterDetails Deathbringer =
+>     undefinedCardDetails MonsterUndeadLich Dragonspire
+> monsterDetails Destiny =
+>     undefinedCardDetails MonsterUndeadLich Dragonspire
+> monsterDetails GraveKnight =
+>     undefinedCardDetails MonsterUndeadLich Dragonspire
+> monsterDetails LichLord =
+>     undefinedCardDetails MonsterUndeadLich Dragonspire
+> monsterDetails TombHaunt =
+>     undefinedCardDetails MonsterUndeadLich Dragonspire
 
-> monsterDetails HungryDead = undefinedCardDetails MonsterUndeadPlague Dragonspire
-> monsterDetails Plaguebearer = undefinedCardDetails MonsterUndeadPlague Dragonspire
-> monsterDetails PlagueZombie = undefinedCardDetails MonsterUndeadPlague Dragonspire
-> monsterDetails RestlessCorpse = undefinedCardDetails MonsterUndeadPlague Dragonspire
-> monsterDetails WalkingScourge = undefinedCardDetails MonsterUndeadPlague Dragonspire
+> monsterDetails HungryDead =
+>     undefinedCardDetails MonsterUndeadPlague Dragonspire
+> monsterDetails Plaguebearer =
+>     undefinedCardDetails MonsterUndeadPlague Dragonspire
+> monsterDetails PlagueZombie =
+>     undefinedCardDetails MonsterUndeadPlague Dragonspire
+> monsterDetails RestlessCorpse =
+>     undefinedCardDetails MonsterUndeadPlague Dragonspire
+> monsterDetails WalkingScourge =
+>     undefinedCardDetails MonsterUndeadPlague Dragonspire
 
-> monsterDetails TheVision = undefinedCardDetails MonsterCultistHumanoid Promotional
-> monsterDetails Mammoth = undefinedCardDetails MonsterEvilDruid Promotional
+> monsterDetails TheVision =
+>     undefinedCardDetails MonsterCultistHumanoid Promotional
+> monsterDetails Mammoth =
+>     undefinedCardDetails MonsterEvilDruid Promotional
 
 > data VillageStats = VillageStats {
 >     villageWeight :: Int,
@@ -2646,7 +2641,503 @@ BATTLE: Destroy one Militia.
 >     }
 
 > villageDetails :: VillageCard -> CardDetails VillageCard VillageStats
-> villageDetails = undefined
+> villageDetails Dagger = CardDetails {
+>     cardName = "Dagger",
+
+ATTACK +1
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Dagger,
+>     cardCount = 15,
+>     cardClasses = [ClassWeapon,ClassEdged],
+>     cardGold = 1,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 2,
+>         villagePrice = 3
+>         }
+>     }
+
+> villageDetails IronRations = CardDetails {
+>     cardName = "Iron Rations",
+
+DUNGEON: One Hero gains Strength +2.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = IronRations,
+>     cardCount = 15,
+>     cardClasses = [ClassItem,ClassFood],
+>     cardGold = 2,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 2
+>         }
+>     }
+
+> villageDetails Torch = CardDetails {
+>     cardName = "Torch",
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Torch,
+>     cardCount = 15,
+>     cardClasses = [ClassItem,ClassLight],
+>     cardGold = 2,
+>     cardLight = 1,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 3
+>         }
+>     }
+
+> villageDetails ArcaneEnergies = CardDetails {
+>     cardName = "Arcane Energies",
+
+DUNGEON: All ATTACKS from Heroes with Weapons equipped become
+MAGIC ATTACKS.  Draw one card.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = ArcaneEnergies,
+>     cardCount = 8,
+>     cardClasses = [ClassSpell],
+>     cardGold = 0,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 2
+>         }
+>     }
+
+> villageDetails Banish = CardDetails {
+>     cardName = "Banish",
+
+DUNGEON: Return one Monster to the bottom of the deck and refill
+the hall, or rearrange the hall.  Destroy one card from your hand.
+Draw one card.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Banish,
+>     cardCount = 8,
+>     cardClasses = [ClassSpell],
+>     cardGold = 0,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 4
+>         }
+>     }
+
+> villageDetails Barkeep = CardDetails {
+>     cardName = "Barkeep",
+
+VILLAGE: You may purchase one additional card this turn.
+
+VILLAGE: Destroy this card to gain 2 Gold.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Barkeep,
+>     cardCount = 8,
+>     cardClasses = [ClassVillager],
+>     cardGold = 1,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 2
+>         }
+>     }
+
+> villageDetails BattleFury = CardDetails {
+>     cardName = "BattleFury",
+
+DUNGEON: All Heroes gain ATTACK +1.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = BattleFury,
+>     cardCount = 8,
+>     cardClasses = [ClassSpell],
+>     cardGold = 0,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 3
+>         }
+>     }
+
+> villageDetails Feast = CardDetails {
+>     cardName = "Feast",
+
+DUNGEON: All Heroes gain Strength +1 and ATTACK +1.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Feast,
+>     cardCount = 8,
+>     cardClasses = [ClassItem,ClassFood],
+>     cardGold = 3,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 5
+>         }
+>     }
+
+> villageDetails Fireball = CardDetails {
+>     cardName = "Fireball",
+
+MAGIC ATTACK +3
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Fireball,
+>     cardCount = 8,
+>     cardClasses = [ClassSpell],
+>     cardGold = 0,
+>     cardLight = 1,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 9
+>         }
+>     }
+
+> villageDetails FlamingSword = CardDetails {
+>     cardName = "Flaming Sword",
+
+MAGIC ATTACK +3
+
+>     cardSource = ThunderstoneBase,
+>     cardType = FlamingSword,
+>     cardCount = 8,
+>     cardClasses = [ClassWeapon,ClassEdged],
+>     cardGold = 2,
+>     cardLight = 1,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 5,
+>         villagePrice = 5
+>         }
+>     }
+
+> villageDetails Goodberries = CardDetails {
+>     cardName = "Goodberries",
+
+DUNGEON: One Hero gains Strength +3 and ATTACK becomes MAGIC ATTACK
+for that Hero.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Goodberries,
+>     cardCount = 8,
+>     cardClasses = [ClassItem,ClassFood,ClassMagic],
+>     cardGold = 2,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 4
+>         }
+>     }
+
+> villageDetails Hatchet = CardDetails {
+>     cardName = "Hatchet",
+
+ATTACK +3
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Hatchet,
+>     cardCount = 8,
+>     cardClasses = [ClassWeapon,ClassEdged],
+>     cardGold = 1,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 3,
+>         villagePrice = 4
+>         }
+>     }
+
+> villageDetails Lantern = CardDetails {
+>     cardName = "Lantern",
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Lantern,
+>     cardCount = 8,
+>     cardClasses = [ClassItem,ClassLight],
+>     cardGold = 2,
+>     cardLight = 2,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 4
+>         }
+>     }
+
+> villageDetails LightstoneGem = CardDetails {
+>     cardName = "Lightstone Gem",
+
+>     cardSource = ThunderstoneBase,
+>     cardType = LightstoneGem,
+>     cardCount = 8,
+>     cardClasses = [ClassItem,ClassLight,ClassMagic],
+>     cardGold = 3,
+>     cardLight = 3,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 6
+>         }
+>     }
+
+> villageDetails MagicalAura = CardDetails {
+>     cardName = "Magical Aura",
+
+DUNGEON: All Weapons become Weight 0.  Draw one card.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = MagicalAura,
+>     cardCount = 8,
+>     cardClasses = [ClassSpell],
+>     cardGold = 2,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 4
+>         }
+>     }
+
+> villageDetails Pawnbroker = CardDetails {
+>     cardName = "Pawnbroker",
+
+VILLAGE: Destroy any card with a gold value to gain its gold value
+plus 3 Gold.
+
+VILLAGE: Destroy this card to gain 2 Gold.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Pawnbroker,
+>     cardCount = 8,
+>     cardClasses = [ClassVillager],
+>     cardGold = 0,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 3
+>         }
+>     }
+
+> villageDetails Polearm = CardDetails {
+>     cardName = "Polearm",
+
+ATTACK +2, or ATTACK +6 when attached to a Hero with 8 or more Strength.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Polearm,
+>     cardCount = 8,
+>     cardClasses = [ClassWeapon,ClassEdged],
+>     cardGold = 3,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 2,
+>         villagePrice = 7
+>         }
+>     }
+
+> villageDetails ShortSword = CardDetails {
+>     cardName = "Short Sword",
+
+ATTACK +4
+
+>     cardSource = ThunderstoneBase,
+>     cardType = ShortSword,
+>     cardCount = 8,
+>     cardClasses = [ClassWeapon,ClassEdged],
+>     cardGold = 3,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 4,
+>         villagePrice = 6
+>         }
+>     }
+
+> villageDetails Spear = CardDetails {
+>     cardName = "Spear",
+
+ATTACK +2
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Spear,
+>     cardCount = 8,
+>     cardClasses = [ClassWeapon,ClassEdged],
+>     cardGold = 2,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 4,
+>         villagePrice = 4
+>         }
+>     }
+
+> villageDetails TownGuard = CardDetails {
+>     cardName = "Town Guard",
+
+VILLAGE: Draw two cards.
+
+VILLAGE: Destroy this card to draw three additional cards.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = TownGuard,
+>     cardCount = 8,
+>     cardClasses = [ClassVillager],
+>     cardGold = 0,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 3
+>         }
+>     }
+
+> villageDetails Trainer = CardDetails {
+>     cardName = "Trainer",
+
+VILLAGE: Destroy one Militia to gain 2 XP.
+
+VILLAGE: Destroy this card to gain 2 Gold.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Trainer,
+>     cardCount = 8,
+>     cardClasses = [ClassVillager],
+>     cardGold = 0,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 0,
+>         villagePrice = 4
+>         }
+>     }
+
+> villageDetails Warhammer = CardDetails {
+>     cardName = "Warhammer",
+
+ATTACK +3
+
+Clerics gain an additional ATTACK +3 against Doomknights and Undead.
+
+>     cardSource = ThunderstoneBase,
+>     cardType = Warhammer,
+>     cardCount = 8,
+>     cardClasses = [ClassWeapon,ClassBlunt],
+>     cardGold = 2,
+>     cardLight = 0,
+>     cardVictoryPoints = 0,
+>     cardStats = VillageStats {
+>         villageWeight = 5,
+>         villagePrice = 4
+>         }
+>     }
+
+> villageDetails Ambrosia =
+>     undefinedCardDetails Ambrosia WrathOfTheElements
+> villageDetails AmuletOfPower =
+>     undefinedCardDetails AmuletOfPower WrathOfTheElements
+> villageDetails Blacksmith =
+>     undefinedCardDetails Blacksmith WrathOfTheElements
+> villageDetails Claymore =
+>     undefinedCardDetails Claymore WrathOfTheElements
+> villageDetails CreepingDeath =
+>     undefinedCardDetails CreepingDeath WrathOfTheElements
+> villageDetails CursedMace =
+>     undefinedCardDetails CursedMace WrathOfTheElements
+> villageDetails ForesightElixir =
+>     undefinedCardDetails ForesightElixir WrathOfTheElements
+> villageDetails IllusoryBlade =
+>     undefinedCardDetails IllusoryBlade WrathOfTheElements
+> villageDetails MagiStaff =
+>     undefinedCardDetails MagiStaff WrathOfTheElements
+> villageDetails MagicMissile =
+>     undefinedCardDetails MagicMissile WrathOfTheElements
+> villageDetails Sage =
+>     undefinedCardDetails Sage WrathOfTheElements
+> villageDetails Shortbow =
+>     undefinedCardDetails Shortbow WrathOfTheElements
+> villageDetails TavernBrawl =
+>     undefinedCardDetails TavernBrawl WrathOfTheElements
+> villageDetails TaxCollector =
+>     undefinedCardDetails TaxCollector WrathOfTheElements
+
+> villageDetails BlessedHammer =
+>     undefinedCardDetails BlessedHammer DoomgateLegion
+> villageDetails BorderGuard =
+>     undefinedCardDetails BorderGuard DoomgateLegion
+> villageDetails Cyclone =
+>     undefinedCardDetails Cyclone DoomgateLegion
+> villageDetails DivineStaff =
+>     undefinedCardDetails DivineStaff DoomgateLegion
+> villageDetails DoomgateSquire =
+>     undefinedCardDetails DoomgateSquire DoomgateLegion
+> villageDetails FlaskOfOil =
+>     undefinedCardDetails FlaskOfOil DoomgateLegion
+> villageDetails FortuneTeller =
+>     undefinedCardDetails FortuneTeller DoomgateLegion
+> villageDetails Glowberries =
+>     undefinedCardDetails Glowberries DoomgateLegion
+> villageDetails GreedBlade =
+>     undefinedCardDetails GreedBlade DoomgateLegion
+> villageDetails PiousChaplain =
+>     undefinedCardDetails PiousChaplain DoomgateLegion
+> villageDetails SoulJar =
+>     undefinedCardDetails SoulJar DoomgateLegion
+> villageDetails SpiritBlast =
+>     undefinedCardDetails SpiritBlast DoomgateLegion
+> villageDetails SpiritHunter =
+>     undefinedCardDetails SpiritHunter DoomgateLegion
+
+> villageDetails BluefireStaff =
+>     undefinedCardDetails BluefireStaff Dragonspire
+> villageDetails BurntOffering =
+>     undefinedCardDetails BurntOffering Dragonspire
+> villageDetails ChieftainsDrum =
+>     undefinedCardDetails ChieftainsDrum Dragonspire
+> villageDetails FrostBolt =
+>     undefinedCardDetails FrostBolt Dragonspire
+> villageDetails FrostGiantAxe =
+>     undefinedCardDetails FrostGiantAxe Dragonspire
+> villageDetails GuardianBlade =
+>     undefinedCardDetails GuardianBlade Dragonspire
+> villageDetails Guide =
+>     undefinedCardDetails Guide Dragonspire
+> villageDetails Polymorph =
+>     undefinedCardDetails Polymorph Dragonspire
+> villageDetails Quartermaster =
+>     undefinedCardDetails Quartermaster Dragonspire
+> villageDetails RecurveBow =
+>     undefinedCardDetails RecurveBow Dragonspire
+> villageDetails Scout =
+>     undefinedCardDetails Scout Dragonspire
+> villageDetails Silverstorm =
+>     undefinedCardDetails Silverstorm Dragonspire
+> villageDetails Skullbreaker =
+>     undefinedCardDetails Skullbreaker Dragonspire
+> villageDetails SoulGem =
+>     undefinedCardDetails SoulGem Dragonspire
+> villageDetails SpoiledFood =
+>     undefinedCardDetails SpoiledFood Dragonspire
+> villageDetails ThunderRing =
+>     undefinedCardDetails ThunderRing Dragonspire
+> villageDetails TorynGuantlet =
+>     undefinedCardDetails TorynGuantlet Dragonspire
+> villageDetails Trader =
+>     undefinedCardDetails Trader Dragonspire
 
 > data DungeonFeatureStats = DungeonFeatureStats
 
