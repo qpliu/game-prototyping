@@ -2,6 +2,42 @@ Prototype the Thunderstone base game.  Avoid the complexities of the
 expansions to work out how to implement the basic mechanisms.
 
 > module ThunderstoneBase
+
+The interface:
+
+Data types:
+
+ThunderstoneState and PlayerId are opaque.
+
+>     (ThunderstoneState,PlayerId,
+>      Card(..),PlayerState(..),PlayerAction(..),ThunderstoneEvent(..),
+>      GameSetup,
+
+Initialization:
+
+>      thunderstoneInit,
+
+Game setup:
+
+>      firstGame,randomGame,specifiedGame,
+>      thunderstoneStartGame,
+
+Game state:
+
+>      thunderstoneGameOver,
+>      thunderstoneDungeonHall,
+>      thunderstoneVillageHeroes,
+>      thunderstoneVillageResources,
+>      thunderstonePlayerIds,
+>      thunderstonePlayerHand,
+>      thunderstonePlayerScore,
+>      thunderstonePlayerState,
+
+Game mechanics:
+
+>      thunderstonePlayerOptions,
+>      thunderstonePerformAction)
+
 > where
 
 > import Control.Monad(mapM,mapM_,replicateM,unless,when)
@@ -10,20 +46,73 @@ expansions to work out how to implement the basic mechanisms.
 > import System.Random(StdGen)
 
 > import qualified Shuffle
-> import StateTransformer(StateTransformer,getState,setState)
+> import StateTransformer
+>     (StateTransformer,getState,runStateTransformer,setState)
 > import ThunderstoneCards
 
-> data Card =
->     MonsterCard MonsterCard
->   | HeroCard HeroCard
->   | VillageCard VillageCard
->   | DiseaseCard
->   | ThunderstoneCard ThunderstoneCard
->   deriving (Eq,Show)
+==============================================================================
+Exported functions:
 
-Game setup:
+Initialize the state with the random number generator.
 
-> type GameSetup = Thunderstone ([MonsterType],[HeroType],[VillageCard])
+> thunderstoneInit :: StdGen -> ThunderstoneState
+> thunderstoneInit stdGen = ThunderstoneState {
+>     thunderstoneStdGen = stdGen,
+>     thunderstoneCurrentPlayer = undefined,
+>     thunderstonePlayers = [],
+>     thunderstoneDungeon = undefined,
+>     thunderstoneHeroes = undefined,
+>     thunderstoneVillage = undefined
+>     }
+
+Start a game, specifying the number of players and choosing which
+cards are in the game, which can be either a specific set of cards,
+or randomly chosen cards.
+
+> thunderstoneStartGame :: ThunderstoneState -> Int -> GameSetup
+>                       -> (ThunderstoneState,[PlayerId])
+> thunderstoneStartGame state numberOfPlayers gameSetup =
+>     runStateTransformer (setup numberOfPlayers gameSetup) state
+
+Various queries about the state of the game.
+
+> thunderstoneGameOver :: ThunderstoneState -> Bool
+> thunderstoneGameOver state = thunderstoneGetState state isGameOver
+
+> thunderstoneDungeonHall :: ThunderstoneState -> (Card,Card,Card)
+> thunderstoneDungeonHall state = undefined
+
+> thunderstoneVillageHeroes :: ThunderstoneState -> [(HeroType,[HeroCard])]
+> thunderstoneVillageHeroes state = undefined
+
+> thunderstoneVillageResources :: ThunderstoneState -> [(VillageCard,Int)]
+> thunderstoneVillageResources state = undefined
+
+> thunderstonePlayerIds :: ThunderstoneState -> [PlayerId]
+> thunderstonePlayerIds state = thunderstoneGetState state getPlayerIds
+
+> thunderstonePlayerHand :: ThunderstoneState -> PlayerId -> [Card]
+> thunderstonePlayerHand state playerId =
+>     thunderstoneGetState state (getHand playerId)
+
+> thunderstonePlayerScore :: ThunderstoneState -> PlayerId -> Int
+> thunderstonePlayerScore state playerId =
+>     thunderstoneGetState state (getScore playerId)
+
+> thunderstonePlayerState :: ThunderstoneState -> PlayerId -> PlayerState
+> thunderstonePlayerState state playerId =
+>     thunderstoneGetState state (getPlayerState playerId)
+
+> thunderstonePlayerOptions :: ThunderstoneState -> PlayerId -> [PlayerAction]
+> thunderstonePlayerOptions state playerId =
+>     thunderstoneGetState state (getPlayerOptions playerId)
+
+A player performs an action.  If the action is legal, the updated state
+and a list of events are returned.
+
+> thunderstonePerformAction :: ThunderstoneState -> PlayerId -> PlayerAction
+>                           -> Maybe (ThunderstoneState,[ThunderstoneEvent])
+> thunderstonePerformAction = undefined
 
 > firstGame :: GameSetup
 > firstGame = return (monsters,heroes,village)
@@ -38,8 +127,8 @@ random heros, and eight village cards.
 
 For a longer game, try four or more monsters.
 
-> basicGame :: GameSetup
-> basicGame = do
+> randomGame :: GameSetup
+> randomGame = do
 >     monsters <- shuffle [MonsterAbyssal .. MonsterUndeadSpirit]
 >     heroes <- shuffle [HeroAmazon .. HeroThyrian]
 >     village <- shuffle [ArcaneEnergies .. Warhammer]
@@ -61,7 +150,28 @@ choose among the specified cards.
 >         shuffledOthers <- shuffle (others \\ shuffledSpecified)
 >         return (shuffledSpecified ++ shuffledOthers)
 
-> setup :: Int -> GameSetup -> Thunderstone ()
+==============================================================================
+
+> data Card =
+>     MonsterCard MonsterCard
+>   | HeroCard HeroCard
+>   | VillageCard VillageCard
+>   | DiseaseCard
+>   | ThunderstoneCard ThunderstoneCard
+>   deriving Eq
+
+> instance Show Card where
+>     show (MonsterCard card) = cardName $ monsterDetails card
+>     show (HeroCard card) = cardName $ heroDetails card
+>     show (VillageCard card) = cardName $ villageDetails card
+>     show DiseaseCard = "Disease"
+>     show (ThunderstoneCard card) = cardName $ thunderstoneDetails card
+
+Game setup:
+
+> type GameSetup = Thunderstone ([MonsterType],[HeroType],[VillageCard])
+
+> setup :: Int -> GameSetup -> Thunderstone [PlayerId]
 > setup numberOfPlayers gameSetup = do
 >     (monsters,heroes,village) <- gameSetup
 >     dungeon <- buildDungeon monsters
@@ -77,7 +187,7 @@ choose among the specified cards.
 >     mapM_ drawStartingHand playerIds
 >     currentPlayerId <- getCurrentPlayerId
 >     setPlayerState currentPlayerId StartingTurn
->     return ()
+>     return playerIds
 
 >   where
 
@@ -221,6 +331,13 @@ Rest
 
 > newtype DungeonRank = DungeonRank Int
 
+> data ThunderstoneEvent =
+>     PlayerEvent PlayerId PlayerAction
+>   | GameOverEvent [(PlayerId,Int)]
+
+Plus breach effects and other things that players should be notified of.
+
+
 Game mechanics
 
 > isGameOver :: Thunderstone Bool
@@ -246,8 +363,8 @@ Game mechanics
 > cardScore (ThunderstoneCard card) =
 >     cardVictoryPoints $ thunderstoneDetails card
 
-> playerOptions :: PlayerId -> Thunderstone [PlayerAction]
-> playerOptions playerId = do
+> getPlayerOptions :: PlayerId -> Thunderstone [PlayerAction]
+> getPlayerOptions playerId = do
 >     gameOver <- isGameOver
 >     if gameOver
 >       then return []
@@ -517,3 +634,7 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 > remove1 item items = before ++ drop 1 after
 >   where
 >     (before,after) = span (/= item) items
+
+> thunderstoneGetState :: ThunderstoneState -> Thunderstone a -> a
+> thunderstoneGetState state getThunderstoneState =
+>     snd $ runStateTransformer getThunderstoneState state
