@@ -19,7 +19,7 @@ Initialization:
 
 Game setup:
 
->      firstGame,randomGame,specifiedGame,
+>      firstGame,randomizedGame,specifiedGame,
 >      thunderstoneStartGame,
 
 Game state:
@@ -32,6 +32,7 @@ Game state:
 >      thunderstonePlayerHand,
 >      thunderstonePlayerScore,
 >      thunderstonePlayerState,
+>      thunderstonePlayerXP,
 
 Game mechanics:
 
@@ -79,14 +80,14 @@ Various queries about the state of the game.
 > thunderstoneGameOver :: ThunderstoneState -> Bool
 > thunderstoneGameOver state = thunderstoneGetState state isGameOver
 
-> thunderstoneDungeonHall :: ThunderstoneState -> (Card,Card,Card)
-> thunderstoneDungeonHall state = undefined
+> thunderstoneDungeonHall :: ThunderstoneState -> [Card]
+> thunderstoneDungeonHall state = take 3 $ thunderstoneDungeon state
 
 > thunderstoneVillageHeroes :: ThunderstoneState -> [(HeroType,[HeroCard])]
-> thunderstoneVillageHeroes state = undefined
+> thunderstoneVillageHeroes state = thunderstoneHeroes state
 
 > thunderstoneVillageResources :: ThunderstoneState -> [(VillageCard,Int)]
-> thunderstoneVillageResources state = undefined
+> thunderstoneVillageResources state = thunderstoneVillage state
 
 > thunderstonePlayerIds :: ThunderstoneState -> [PlayerId]
 > thunderstonePlayerIds state = thunderstoneGetState state getPlayerIds
@@ -102,6 +103,10 @@ Various queries about the state of the game.
 > thunderstonePlayerState :: ThunderstoneState -> PlayerId -> PlayerState
 > thunderstonePlayerState state playerId =
 >     thunderstoneGetState state (getPlayerState playerId)
+
+> thunderstonePlayerXP :: ThunderstoneState -> PlayerId -> Int
+> thunderstonePlayerXP state playerId =
+>     playerXP $ thunderstoneGetState state (getPlayer playerId)
 
 > thunderstonePlayerOptions :: ThunderstoneState -> PlayerId -> [PlayerAction]
 > thunderstonePlayerOptions state playerId =
@@ -127,8 +132,8 @@ random heros, and eight village cards.
 
 For a longer game, try four or more monsters.
 
-> randomGame :: GameSetup
-> randomGame = do
+> randomizedGame :: GameSetup
+> randomizedGame = do
 >     monsters <- shuffle [MonsterAbyssal .. MonsterUndeadSpirit]
 >     heroes <- shuffle [HeroAmazon .. HeroThyrian]
 >     village <- shuffle [ArcaneEnergies .. Warhammer]
@@ -384,11 +389,12 @@ Game mechanics
 >     optionsWhen TakingSpoils = undefined
 >     optionsWhen Waiting = return []
 
-> takeAction :: PlayerId -> PlayerAction -> Thunderstone Bool
+> takeAction :: PlayerId -> PlayerAction
+>            -> Thunderstone (Maybe [ThunderstoneEvent])
 > takeAction playerId playerAction = do
 >     gameOver <- isGameOver
 >     if gameOver
->       then return False
+>       then return Nothing
 >       else do
 >         playerState <- getPlayerState playerId
 >         status <- performAction playerState playerAction
@@ -398,7 +404,8 @@ Game mechanics
 
 >   where
 
->     performAction :: PlayerState -> PlayerAction -> Thunderstone Bool
+>     performAction :: PlayerState -> PlayerAction
+>                   -> Thunderstone (Maybe [ThunderstoneEvent])
 >     performAction StartingTurn VisitVillage = do
 >         hand <- getHand playerId
 >         setPlayerState playerId
@@ -408,23 +415,23 @@ Game mechanics
 >                            villageEffectsNumberOfBuys = 0,
 >                            villageEffectsGold = 0
 >                            }
->         return True
+>         return (Just [PlayerEvent playerId VisitVillage])
 >     performAction StartingTurn EnterDungeon = do
 >         setPlayerState playerId
 >                        UsingDungeonEffects
->         return True
+>         return (Just [PlayerEvent playerId EnterDungeon])
 >     performAction StartingTurn (Rest (Just card)) = do
 >         hand <- getHand playerId
 >         if card `elem` hand
 >           then do
 >             setHand playerId (remove1 card hand)
 >             endTurn
->             return True
->           else return False
+>             return (Just [PlayerEvent playerId (Rest (Just card))])
+>           else return Nothing
 >     performAction StartingTurn (Rest Nothing) = do
 >         endTurn
->         return True
->     performAction StartingTurn _ = return False
+>         return (Just [PlayerEvent playerId (Rest Nothing)])
+>     performAction StartingTurn _ = return Nothing
 
 ... more actions ...
 

@@ -480,6 +480,16 @@ Wrath of the Elements:
 >   | StoneGolem
 
 >   | HordePlaceholder
+>   | Horde3
+>   | Horde4
+>   | Horde5
+>   | Horde6
+>   | Horde7
+>   | Horde8
+>   | Horde9
+>   | Horde10
+>   | Horde11
+>   | Horde12
 
 Doomgate Legion:
 
@@ -502,6 +512,16 @@ Doomgate Legion:
 >   | NaturesMistress
 
 >   | SwarmPlaceholder
+>   | Swarm4
+>   | Swarm5
+>   | Swarm6
+>   | Swarm7
+>   | Swarm8
+>   | Swarm9
+>   | Swarm10
+>   | Swarm11
+>   | Swarm12
+>   | Swarm13
 
 >   | Deathchill
 >   | Hellstorm
@@ -667,7 +687,6 @@ Doomgate Legion:
 >   | ClassWizard
 >   deriving (Eq,Show)
 
-
 Card details
 ===============================================================================
 
@@ -711,13 +730,10 @@ You are welcome to use any Thunderstone card during setup.
 
 > thunderstoneDetails StoneOfAgony =
 >     undefinedCardDetails StoneOfAgony WrathOfTheElements
-
 > thunderstoneDetails StoneOfAvarice =
 >     undefinedCardDetails StoneOfAvarice DoomgateLegion
-
 > thunderstoneDetails StoneOfTerror =
 >     undefinedCardDetails StoneOfTerror Dragonspire
-
 > thunderstoneDetails StoneOfScorn =
 >     undefinedCardDetails StoneOfScorn Dragonspire
 
@@ -727,7 +743,9 @@ Hero cards:
 >     heroStrength :: Int,
 >     heroLevel :: Int,
 >     heroPrice :: Int,
->     heroUpgrade :: (Int,[HeroCard])
+>     heroUpgrade :: (Int,[HeroCard]),
+>     heroAttack :: Int,
+>     heroMagicAttack :: Int
 >     }
 
 > heroDetails :: HeroCard -> CardDetails HeroType HeroStats
@@ -751,7 +769,9 @@ a gold value of 0.  This is a asic card included in every game.
 >         heroStrength = 2,
 >         heroLevel = 0,
 >         heroPrice = 0,
->         heroUpgrade = (3,levelOneHeroes)
+>         heroUpgrade = (3,levelOneHeroes),
+>         heroAttack = 1,
+>         heroMagicAttack = 0
 >         }
 >     }
 >   where
@@ -779,7 +799,9 @@ to the Amazon's normal Attack.
 >         heroStrength = 4,
 >         heroLevel = 1,
 >         heroPrice = 6,
->         heroUpgrade = (2,[AmazonHuntress])
+>         heroUpgrade = (2,[AmazonHuntress]),
+>         heroAttack = 1,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -804,7 +826,9 @@ to the Amazon's normal Attack.
 >         heroStrength = 5,
 >         heroLevel = 2,
 >         heroPrice = 9,
->         heroUpgrade = (3,[AmazonQueen])
+>         heroUpgrade = (3,[AmazonQueen]),
+>         heroAttack = 2,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -829,7 +853,9 @@ to the Amazon's normal Attack.
 >         heroStrength = 6,
 >         heroLevel = 3,
 >         heroPrice = 11,
->         heroUpgrade = (0,[])
+>         heroUpgrade = (0,[]),
+>         heroAttack = 2,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -854,7 +880,9 @@ cards and draw new cards until you choose which Monster to attack.
 >         heroStrength = 5,
 >         heroLevel = 1,
 >         heroPrice = 7,
->         heroUpgrade = (2,[ChaliceDefender])
+>         heroUpgrade = (2,[ChaliceDefender]),
+>         heroAttack = 2,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -886,7 +914,9 @@ bonus increase the Defender's Attack Value.
 >         heroStrength = 6,
 >         heroLevel = 2,
 >         heroPrice = 10,
->         heroUpgrade = (3,[ChalicePaladin])
+>         heroUpgrade = (3,[ChalicePaladin]),
+>         heroAttack = 3,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -914,7 +944,9 @@ using the gold in your hand.
 >         heroStrength = 7,
 >         heroLevel = 3,
 >         heroPrice = 12,
->         heroUpgrade = (0,[])
+>         heroUpgrade = (0,[]),
+>         heroAttack = 4,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -941,7 +973,9 @@ for instance).
 >         heroStrength = 5,
 >         heroLevel = 1,
 >         heroPrice = 6,
->         heroUpgrade = (2,[DwarfJanissary])
+>         heroUpgrade = (2,[DwarfJanissary]),
+>         heroAttack = 1,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -970,7 +1004,9 @@ equipped is +6.
 >         heroStrength = 6,
 >         heroLevel = 2,
 >         heroPrice = 9,
->         heroUpgrade = (3,[DwarfSentinel])
+>         heroUpgrade = (3,[DwarfSentinel]),
+>         heroAttack = 2,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -995,7 +1031,9 @@ is +8.
 >         heroStrength = 8,
 >         heroLevel = 3,
 >         heroPrice = 12,
->         heroUpgrade = (0,[])
+>         heroUpgrade = (0,[]),
+>         heroAttack = 3,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1015,7 +1053,9 @@ MAGIC ATTACK +2
 >         heroStrength = 3,
 >         heroLevel = 1,
 >         heroPrice = 5,
->         heroUpgrade = (2,[ElfSorcerer])
+>         heroUpgrade = (2,[ElfSorcerer]),
+>         heroAttack = 0,
+>         heroMagicAttack = 2
 >         }
 >     }
 
@@ -1044,7 +1084,9 @@ not collect the Thunderstone.
 >         heroStrength = 3,
 >         heroLevel = 2,
 >         heroPrice = 8,
->         heroUpgrade = (2,[ElfArchmage])
+>         heroUpgrade = (2,[ElfArchmage]),
+>         heroAttack = 0,
+>         heroMagicAttack = 3
 >         }
 >     }
 
@@ -1073,7 +1115,9 @@ not collect the Thunderstone.
 >         heroStrength = 4,
 >         heroLevel = 3,
 >         heroPrice = 10,
->         heroUpgrade = (0,[])
+>         heroUpgrade = (0,[]),
+>         heroAttack = 0,
+>         heroMagicAttack = 4
 >         }
 >     }
 
@@ -1099,7 +1143,9 @@ If Feayn does not attack, his Light bonus is lost.
 >         heroStrength = 4,
 >         heroLevel = 1,
 >         heroPrice = 7,
->         heroUpgrade = (2,[FeaynMarksman])
+>         heroUpgrade = (2,[FeaynMarksman]),
+>         heroAttack = 2,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1125,7 +1171,9 @@ If Feayn does not attack, his Light bonus is lost.
 >         heroStrength = 5,
 >         heroLevel = 2,
 >         heroPrice = 10,
->         heroUpgrade = (3,[FeaynSniper])
+>         heroUpgrade = (3,[FeaynSniper]),
+>         heroAttack = 3,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1153,7 +1201,9 @@ If Feayn does not attack, his Light bonus is lost.
 >         heroStrength = 6,
 >         heroLevel = 3,
 >         heroPrice = 12,
->         heroUpgrade = (0,[])
+>         heroUpgrade = (0,[]),
+>         heroAttack = 4,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1173,7 +1223,9 @@ ATTACK +1
 >         heroStrength = 4,
 >         heroLevel = 1,
 >         heroPrice = 5,
->         heroUpgrade = (2,[LoriggRogue])
+>         heroUpgrade = (2,[LoriggRogue]),
+>         heroAttack = 1,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1199,7 +1251,9 @@ Dungeon.
 >         heroStrength = 4,
 >         heroLevel = 2,
 >         heroPrice = 8,
->         heroUpgrade = (3,[LoriggOutlaw])
+>         heroUpgrade = (3,[LoriggOutlaw]),
+>         heroAttack = 2,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1225,7 +1279,9 @@ Dungeon.
 >         heroStrength = 5,
 >         heroLevel = 3,
 >         heroPrice = 10,
->         heroUpgrade = (0,[])
+>         heroUpgrade = (0,[]),
+>         heroAttack = 2,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1247,7 +1303,9 @@ DUNGEON: Destroy one Food for an additional ATTACK +3.
 >         heroStrength = 7,
 >         heroLevel = 1,
 >         heroPrice = 8,
->         heroUpgrade = (2,[OutlandsSlayer])
+>         heroUpgrade = (2,[OutlandsSlayer]),
+>         heroAttack = 3,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1274,7 +1332,9 @@ Monster card revealed in your hand before the battle.
 >         heroStrength = 8,
 >         heroLevel = 2,
 >         heroPrice = 11,
->         heroUpgrade = (3,[OutlandsKhan])
+>         heroUpgrade = (3,[OutlandsKhan]),
+>         heroAttack = 5,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1299,7 +1359,9 @@ Monster card revealed in your hand before the battle.
 >         heroStrength = 8,
 >         heroLevel = 3,
 >         heroPrice = 13,
->         heroUpgrade = (0,[])
+>         heroUpgrade = (0,[]),
+>         heroAttack = 7,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1319,7 +1381,9 @@ ATTACK +2
 >         heroStrength = 5,
 >         heroLevel = 1,
 >         heroPrice = 5,
->         heroUpgrade = (2,[RedbladePoisoner])
+>         heroUpgrade = (2,[RedbladePoisoner]),
+>         heroAttack = 2,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1345,7 +1409,9 @@ enters the Dungeon.
 >         heroStrength = 5,
 >         heroLevel = 2,
 >         heroPrice = 8,
->         heroUpgrade = (3,[RedbladeAssassin])
+>         heroUpgrade = (3,[RedbladeAssassin]),
+>         heroAttack = 3,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1371,7 +1437,9 @@ enters the Dungeon.
 >         heroStrength = 6,
 >         heroLevel = 3,
 >         heroPrice = 9,
->         heroUpgrade = (0,[])
+>         heroUpgrade = (0,[]),
+>         heroAttack = 4,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1396,7 +1464,9 @@ until the battle begins.
 >         heroStrength = 4,
 >         heroLevel = 1,
 >         heroPrice = 5,
->         heroUpgrade = (2,[RegianPriest])
+>         heroUpgrade = (2,[RegianPriest]),
+>         heroAttack = 0,
+>         heroMagicAttack = 1
 >         }
 >     }
 
@@ -1423,7 +1493,9 @@ until the battle begins.
 >         heroStrength = 4,
 >         heroLevel = 2,
 >         heroPrice = 8,
->         heroUpgrade = (3,[RegianBishop])
+>         heroUpgrade = (3,[RegianBishop]),
+>         heroAttack = 0,
+>         heroMagicAttack = 2
 >         }
 >     }
 
@@ -1450,7 +1522,9 @@ until the battle begins.
 >         heroStrength = 5,
 >         heroLevel = 3,
 >         heroPrice = 11,
->         heroUpgrade = (0,[])
+>         heroUpgrade = (0,[]),
+>         heroAttack = 0,
+>         heroMagicAttack = 3
 >         }
 >     }
 
@@ -1476,7 +1550,9 @@ an Attack bonus or not, gains a Magic Attack bonus of +1.
 >         heroStrength = 2,
 >         heroLevel = 1,
 >         heroPrice = 8,
->         heroUpgrade = (2,[SelurinWarlock])
+>         heroUpgrade = (2,[SelurinWarlock]),
+>         heroAttack = 0,
+>         heroMagicAttack = 2
 >         }
 >     }
 
@@ -1486,10 +1562,6 @@ an Attack bonus or not, gains a Magic Attack bonus of +1.
 MAGIC ATTACK +2
 
 Total MAGIC ATTACK x2* (apply last)
-
-Selurin: Each Spell with a Magic Attack bonus gains a Magic Attack bonus
-of +1.  Each Item (with the Item keyword), regardless of whether it has
-an Attack bonus or not, gains a Magic Attack bonus of +1.
 
 Selurin Theurge or Warlock: The x2 multiplier of the Selurin Wizard
 affects only Magic Attack bonuses, and is applied after all Magic Attack
@@ -1507,7 +1579,9 @@ bonuses have been calculated.  Multiple Wizards multiply together
 >         heroStrength = 2,
 >         heroLevel = 2,
 >         heroPrice = 10,
->         heroUpgrade = (3,[SelurinTheurge])
+>         heroUpgrade = (3,[SelurinTheurge]),
+>         heroAttack = 0,
+>         heroMagicAttack = 2
 >         }
 >     }
 
@@ -1521,10 +1595,6 @@ Total MAGIC ATTACK x2* (apply last)
 DUNGEON: Each player discards one Hero or shows they have none.
 You may borrow one of those discarded Heroes for the battle, returning
 it at the end.
-
-Selurin: Each Spell with a Magic Attack bonus gains a Magic Attack bonus
-of +1.  Each Item (with the Item keyword), regardless of whether it has
-an Attack bonus or not, gains a Magic Attack bonus of +1.
 
 Selurin Theurge or Warlock: The x2 multiplier of the Selurin Wizard
 affects only Magic Attack bonuses, and is applied after all Magic Attack
@@ -1545,7 +1615,9 @@ it is not returned to the original owner.  Instead, destroy the card.
 >         heroStrength = 3,
 >         heroLevel = 3,
 >         heroPrice = 13,
->         heroUpgrade = (0,[])
+>         heroUpgrade = (0,[]),
+>         heroAttack = 0,
+>         heroMagicAttack = 2
 >         }
 >     }
 
@@ -1570,7 +1642,9 @@ gain a Strength bonus or for any other effect.
 >         heroStrength = 6,
 >         heroLevel = 1,
 >         heroPrice = 7,
->         heroUpgrade = (2,[ThyrianKnight])
+>         heroUpgrade = (2,[ThyrianKnight]),
+>         heroAttack = 2,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1597,7 +1671,9 @@ gain a Strength bonus or for any other effect.
 >         heroStrength = 8,
 >         heroLevel = 2,
 >         heroPrice = 9,
->         heroUpgrade = (3,[ThyrianLord])
+>         heroUpgrade = (3,[ThyrianLord]),
+>         heroAttack = 2,
+>         heroMagicAttack = 0
 >         }
 >     }
 
@@ -1608,8 +1684,8 @@ ATTACK +4
 
 All Heroes other than Fighters gain ATTACK +2.
 
-DUNGEON: Destroy one Food to playce one Monster from the hall
-work 1 or 2 VP into your discard pile.  Refill the hall.
+DUNGEON: Destroy one Food to place one Monster from the hall
+worth 1 or 2 VP into your discard pile.  Refill the hall.
 
 Thyrian: Food destroyed by this Dungeon Effect cannot also be used to
 gain a Strength bonus or for any other effect.
@@ -1632,7 +1708,9 @@ You do not earn any Experience Points for the Effect.
 >         heroStrength = 9,
 >         heroLevel = 3,
 >         heroPrice = 11,
->         heroUpgrade = (0,[])
+>         heroUpgrade = (0,[]),
+>         heroAttack = 4,
+>         heroMagicAttack = 0
 >         }
 >     }
 
