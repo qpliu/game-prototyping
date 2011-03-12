@@ -43,7 +43,7 @@ Game mechanics:
 
 > where
 
-> import Control.Monad(mapM,mapM_,replicateM,unless,when)
+> import Control.Monad(filterM,mapM,mapM_,replicateM,unless,when)
 > import Data.List(nub,sortBy,(\\))
 > import Data.Maybe(catMaybes,listToMaybe)
 > import System.Random(StdGen)
@@ -400,8 +400,16 @@ Game mechanics
 >       then return []
 >       else do
 >         playerState <- getPlayerState playerId
->         optionsWhen playerState
+>         options <- optionsWhen playerState
+>         filterM legalAction options
 >   where
+
+>     legalAction playerAction = do
+>         savedState <- getState
+>         actionResult <- takeAction playerId playerAction
+>         setState savedState
+>         return (maybe False (const True) actionResult)
+
 >     optionsWhen StartingTurn =
 >         return [VisitVillage, EnterDungeon, Rest]
 
