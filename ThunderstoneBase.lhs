@@ -10,7 +10,7 @@ Data types:
 ThunderstoneState and PlayerId are opaque.
 
 >     (ThunderstoneState,PlayerId,
->      Card(..),PlayerState(..),
+>      Card(..),ThunderstonePlayerState(..),
 >      PlayerAction(..),PlayerOption(..),
 >      ThunderstoneEvent(..),
 >      GameSetup,
@@ -27,18 +27,12 @@ Game setup:
 Game state:
 
 >      thunderstoneIsGameOver,
->      thunderstoneDungeonHall,
->      thunderstoneVillageHeroes,
->      thunderstoneVillageResources,
 >      thunderstonePlayerIds,
->      thunderstonePlayerHand,
->      thunderstonePlayerScore,
 >      thunderstonePlayerState,
->      thunderstonePlayerXP,
+>      thunderstoneScores,
 
 Game mechanics:
 
->      thunderstonePlayerOptions,
 >      thunderstoneTakeAction)
 
 > where
@@ -52,6 +46,14 @@ Game mechanics:
 > import StateTransformer
 >     (StateTransformer,getState,runStateTransformer,setState)
 > import ThunderstoneCards
+>     (HeroType(..),MonsterType(..),
+>      ThunderstoneCard(..),HeroCard(..),MonsterCard(..),VillageCard(..),
+>      CardClass(..),CardDetails(..),
+>      thunderstoneDetails,
+>      HeroStats(..),heroDetails,
+>      MonsterStats(..),monsterDetails,
+>      VillageStats(..),villageDetails,
+>      cardsOfType)
 
 ==============================================================================
 Exported functions:
@@ -80,40 +82,30 @@ or randomly chosen cards.
 
 Various queries about the state of the game.
 
+> data ThunderstonePlayerState = ThunderstonePlayerState {
+>     playerStateHand :: [Card],
+>     playerStateDeck :: Int,
+>     playerStateDiscards :: Int,
+>     playerStateXP :: Int,
+>     playerStateOptions :: [PlayerAction],
+>     playerStateDungeonHall :: [Card],
+>     playerStateHeroes :: [(HeroType,[HeroCard])],
+>     playerStateVillage :: [(VillageCard,Int)]
+>     }
+
 > thunderstoneIsGameOver :: ThunderstoneState -> Bool
 > thunderstoneIsGameOver state = thunderstoneGetState state isGameOver
-
-> thunderstoneDungeonHall :: ThunderstoneState -> [Card]
-> thunderstoneDungeonHall state = take 3 $ thunderstoneDungeon state
-
-> thunderstoneVillageHeroes :: ThunderstoneState -> [(HeroType,[HeroCard])]
-> thunderstoneVillageHeroes state = thunderstoneHeroes state
-
-> thunderstoneVillageResources :: ThunderstoneState -> [(VillageCard,Int)]
-> thunderstoneVillageResources state = thunderstoneVillage state
 
 > thunderstonePlayerIds :: ThunderstoneState -> [PlayerId]
 > thunderstonePlayerIds state = thunderstoneGetState state getPlayerIds
 
-> thunderstonePlayerHand :: ThunderstoneState -> PlayerId -> [Card]
-> thunderstonePlayerHand state playerId =
->     thunderstoneGetState state (getHand playerId)
-
-> thunderstonePlayerScore :: ThunderstoneState -> PlayerId -> Int
-> thunderstonePlayerScore state playerId =
->     thunderstoneGetState state (getScore playerId)
-
-> thunderstonePlayerState :: ThunderstoneState -> PlayerId -> PlayerState
+> thunderstonePlayerState :: ThunderstoneState -> PlayerId
+>                         -> ThunderstonePlayerState
 > thunderstonePlayerState state playerId =
->     thunderstoneGetState state (getPlayerState playerId)
+>     thunderstoneGetState state (getThunderstonePlayerState playerId)
 
-> thunderstonePlayerXP :: ThunderstoneState -> PlayerId -> Int
-> thunderstonePlayerXP state playerId =
->     playerXP $ thunderstoneGetState state (getPlayer playerId)
-
-> thunderstonePlayerOptions :: ThunderstoneState -> PlayerId -> [PlayerAction]
-> thunderstonePlayerOptions state playerId =
->     thunderstoneGetState state (getPlayerOptions playerId)
+> thunderstoneScores :: ThunderstoneState -> [(PlayerId,Int)]
+> thunderstoneScores state = thunderstoneGetState state getScores
 
 A player takes an action.  If the action is legal, the updated state
 and a list of events are returned.
@@ -125,6 +117,8 @@ and a list of events are returned.
 >   where
 >     (updatedState,events) =
 >         runStateTransformer (takeAction playerId playerAction) state
+
+The cards for the first game.
 
 > firstGame :: GameSetup
 > firstGame = return (monsters,heroes,village)
@@ -283,11 +277,11 @@ Game state:
 >     StartingTurn
 
 >   | UsingVillageEffects {
->         villageEffects :: [(Card,[(String,Thunderstone (Maybe [ThunderstoneEvent]))])],
+>         villageEffects :: [(Card,[VillageEffect])],
 >         villageEffectsNumberOfBuys :: Int,
 >         villageEffectsGold :: Int
 >         }
->   | Purchasing {
+>   | PurchasingCards {
 >         purchasingNumberOfBuys :: Int,
 >         purchasingGold :: Int
 >         }
@@ -303,6 +297,7 @@ Game state:
 
 >   | ChoosingOption PlayerOption
 >         (Thunderstone [((Int,String),Thunderstone [ThunderstoneEvent])])
+>         (Thunderstone ())
 
 > data PlayerOption =
 >     WhichCardToDestroy
@@ -344,8 +339,9 @@ Rest
 > data PlayerAction =
 >     VisitVillage
 >   | UseVillageEffect
->   | PurchaseHero
->   | PurchaseResource
+>   | FinishUsingVillageEffects
+>   | PurchaseCard
+>   | FinishPurchasingCards
 >   | LevelUpHero
 
 >   | EnterDungeon
@@ -358,9 +354,13 @@ Rest
 >   | EndTurn
 
 >   | ChooseOption (Int,String)
+>   | Backout
 
 > data ThunderstoneEvent =
 >     PlayerEvent PlayerId PlayerAction
+>   | PlayerHand PlayerId [Card]
+>   | PlayerPurchase PlayerId Card
+>   | PlayerUpgrade PlayerId HeroCard HeroCard
 >   | GameOverEvent [(PlayerId,Int)]
 
 Plus breach effects and other things that players should be notified of.
@@ -373,25 +373,43 @@ Game mechanics
 >     state <- getState
 >     return (thunderstoneGameOver state)
 
+> getThunderstonePlayerState :: PlayerId
+>                            -> Thunderstone ThunderstonePlayerState
+> getThunderstonePlayerState playerId = do
+>     state <- getState
+>     player <- getPlayer playerId
+>     playerOptions <- getPlayerOptions playerId
+>     return ThunderstonePlayerState {
+>         playerStateHand = playerHand player,
+>         playerStateDeck = length (playerDeck player),
+>         playerStateDiscards = length (playerDiscard player),
+>         playerStateXP = playerXP player,
+>         playerStateOptions = playerOptions,
+>         playerStateDungeonHall = take 3 (thunderstoneDungeon state),
+>         playerStateHeroes = thunderstoneHeroes state,
+>         playerStateVillage = thunderstoneVillage state
+>         }
+
 > getScores :: Thunderstone [(PlayerId,Int)]
 > getScores = do
 >     playerIds <- getPlayerIds
 >     scores <- mapM getScore playerIds
 >     return (zip playerIds scores)
+>   where
+>     getScore :: PlayerId -> Thunderstone Int
+>     getScore playerId = do
+>         player <- getPlayer playerId
+>         return $ sum $ map cardScore
+>                $ playerHand player ++ playerDeck player
+>                                    ++ playerDiscard player
 
-> getScore :: PlayerId -> Thunderstone Int
-> getScore playerId = do
->     player <- getPlayer playerId
->     return $ sum $ map cardScore
->            $ playerHand player ++ playerDeck player ++ playerDiscard player
-
-> cardScore :: Card -> Int
-> cardScore (MonsterCard card) = cardVictoryPoints $ monsterDetails card
-> cardScore (HeroCard card) = cardVictoryPoints $ heroDetails card
-> cardScore (VillageCard card) = cardVictoryPoints $ villageDetails card
-> cardScore DiseaseCard = 0
-> cardScore (ThunderstoneCard card) =
->     cardVictoryPoints $ thunderstoneDetails card
+>     cardScore :: Card -> Int
+>     cardScore (MonsterCard card) = cardVictoryPoints $ monsterDetails card
+>     cardScore (HeroCard card) = cardVictoryPoints $ heroDetails card
+>     cardScore (VillageCard card) = cardVictoryPoints $ villageDetails card
+>     cardScore DiseaseCard = 0
+>     cardScore (ThunderstoneCard card) =
+>         cardVictoryPoints $ thunderstoneDetails card
 
 > getPlayerOptions :: PlayerId -> Thunderstone [PlayerAction]
 > getPlayerOptions playerId = do
@@ -414,24 +432,26 @@ Game mechanics
 >         return [VisitVillage, EnterDungeon, Rest]
 
 >     optionsWhen UsingVillageEffects {} = do
->         -- check if any effects are available: UseVillageEffect
->         -- check if can afford any village cards: PurchaseVillage
->         -- check if can afford any heroes: BuyHeroCard
->         -- check if can upgrade any hero: LevelUpHero
->         -- EndTurn
->         return undefined
+>         if villageEffectAvailable
+>           then return [UseVillageEffect,FinishUsingVillageEffects,EndTurn]
+>           else return [FinishUsingVillageEffects,EndTurn]
+>       where
+>         villageEffectAvailable = undefined
 
->     optionsWhen Purchasing {} = do
->         -- check if have remaining buys and can afford any village cards: PurchaseVillage
->         -- check if have remaining buys and can afford any heroes: BuyHeroCard
->         -- check if can upgrade any hero: LevelUpHero
->         -- EndTurn
->         return undefined
+>     optionsWhen PurchasingCards {
+>             purchasingNumberOfBuys = numberOfBuys,
+>             purchasingGold = gold
+>             } = do
+>         forSale <- getForSaleInVillage
+>         if numberOfBuys > 0 && gold >= minimum (map snd forSale)
+>           then return [PurchaseCard,FinishPurchasingCards,EndTurn]
+>           else return [FinishPurchasingCards,EndTurn]
 
 >     optionsWhen LevelingUpHeroes = do
->         -- check if can upgrade any hero: LevelUpHero
->         -- EndTurn
->         return undefined
+>         heroUpgrades <- getHeroUpgrades playerId
+>         if null heroUpgrades
+>           then return [EndTurn]
+>           else return [LevelUpHero,EndTurn]
 
 >     optionsWhen UsingDungeonEffects = undefined
 
@@ -443,9 +463,9 @@ Game mechanics
 
 >     optionsWhen Waiting = return []
 
->     optionsWhen (ChoosingOption _ getOptions) = do
+>     optionsWhen (ChoosingOption _ getOptions _) = do
 >         options <- getOptions
->         return (map (ChooseOption . fst) options)
+>         return (Backout : map (ChooseOption . fst) options)
 
 > takeAction :: PlayerId -> PlayerAction
 >            -> Thunderstone (Maybe [ThunderstoneEvent])
@@ -502,12 +522,23 @@ and draw six new cards to form a new hand.
 
 >     performAction StartingTurn VisitVillage = do
 >         hand <- getHand playerId
->         undefined -- update player state
->         return (Just [PlayerEvent playerId VisitVillage])
+>         setPlayerState playerId
+>             UsingVillageEffects {
+>                 villageEffects = map addVillageEffects hand,
+>                 villageEffectsNumberOfBuys = 0,
+>                 villageEffectsGold = 0
+>                 }
+>         return (Just [PlayerEvent playerId VisitVillage,
+>                       PlayerHand playerId hand])
+>       where
+>         addVillageEffects card =
+>             (card,cardVillageEffects $ cardProperties card)
 
 >     performAction StartingTurn EnterDungeon = do
+>         hand <- getHand playerId
 >         undefined -- update player state
->         return (Just [PlayerEvent playerId EnterDungeon])
+>         return (Just [PlayerEvent playerId EnterDungeon,
+>                       PlayerHand playerId hand])
 
 >     performAction StartingTurn Rest = do
 >         setPlayerState playerId Resting
@@ -516,6 +547,105 @@ and draw six new cards to form a new hand.
 >     performAction StartingTurn _ = return Nothing
 
 Village:
+
+Village: Using Village Effects:
+
+>     performAction UsingVillageEffects {} UseVillageEffect = do
+>         undefined
+
+>     performAction
+>             UsingVillageEffects {
+>                 villageEffectsNumberOfBuys = numberOfBuys,
+>                 villageEffectsGold = gold
+>                 }
+>             FinishUsingVillageEffects = do
+>         hand <- getHand playerId
+>         let producedGold = sum (map (cardVillageGold . cardProperties) hand)
+>         setPlayerState playerId
+>             PurchasingCards {
+>                 purchasingNumberOfBuys = numberOfBuys + 1,
+>                 purchasingGold = gold + producedGold
+>                 }
+>         return (Just [])
+
+>     performAction UsingVillageEffects {} EndTurn = do
+>         endTurn []
+>         return (Just [])
+
+>     performAction UsingVillageEffects {} _ = return Nothing
+
+Village: Purchasing cards:
+
+>     performAction
+>             playerState@PurchasingCards {
+>                 purchasingNumberOfBuys = numberOfBuys,
+>                 purchasingGold = gold
+>                 }
+>             PurchaseCard = do
+>         forSale <- fmap (filter ((<= gold) . snd)) getForSaleInVillage
+>         if null forSale || numberOfBuys <= 0
+>           then return Nothing
+>           else do
+>             setPlayerState playerId
+>                 (ChoosingOption WhichCardToBuy
+>                      (return $ zipWith purchaseOption [1..] forSale)
+>                      backout)
+>             return (Just [])
+>       where
+>         purchaseOption index (card,_) = ((index,show card),doPurchase card)
+>         doPurchase card = do
+>             setPlayerState playerId playerState
+>             result <- purchaseCard playerId card
+>             return [PlayerPurchase playerId card]
+>         backout = do
+>             setPlayerState playerId playerState
+
+>     performAction PurchasingCards {} FinishPurchasingCards = do
+>         setPlayerState playerId LevelingUpHeroes
+>         return (Just [])
+
+>     performAction PurchasingCards {} EndTurn = do
+>         endTurn []
+>         return (Just [])
+
+>     performAction PurchasingCards {} _ = return Nothing
+
+Village: Leveling Up Heroes:
+
+>     performAction LevelingUpHeroes LevelUpHero = do
+>         xp <- getXP playerId
+>         -- [(HeroCard,(Int,HeroCard))]
+>         upgrades <- fmap (filter (canUpgrade xp)) (getHeroUpgrades playerId)
+>         if null upgrades
+>           then return Nothing
+>           else do
+>             setPlayerState playerId
+>                 (ChoosingOption WhichHeroToLevelUp
+>                      (return $ zipWith upgradeOption [1..] upgrades)
+>                      backout)
+>             return (Just [])
+>       where
+>         canUpgrade xp (_,(price,_)) = xp >= price
+>         upgradeOption index (oldHero,(price,newHero)) =
+>             ((index,showUpgrade oldHero newHero price),
+>              doUpgrade oldHero newHero)
+>         showUpgrade oldHero newHero price =
+>             show (HeroCard oldHero) ++ " -> " ++ show (HeroCard newHero)
+>                                     ++ " (" ++ show price ++ "XP)"
+>         doUpgrade oldHero newHero = do
+>             result <- upgradeHero playerId oldHero newHero
+>             setPlayerState playerId LevelingUpHeroes
+>             if result
+>               then return [PlayerUpgrade playerId oldHero newHero]
+>               else return []
+>         backout = do
+>             setPlayerState playerId LevelingUpHeroes
+
+>     performAction LevelingUpHeroes EndTurn = do
+>         endTurn []
+>         return (Just [])
+
+>     performAction LevelingUpHeroes _ = return Nothing
 
 Dungeon:
 
@@ -529,7 +659,8 @@ Rest:
 >           else do
 >             setPlayerState playerId
 >                 (ChoosingOption WhichCardToDestroy
->                      (return (zipWith chooseCard [1..] hand)))
+>                      (return (zipWith chooseCard [1..] hand))
+>                      backout)
 >             return (Just [])
 >       where
 >         chooseCard optionNumber card =
@@ -539,15 +670,23 @@ Rest:
 >             setHand playerId (remove1 card hand)
 >             endTurn []
 >             return [PlayerEvent playerId DestroyCard]
+>         backout =
+>             setPlayerState playerId Resting
 
 >     performAction Resting EndTurn = do
 >         endTurn []
 
+>     performAction Resting _ = return Nothing
+
 Generic choose option:
 
->     performAction (ChoosingOption _ getOptions) (ChooseOption option) = do
+>     performAction (ChoosingOption _ getOptions _) (ChooseOption option) = do
 >         options <- getOptions
 >         maybe (return Nothing) (fmap Just) $ lookup option options
+
+>     performAction (ChoosingOption _ _ backout) Backout = do
+>         backout
+>         return (Just [])
 
 Low level game mechanics
 
@@ -578,6 +717,89 @@ together.
 >         setPlayer playerId
 >                   player { playerDeck = tail (playerDeck player) }
 >         return (Just (head (playerDeck player)))
+
+> getForSaleInVillage :: Thunderstone [(Card,Int)]
+> getForSaleInVillage = do
+>     state <- getState
+>     let village = map fst (filter ((> 0) . snd) (thunderstoneVillage state))
+>     let heroes = concatMap (take 1 . snd) (thunderstoneHeroes state)
+>     return (map addPrice $ map VillageCard village ++ map HeroCard heroes)
+>   where
+>     addPrice card = (card,cardVillagePrice $ cardProperties card)
+
+> purchaseCard :: PlayerId -> Card -> Thunderstone Bool
+> purchaseCard playerId card = do
+>     playerState <- getPlayerState playerId
+>     doPurchase playerState
+>   where
+>     cardPrice = cardVillagePrice $ cardProperties card
+>     doPurchase playerState@PurchasingCards {
+>             purchasingNumberOfBuys = numberOfBuys,
+>             purchasingGold = gold
+>             }
+>       | numberOfBuys <= 0 || gold < cardPrice = return False
+>       | otherwise =
+>           case card of
+>             VillageCard villageCard -> do
+>                 result <- drawResource villageCard
+>                 maybe (return False) (const completePurchase) result
+>             HeroCard heroCard -> do
+>                 result <- drawHero (cardType $ heroDetails heroCard)
+>                 maybe (return False) (const completePurchase) result
+>             _ -> return False
+>       where
+>         completePurchase = do
+>             setPlayerState playerId playerState {
+>                 purchasingNumberOfBuys = numberOfBuys - 1,
+>                 purchasingGold = gold - cardPrice
+>                 }
+>             discard playerId [card]
+>             return True
+>     doPurchase _ = return False
+
+> getHeroUpgrades :: PlayerId -> Thunderstone [(HeroCard,(Int,HeroCard))]
+> getHeroUpgrades playerId = do
+>     state <- getState
+>     player <- getPlayer playerId
+>     let heroes = nub $ concatMap heroUpgrades $ concatMap onlyHeroes
+>                                               $ playerHand player
+>     let xp = playerXP player
+>     let availableHeroes = concatMap snd $ thunderstoneHeroes state
+>     return (filter (upgradeAvailable xp availableHeroes) heroes)
+>   where
+>     onlyHeroes :: Card -> [HeroCard]
+>     onlyHeroes (HeroCard hero) = [hero]
+>     onlyHeroes _ = []
+
+>     heroUpgrades :: HeroCard -> [(HeroCard,(Int,HeroCard))]
+>     heroUpgrades card =
+>         map (\ newHero -> (card,(price,newHero))) upgradeTo
+>       where
+>         (price,upgradeTo) = heroUpgrade $ cardStats $ heroDetails card
+
+>     upgradeAvailable xp availableHeroes (_,(price,hero)) =
+>         xp >= price && hero `elem` availableHeroes
+
+> upgradeHero :: PlayerId -> HeroCard -> HeroCard -> Thunderstone Bool
+> upgradeHero playerId oldHero newHero = do
+>     state <- getState
+>     xp <- getXP playerId
+>     hand <- getHand playerId
+>     let (upgradePrice,upgradeHeroes) =
+>             heroUpgrade $ cardStats $ heroDetails oldHero
+>     if not (HeroCard oldHero `elem` hand)
+>         || xp < upgradePrice
+>         || not (newHero `elem` upgradeHeroes)
+>       then
+>         return False
+>       else do
+>         heroUpgrade <- drawHeroUpgrade newHero
+>         maybe (return False) (const $ do
+>                   setXP playerId (xp - upgradePrice)
+>                   setHand playerId (remove1 (HeroCard oldHero) hand)
+>                   discard playerId [HeroCard newHero]
+>                   return True)
+>               heroUpgrade
 
 Low level game state transformations.
 
@@ -624,6 +846,14 @@ Low level game state transformations.
 > setHand playerId cards = do
 >     player <- getPlayer playerId
 >     setPlayer playerId player { playerHand = cards }
+
+> getXP :: PlayerId -> Thunderstone Int
+> getXP playerId = fmap playerXP (getPlayer playerId)
+
+> setXP :: PlayerId -> Int -> Thunderstone ()
+> setXP playerId xp = do
+>     player <- getPlayer playerId
+>     setPlayer playerId player { playerXP = xp }
 
 > getPlayerState :: PlayerId -> Thunderstone PlayerState
 > getPlayerState playerId = fmap playerState (getPlayer playerId)
@@ -736,24 +966,49 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 Card properties
 
 > data CardProperties = CardProperties {
->     cardVillageEffects :: [(String,PlayerId -> Thunderstone ())]
+>     cardVillageGold :: Int,
+>     cardVillagePrice :: Int,
+>     cardVillageEffects :: [VillageEffect]
 >     }
 
-> cardProperties :: Card -> CardProperties
+> class HasCardProperties card where
+>     cardProperties :: card -> CardProperties
 
-> cardProperties (VillageCard Barkeep) = CardProperties {
->     cardVillageEffects = [purchaseAdditional,destroyForGold]
->     }
->   where
->     purchaseAdditional =
->         ("VILLAGE: You may purchase one additional card this turn.",
->          doPurchaseAdditional)
->     doPurchaseAdditional = undefined
->     destroyForGold =
->         ("VILLAGE: Destroy this card to gain 2 Gold.",
->          doDestroyForGold)
->     doDestroyForGold = undefined
+> instance HasCardProperties Card where
+>     cardProperties (MonsterCard card) = cardProperties card
+>     cardProperties (HeroCard card) = cardProperties card
+>     cardProperties (VillageCard card) = cardProperties card
+>     cardProperties DiseaseCard = CardProperties {
+>         cardVillageGold = 0,
+>         cardVillagePrice = undefined,
+>         cardVillageEffects = []
+>         }
+>     cardProperties (ThunderstoneCard card) = cardProperties card
 
-> cardProperties _ = CardProperties {
->     cardVillageEffects = []
->     }
+> type VillageEffect = (String,PlayerId -> Thunderstone ())
+
+> instance HasCardProperties ThunderstoneCard where
+>     cardProperties _ = undefined
+
+> instance HasCardProperties HeroCard where
+>     cardProperties _ = undefined
+
+> instance HasCardProperties MonsterCard where
+>     cardProperties _ = undefined
+
+> instance HasCardProperties VillageCard where
+
+>     cardProperties Barkeep = CardProperties {
+>         cardVillageGold = cardGold $ villageDetails Barkeep,
+>         cardVillagePrice = villagePrice $ cardStats $ villageDetails Barkeep,
+>         cardVillageEffects = [purchaseAdditional,destroyForGold]
+>         }
+>       where
+>         purchaseAdditional =
+>             ("VILLAGE: You may purchase one additional card this turn.",
+>              undefined)
+>         destroyForGold =
+>             ("VILLAGE: Destroy this card to gain 2 Gold.",
+>              undefined)
+
+>     cardProperties _ = undefined
