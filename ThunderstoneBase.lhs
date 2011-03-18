@@ -1,6 +1,42 @@
 Prototype the Thunderstone base game.  Avoid the complexities of the
 expansions to work out how to implement the basic mechanisms.
 
+For those who do not know Haskell, please note that return does not
+mean the same thing it means in most other languages.  It does not
+cause the function being defined to exit with the given value.  (Most
+of the time, return takes a value of type t and returns a value of
+type IO t.  In this file, return takes a value of type t and returns
+a value of type Thunderstone t.  Both are special cases of the
+generic type signature return :: Monad m => a -> m a, which, in
+Java syntax would be
+    <A, M<A> extends Monad<A>> M<A> returnMonad(A a);
+or something like that.)
+
+
+I'm pretty happy with the game setup code.  I like the functions
+firstGame, randomizedGame and specifiedGame.
+
+I'm pretty happy with Card and HeroCard, MonsterCard, VillageCard,
+and ThunderstoneCard data structures, which are exported.  I'm not
+so happy with the CardDetails and the CardProperties data structures,
+which are not exported.
+
+I'm somewhat satisfied with the exported interface, though I am
+not so happy with ThunderstonePlayerState or PlayerOption.
+
+I like the model of PlayerActions transforming the ThunderstoneState
+and yielding ThunderstoneEvents, as well as having
+ThunderstonePlayerState contain all the valid PlayerActions, but
+I'm not satisfied with PlayerActions, which still remains mostly
+undefined.
+
+The internal PlayerState is messy and mostly undefined.  The same is
+true of the internal CardProperties.  The inchoate vision of how
+the dungeon will work is to have the cardBattleResult of the
+CardProperties of the MonsterCard contain the code that resolves
+the battle.  It's hard to see how to avoid lots of special casing.
+
+
 > module ThunderstoneBase
 
 The interface:
@@ -188,7 +224,7 @@ Game setup:
 >         thunderstoneDungeon = dungeon,
 >         thunderstoneHeroes = map heroStack (HeroMilitia:heroes),
 >         thunderstoneVillage =
->             map villageStack ([Dagger .. Torch] ++ village),
+>             map villageStack ([Dagger, IronRations, Torch] ++ village),
 >         thunderstoneGameOver = False
 >         }
 >     playerIds <- getPlayerIds
@@ -295,9 +331,16 @@ Game state:
 
 >   | Waiting
 
+>   | Discarding {
+>         discardingCards :: Int,
+>         discarding2CardsOr1Hero :: Int,
+>         discardingHero :: Int
+>         }
+>   | WaitingForDiscards
+
 >   | ChoosingOption PlayerOption
 >         (Thunderstone [((Int,String),Thunderstone [ThunderstoneEvent])])
->         (Thunderstone ())
+>         (Maybe (Thunderstone ()))
 
 > data PlayerOption =
 >     WhichCardToDestroy
@@ -463,9 +506,29 @@ Game mechanics
 
 >     optionsWhen Waiting = return []
 
->     optionsWhen (ChoosingOption _ getOptions _) = do
+>     optionsWhen Discarding {
+>                     discardingCards = cards,
+>                     discarding2CardsOr1Hero = cardsOrHero,
+>                     discardingHero = hero
+>                     } = do
+>         hand <- getHand playerId
+>         if null hand || (all (== 0) [cards, cardsOrHero, hero])
+>             || (cards == 0 && all (not . isHero) hand)
+>           then return [Backout]
+>           else if cards == 0 && cardsOrHero == 0
+>             then return (zipWith option [1..] (filter isHero hand))
+>             else return (zipWith option [1..] hand)
+>       where
+>         isHero (HeroCard _) = True
+>         isHero _ = False
+>         option index card = ChooseOption (index,show card)
+
+>     optionsWhen WaitingForDiscards = return []
+
+>     optionsWhen (ChoosingOption _ getOptions backout) = do
 >         options <- getOptions
->         return (Backout : map (ChooseOption . fst) options)
+>         return $ maybe id (const (Backout:)) backout
+>                $ map (ChooseOption . fst) options
 
 > takeAction :: PlayerId -> PlayerAction
 >            -> Thunderstone (Maybe [ThunderstoneEvent])
@@ -589,7 +652,7 @@ Village: Purchasing cards:
 >             setPlayerState playerId
 >                 (ChoosingOption WhichCardToBuy
 >                      (return $ zipWith purchaseOption [1..] forSale)
->                      backout)
+>                      (Just backout))
 >             return (Just [])
 >       where
 >         purchaseOption index (card,_) = ((index,show card),doPurchase card)
@@ -622,7 +685,7 @@ Village: Leveling Up Heroes:
 >             setPlayerState playerId
 >                 (ChoosingOption WhichHeroToLevelUp
 >                      (return $ zipWith upgradeOption [1..] upgrades)
->                      backout)
+>                      (Just backout))
 >             return (Just [])
 >       where
 >         canUpgrade xp (_,(price,_)) = xp >= price
@@ -660,7 +723,7 @@ Rest:
 >             setPlayerState playerId
 >                 (ChoosingOption WhichCardToDestroy
 >                      (return (zipWith chooseCard [1..] hand))
->                      backout)
+>                      (Just backout))
 >             return (Just [])
 >       where
 >         chooseCard optionNumber card =
@@ -684,9 +747,11 @@ Generic choose option:
 >         options <- getOptions
 >         maybe (return Nothing) (fmap Just) $ lookup option options
 
->     performAction (ChoosingOption _ _ backout) Backout = do
+>     performAction (ChoosingOption _ _ (Just backout)) Backout = do
 >         backout
 >         return (Just [])
+
+>     performAction (ChoosingOption _ _ _) _ = return Nothing
 
 Low level game mechanics
 
@@ -966,10 +1031,22 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 Card properties
 
 > data CardProperties = CardProperties {
+>     cardDungeonEffects :: [DungeonEffect],
+>     cardBattleEffects :: [BattleEffect],
+>     cardSpoilsEffects :: [SpoilsEffect],
+>     cardBattleResult :: BattleResult,
+>     cardBreachEffect :: BreachEffect,
 >     cardVillageGold :: Int,
 >     cardVillagePrice :: Int,
 >     cardVillageEffects :: [VillageEffect]
 >     }
+
+> type DungeonEffect = (String,PlayerId -> Thunderstone ())
+> type BattleEffect = (String,PlayerId -> Thunderstone ())
+> type SpoilsEffect = (String,PlayerId -> Thunderstone ())
+> type VillageEffect = (String,PlayerId -> Thunderstone ())
+> type BattleResult = (String,PlayerId -> Thunderstone Bool)
+> type BreachEffect = (String,Thunderstone ())
 
 > class HasCardProperties card where
 >     cardProperties :: card -> CardProperties
@@ -979,30 +1056,538 @@ Card properties
 >     cardProperties (HeroCard card) = cardProperties card
 >     cardProperties (VillageCard card) = cardProperties card
 >     cardProperties DiseaseCard = CardProperties {
+>         cardDungeonEffects = [],
+>         cardBattleEffects = [],
+>         cardSpoilsEffects = [],
+>         cardBattleResult = undefined,
+>         cardBreachEffect = undefined,
 >         cardVillageGold = 0,
 >         cardVillagePrice = undefined,
 >         cardVillageEffects = []
 >         }
 >     cardProperties (ThunderstoneCard card) = cardProperties card
 
-> type VillageEffect = (String,PlayerId -> Thunderstone ())
-
 > instance HasCardProperties ThunderstoneCard where
 >     cardProperties _ = undefined
 
+> heroCardProperties :: HeroCard -> [DungeonEffect] -> [BattleEffect]
+>                                -> [SpoilsEffect]
+>                    -> CardProperties
+> heroCardProperties heroCard dungeonEffects battleEffects spoilsEffects =
+>     CardProperties {
+>         cardDungeonEffects = dungeonEffects,
+>         cardBattleEffects = battleEffects,
+>         cardSpoilsEffects = spoilsEffects,
+>         cardBattleResult = undefined,
+>         cardBreachEffect = undefined,
+>         cardVillageGold = cardGold $ heroDetails heroCard,
+>         cardVillagePrice = heroPrice $ cardStats $ heroDetails heroCard,
+>         cardVillageEffects = []
+>         }
+
 > instance HasCardProperties HeroCard where
+
+>     cardProperties AmazonArcher = heroCardProperties AmazonArcher
+>         [] [amazon] []
+>       where
+>         amazon =
+>             ("ATTACK +1.\nAdditional ATTACK +2 at Rank 2 or 3.",
+>              undefined)
+> -- Amazon: This Hero's Dungeon Effect is an Attack that is in addition
+> -- to the Amazon's normal Attack.
+
+>     cardProperties AmazonHuntress = heroCardProperties AmazonHuntress
+>         [] [amazon] []
+>       where
+>         amazon =
+>             ("ATTACK +2.\nAdditional ATTACK +3 at Rank 2 or 3.",
+>              undefined)
+> -- Amazon: This Hero's Dungeon Effect is an Attack that is in addition
+> -- to the Amazon's normal Attack.
+
+>     cardProperties AmazonQueen = heroCardProperties AmazonQueen
+>         [] [amazon] []
+>       where
+>         amazon =
+>             ("ATTACK +2.\nAdditional ATTACK +4 at Rank 2 or 3.",
+>              undefined)
+> -- Amazon: This Hero's Dungeon Effect is an Attack that is in addition
+> -- to the Amazon's normal Attack.
+
+>     cardProperties ChaliceQuester = heroCardProperties ChaliceQuester
+>         [destroyDisease] [chalice] []
+>       where
+>         destroyDisease =
+>             ("REPEAT DUNGEON: Destroy one Disease to draw one card.",
+>              undefined)
+>         chalice =
+>             ("ATTACK +2",
+>              undefined)
+> -- Chalice Quester and Defender: You man continue to destroy Disease
+> -- cards and draw new cards until you choose which Monster to attack.
+
+>     cardProperties ChaliceDefender = heroCardProperties ChaliceDefender
+>         [destroyDisease,drawCard,attackPlus1] [chalice] []
+>       where
+>         destroyDisease =
+>             ("REPEAT DUNGEON: Destroy one Disease to draw one card.",
+>              undefined)
+>         drawCard =
+>             ("DUNGEON: Draw one card.",
+>              undefined)
+>         attackPlus1 =
+>             ("DUNGEON: ATTACK +1 for each Item that produces Light.",
+>              undefined)
+>         chalice =
+>             ("ATTACK +3",
+>              undefined)
+> -- Chalice Quester and Defender: You man continue to destroy Disease
+> -- cards and draw new cards until you choose which Monster to attack.
+
+>     cardProperties ChalicePaladin = heroCardProperties ChalicePaladin
+>         [drawCard] [chalice] [spoils]
+>       where
+>         drawCard =
+>             ("DUNGEON: Draw one card.",
+>              undefined)
+>         chalice =
+>             ("ATTACK +4",
+>              undefined)
+>         spoils =
+>             ("Spoils (Village).",
+>              undefined)
+> -- Chalic Paladin: You may purchase any one Village card (including
+> -- Basic and Hero cards) from the Village after a victorious battle,
+> -- using the gold in your hand.
+
+>     cardProperties DwarfGuardian = heroCardProperties DwarfGuardian
+>         [] [dwarf] []
+>       where
+>         dwarf =
+>             ("ATTACK +1\nAdditional ATTACK +3 when equipped with an "
+>              ++ "Edged Weapon.",
+>              undefined)
+> -- Dwarf Guardian: His total Attack Value if an Edged Weapon is equipped
+> -- is +4.  This bonus is part of the Dwarf's ability which he retains even
+> -- if the Weapon later becomes useless (due to a Monster's Battle Effect,
+> -- for instance).
+
+>     cardProperties DwarfJanissary = heroCardProperties DwarfJanissary
+>         [] [dwarf] [spoils]
+>       where
+>         dwarf =
+>             ("ATTACK +2\nAdditional ATTACK +4 when equipped with an "
+>              ++ "Edged Weapon.",
+>              undefined)
+>         spoils =
+>             ("Spoils (Weapon).",
+>              undefined)
+> -- Dwarf Janissary: If revealed during a Dungeon action, you may purchase
+> -- one Weapon card from the Village after a victorious battle, using the
+> -- gold in your hand.  His total Attack Vlaue if an Edged Weapon is
+> -- equipped is +6.
+
+>     cardProperties DwarfSentinel = heroCardProperties DwarfSentinel
+>         [] [dwarf] []
+>       where
+>         dwarf =
+>             ("ATTACK +3\nAdditional ATTACK +45 when equipped with an "
+>              ++ "Edged Weapon.",
+>              undefined)
+> -- Dwarf Sentinel: His total Attack Value with an Edged Weapon equipped
+> -- is +8.
+
+>     cardProperties ElfWizard = heroCardProperties ElfWizard
+>         [] [elf] []
+>       where
+>         elf =
+>             ("MAGIC ATTACK +2",
+>              undefined)
+
+>     cardProperties ElfSorcerer = heroCardProperties ElfSorcerer
+>         [] [elf] [spoils]
+>       where
+>         elf =
+>             ("MAGIC ATTACK +3",
+>              undefined)
+>         spoils =
+>             ("You may return one Monster to the bottom of the deck "
+>              ++ "after defeating a monster.  (Refill the hall.)",
+>              undefined)
+> -- Elf Sorcerer/Archmage: When a Monster is returned to the bottom of
+> -- the monster deck, refill the Dungeon Hall.  If this results in a
+> -- Breach effect, resolve it immediately.  If the Thunderstone moves
+> -- to Rank 1 of the Dungeon Hall, the game ends immediately; you do
+> -- not collect the Thunderstone.
+
+>     cardProperties ElfArchmage = heroCardProperties ElfArchmage
+>         [dungeon] [elf] []
+>       where
+>         dungeon =
+>             ("DUNGEON: You may return one Monster to the bottom of "
+>              ++ "the deck and refill the hall before the beginning "
+>              ++ "of a battle.",
+>              undefined)
+>         elf =
+>             ("MAGIC ATTACK +3",
+>              undefined)
+> -- Elf Sorcerer/Archmage: When a Monster is returned to the bottom of
+> -- the monster deck, refill the Dungeon Hall.  If this results in a
+> -- Breach effect, resolve it immediately.  If the Thunderstone moves
+> -- to Rank 1 of the Dungeon Hall, the game ends immediately; you do
+> -- not collect the Thunderstone.
+
+>     cardProperties FeaynArcher = heroCardProperties FeaynArcher
+>         [] [feayn] []
+>       where
+>         feayn =
+>             ("Cannot attack Rank 1.\nATTACK +2",
+>              undefined)
+> -- Feayn: If a Dungeon Actions causes you to attack a Monster in
+> -- Rank 1, do not add the Feayn's Attack bonus to your Attack Value.
+> -- If Feayn does not attack, his Light bonus is lost.
+
+>     cardProperties FeaynMarksman = heroCardProperties FeaynMarksman
+>         [] [feayn] []
+>       where
+>         feayn =
+>             ("Cannot attack Rank 1.\nATTACK +3",
+>              undefined)
+> -- Feayn: If a Dungeon Actions causes you to attack a Monster in
+> -- Rank 1, do not add the Feayn's Attack bonus to your Attack Value.
+> -- If Feayn does not attack, his Light bonus is lost.
+
+>     cardProperties FeaynSniper = heroCardProperties FeaynSniper
+>         [] [feayn] [spoils]
+>       where
+>         feayn =
+>             ("Cannot attack Rank 1.\nATTACK +4",
+>              undefined)
+>         spoils =
+>             ("Gain +1 XP if you defeat a Monster in Rank 3.",
+>              undefined)
+> -- Feayn: If a Dungeon Actions causes you to attack a Monster in
+> -- Rank 1, do not add the Feayn's Attack bonus to your Attack Value.
+> -- If Feayn does not attack, his Light bonus is lost.
+
+>     cardProperties LoriggThief = heroCardProperties LoriggThief
+>         [] [lorigg] []
+>       where
+>         lorigg =
+>             ("ATTACK +1",
+>              undefined)
+
+>     cardProperties LoriggRogue = heroCardProperties LoriggRogue
+>         [dungeon] [lorigg] []
+>       where
+>         dungeon =
+>             ("DUNGEON: All other players discard one card.",
+>              undefined)
+>         lorigg =
+>             ("ATTACK +2",
+>              undefined)
+> -- Lorigg Outlaw or Rogue: Regardless of whether the battle is victorious
+> -- or not, all other players must discard cards when this Hero enters the
+> -- Dungeon.
+
+>     cardProperties LoriggOutlaw = heroCardProperties LoriggOutlaw
+>         [dungeon] [lorigg] []
+>       where
+>         dungeon =
+>             ("DUNGEON: All other players discard one card.",
+>              undefined)
+>         lorigg =
+>             ("ATTACK +2",
+>              undefined)
+> -- Lorigg Outlaw or Rogue: Regardless of whether the battle is victorious
+> -- or not, all other players must discard cards when this Hero enters the
+> -- Dungeon.
+
+>     cardProperties OutlandsWarrior = heroCardProperties OutlandsWarrior
+>         [dungeon] [outlands] []
+>       where
+>         dungeon =
+>             ("DUNGEON: Destroy one Food for an additional ATTACK +3.",
+>              undefined)
+>         outlands =
+>             ("ATTACK +3",
+>              undefined)
+
+>     cardProperties OutlandsSlayer = heroCardProperties OutlandsSlayer
+>         [dungeonMonster,dungeonFood] [outlands] []
+>       where
+>         dungeonMonster =
+>             ("DUNGEON: Gain +1 ATTACK for each Monster card revealed "
+>              ++ "from your hand.",
+>              undefined)
+>         dungeonFood =
+>             ("REPEAT DUNGEON: Destroy one Food for an additional ATTACK +3.",
+>              undefined)
+>         outlands =
+>             ("ATTACK +5",
+>              undefined)
+> -- Outlands Slayer or Khan: The Hero gains an Attack bonus for each
+> -- Monster card revealed in your hand before the battle.
+
+>     cardProperties OutlandsKhan = heroCardProperties OutlandsKhan
+>         [dungeon] [outlands] []
+>       where
+>         dungeon =
+>             ("DUNGEON: ATTACK +2 for each Monster card revealed "
+>              ++ "from your hand.",
+>              undefined)
+>         outlands =
+>             ("ATTACK +7",
+>              undefined)
+> -- Outlands Slayer or Khan: The Hero gains an Attack bonus for each
+> -- Monster card revealed in your hand before the battle.
+
+>     cardProperties RedbladeKiller = heroCardProperties RedbladeKiller
+>         [] [redblade] []
+>       where
+>         redblade =
+>             ("ATTACK +2",
+>              undefined)
+
+>     cardProperties RedbladePoisoner = heroCardProperties RedbladePoisoner
+>         [dungeon] [redblade] []
+>       where
+>         dungeon =
+>             ("DUNGEON: All other players discard one card.",
+>              undefined)
+>         redblade =
+>             ("ATTACK +3",
+>              undefined)
+> -- Redblade Assassin or Poisoner: Regardless of whether the battle is
+> -- victorious or not, all other players must discard cards when this Hero
+> -- enters the Dungeon.
+
+>     cardProperties RedbladeAssassin = heroCardProperties RedbladeAssassin
+>         [dungeon] [redblade] []
+>       where
+>         dungeon =
+>             ("DUNGEON: All other players discard one Hero or two cards.",
+>              undefined)
+>         redblade =
+>             ("ATTACK +4",
+>              undefined)
+> -- Redblade Assassin or Poisoner: Regardless of whether the battle is
+> -- victorious or not, all other players must discard cards when this Hero
+> -- enters the Dungeon.
+
+>     cardProperties RegianCleric = heroCardProperties RegianCleric
+>         [dungeon] [regian] []
+>       where
+>         dungeon =
+>             ("REPEAT DUNGEON: Destroy one Disease to draw one card.",
+>              undefined)
+>         regian =
+>             ("MAGIC ATTACK +1",
+>              undefined)
+> -- Regian: You may continue to destroy Disease cards and draw new cards
+> -- until the battle begins.
+
+>     cardProperties RegianPriest = heroCardProperties RegianPriest
+>         [dungeonCard,dungeonDisease] [regian] []
+>       where
+>         dungeonCard =
+>             ("DUNGEON: Draw one card.",
+>              undefined)
+>         dungeonDisease =
+>             ("REPEAT DUNGEON: Destroy one Disease to draw one card.",
+>              undefined)
+>         regian =
+>             ("MAGIC ATTACK +2",
+>              undefined)
+> -- Regian: You may continue to destroy Disease cards and draw new cards
+> -- until the battle begins.
+
+>     cardProperties RegianBishop = heroCardProperties RegianBishop
+>         [dungeonCard,dungeonDisease] [regian] []
+>       where
+>         dungeonCard =
+>             ("DUNGEON: Draw two cards.",
+>              undefined)
+>         dungeonDisease =
+>             ("REPEAT DUNGEON: Destroy one Disease to draw one card.",
+>              undefined)
+>         regian =
+>             ("MAGIC ATTACK +3",
+>              undefined)
+> -- Regian: You may continue to destroy Disease cards and draw new cards
+> -- until the battle begins.
+
+>     cardProperties SelurinMagician = heroCardProperties SelurinMagician
+>         [] [selurin] []
+>       where
+>         selurin =
+>             ("MAGIC ATTACK +2\nAll Items and Magic Attack Spells gain "
+>              ++ "MAGIC ATTACK +1.",
+>              undefined)
+> -- Selurin: Each Spell with a Magic Attack bonus gains a Magic Attack bonus
+> -- of +1.  Each Item (with the Item keyword), regardless of whether it has
+> -- an Attack bonus or not, gains a Magic Attack bonus of +1.
+
+>     cardProperties SelurinWarlock = heroCardProperties SelurinWarlock
+>         [] [selurin] []
+>       where
+>         selurin =
+>             ("MAGIC ATTACK +2\nTotal MAGIC ATTACK x2* (apply last)",
+>              undefined)
+> -- Selurin Theurge or Warlock: The x2 multiplier of the Selurin Wizard
+> -- affects only Magic Attack bonuses, and is applied after all Magic Attack
+> -- bonuses have been calculated.  Multiple Wizards multiply together
+> -- (two become x4, three become x8, etc.).
+
+>     cardProperties SelurinTheurge = heroCardProperties SelurinTheurge
+>         [dungeon] [selurin] []
+>       where
+>         dungeon =
+>             ("DUNGEON: Each player discards one Hero or shows they "
+>              ++ "have none.  You may borrow one of those discarded "
+>              ++ "Heroes for the battle, returning it at the end.",
+>              undefined)
+>         selurin =
+>             ("MAGIC ATTACK +2\nTotal MAGIC ATTACK x2* (apply last)",
+>              undefined)
+> -- Selurin Theurge or Warlock: The x2 multiplier of the Selurin Wizard
+> -- affects only Magic Attack bonuses, and is applied after all Magic Attack
+> -- bonuses have been calculated.  Multiple Wizards multiply together
+> -- (two become x4, three become x8, etc.).
+> -- Selurin Theurge: If the borrowed Hero is destroyed by a Battle Effect,
+> -- it is not returned to the original owner.  Instead, destroy the card.
+
+>     cardProperties ThyrianSquire = heroCardProperties ThyrianSquire
+>         [dungeon] [thyrian] []
+>       where
+>         dungeon =
+>             ("DUNGEON: Destroy one Food for additional ATTACK +2.",
+>              undefined)
+>         thyrian =
+>             ("ATTACK +2",
+>              undefined)
+> -- Thyrian: Food destroyed by this Dungeon Effect cannot also be used to
+> -- gain a Strength bonus or for any other effect.
+
+>     cardProperties ThyrianKnight = heroCardProperties ThyrianKnight
+>         [dungeon] [thyrian] []
+>       where
+>         dungeon =
+>             ("DUNGEON: Destroy one Food for additional ATTACK +2.",
+>              undefined)
+>         thyrian =
+>             ("ATTACK +4\nAll Militia gain ATTACK +1.",
+>              undefined)
+> -- Thyrian: Food destroyed by this Dungeon Effect cannot also be used to
+> -- gain a Strength bonus or for any other effect.
+
+>     cardProperties ThyrianLord = heroCardProperties ThyrianLord
+>         [dungeon] [thyrian] []
+>       where
+>         dungeon =
+>             ("DUNGEON: Destroy one Food to place one Monster from "
+>              ++ "the hall worth 1 or 2 VP into your discard pile.  "
+>              ++ "Refill the hall.",
+>              undefined)
+>         thyrian =
+>             ("ATTACK +4\nAll Heroes other than Fighters gain ATTACK +2.",
+>              undefined)
+> -- Thyrian: Food destroyed by this Dungeon Effect cannot also be used to
+> -- gain a Strength bonus or for any other effect.
+> -- Thyrian Lord: You may only select a Monster iwth 1 or 2 VP, and not
+> -- 0 VP.  When a Monster is placed in your discard pile, refill the
+> -- Dungeon Hall.  If this results in a Breach effect, resolve it
+> -- immediately.  If the Thunderstone moves to Rank 1 of the Dungeon
+> -- Hall, the game ends immediately; you do not collect the Thunderstone.
+> -- You do not earn any Experience Points for the Effect.
+
 >     cardProperties _ = undefined
 
+> monsterCardProperties :: MonsterCard -> BattleResult -> BreachEffect
+>                       -> CardProperties
+> monsterCardProperties monsterCard battleResult breachEffect =
+>     CardProperties {
+>         cardDungeonEffects = [],
+>         cardBattleEffects = [],
+>         cardSpoilsEffects = [],
+>         cardBattleResult = battleResult,
+>         cardBreachEffect = breachEffect,
+>         cardVillageGold = 0,
+>         cardVillagePrice = undefined,
+>         cardVillageEffects = []
+>         }
+
 > instance HasCardProperties MonsterCard where
+
+>     cardProperties ArchdukeOfPain = monsterCardProperties ArchdukeOfPain
+>         archduke breach
+>       where
+>         archduke =
+>             ("Magic Attack Required\nBATTLE: Destroy all Clerics and "
+>              ++ "Wizards.",
+>              undefined)
+>         breach =
+>             ("BREACH: Destroy the top two cards from each Hero deck "
+>              ++ "in the Village.",
+>              undefined)
+> -- Archduke of Pain: You must have a Magic Attack of at least +1 in order
+> -- to defeat the Archduke of Pain.  You may still choose to attack the
+> -- Archduke, even without Magic Attack present.  If there are no Cleric
+> -- and/or Wizard cards in the battle, there is no effect.  When the
+> -- Archduke reaches Rank 1 of he Dungeon Hall, destroy the top two cards
+> -- from each Hero stack in the Village, including Militia.
+
 >     cardProperties _ = undefined
+
+> villageCardProperties :: VillageCard -> [DungeonEffect] -> [BattleEffect]
+>                                      -> [VillageEffect]
+>                       -> CardProperties
+> villageCardProperties villageCard dungeonEffects battleEffects
+>                       villageEffects =
+>     CardProperties {
+>         cardDungeonEffects = dungeonEffects,
+>         cardBattleEffects = battleEffects,
+>         cardSpoilsEffects = [],
+>         cardBattleResult = undefined,
+>         cardBreachEffect = undefined,
+>         cardVillageGold = cardGold $ villageDetails villageCard,
+>         cardVillagePrice =
+>             villagePrice $ cardStats $ villageDetails villageCard,
+>         cardVillageEffects = villageEffects
+>         }
 
 > instance HasCardProperties VillageCard where
 
->     cardProperties Barkeep = CardProperties {
->         cardVillageGold = cardGold $ villageDetails Barkeep,
->         cardVillagePrice = villagePrice $ cardStats $ villageDetails Barkeep,
->         cardVillageEffects = [purchaseAdditional,destroyForGold]
->         }
+>     cardProperties ArcaneEnergies = villageCardProperties ArcaneEnergies
+>         [allAttacksBecomeMagic] [] []
+>       where
+>         allAttacksBecomeMagic =
+>             ("DUNGEON: All ATTACKS from Heroes with Weapons equipped "
+>              ++ "become MAGIC ATTACKS.  Draw one card.",
+>              undefined)
+> -- Arcane Energies: You must draw a card when you use this dungeon
+> -- ability.
+
+>     cardProperties Banish = villageCardProperties Banish
+>         [banish] [] []
+>       where
+>         banish =
+>             ("DUNGEON: Return one Monster to the bottom of the deck and "
+>              ++ "refill the hall, or rearrange the hall.  Destroy one "
+>              ++ "card from your hand.  Draw one card.",
+>              undefined)
+> -- Banish: You must declare you are entering the Dungeon to play
+> -- Banish, but do not choose which Monster to attack until after the
+> -- Hall is refilled.  If Banish results in a Breach (or Trap) Effect,
+> -- resolve it immediately.  You may rearrange the hall so as to place
+> -- the Thunderstone in Rank 1 of the Dungeon Hall, ending the game
+> -- immediately without collecting the Thunderstone.  Multiple Banish
+> -- cards can be used before choosing which Monster to attack, but each
+> -- must be completely resolved before the next can be played.  You
+> -- must draw a card when using this Dungeon Ability.
+
+>     cardProperties Barkeep = villageCardProperties Barkeep
+>         [] [] [purchaseAdditional,destroyForGold]
 >       where
 >         purchaseAdditional =
 >             ("VILLAGE: You may purchase one additional card this turn.",
@@ -1010,5 +1595,170 @@ Card properties
 >         destroyForGold =
 >             ("VILLAGE: Destroy this card to gain 2 Gold.",
 >              undefined)
+> -- Barkeep: Each additional Barkeep allows you to purchase one 
+> -- additional card.  You do not gain the gold value of the Barkeep when
+> -- it is destroyed.
+
+>     cardProperties BattleFury = villageCardProperties BattleFury
+>         [battleFury] [] []
+>       where
+>         battleFury =
+>             ("DUNGEON: All Heroes gain ATTACK +1.",
+>              undefined)
+> -- Battle Fury: Militia are Heroes, and gain the Attack bonus from this
+> -- spell.
+
+>     cardProperties Feast = villageCardProperties Feast
+>         [feast] [] []
+>       where
+>         feast =
+>             ("DUNGEON: All Heroes gain Strength +1 and ATTACK +1.",
+>              undefined)
+> -- Feast: Militia cards are Heroes, so they gain the Attack and Strength
+> -- bonuses from this card.
+
+>     cardProperties Fireball = villageCardProperties Fireball
+>         [] [fireball] []
+>       where
+>         fireball =
+>             ("MAGIC ATTACK +3",
+>              undefined)
+> -- Fireball: You do not need Heroes present to use this Spell.
+
+>     cardProperties FlamingSword = villageCardProperties FlamingSword
+>         [] [flamingSword] []
+>       where
+>         flamingSword =
+>             ("MAGIC ATTACK +3",
+>              undefined)
+> -- Flaming Sword: You only gain the Light bonus if the Flaming Sword
+> -- is equipped to a Hero.
+
+>     cardProperties Goodberries = villageCardProperties Goodberries
+>         [goodberries] [] []
+>       where
+>         goodberries =
+>             ("DUNGEON: One Hero gains Strength +3 and ATTACK becomes "
+>              ++ "MAGIC ATTACK for that Hero.",
+>              undefined)
+> -- Goodberries: After the final Attack bonus of the Hero is calculated,
+> -- its entire bonus becomes Magic Attack.  Militia are Heroes, and may
+> -- benefit from this card.
+
+>     cardProperties Hatchet = villageCardProperties Hatchet
+>         [] [hatchet] []
+>       where
+>         hatchet =
+>             ("ATTACK +3",
+>              undefined)
+> -- Hatchet: This is an Edged Weapon.
+
+>     cardProperties Lantern = villageCardProperties Lantern
+>         [] [lantern] []
+>       where
+>         lantern =
+>             ("Light +2",
+>              undefined)
+> -- Lantern: This Item always provides Light +2, even without a Hero present.
+
+>     cardProperties LightstoneGem = villageCardProperties LightstoneGem
+>         [] [lightstoneGem] []
+>       where
+>         lightstoneGem =
+>             ("Light +3",
+>              undefined)
+> -- Lightstone Gem: This Item always provides Light +3, even without a Hero
+> -- present.
+
+>     cardProperties MagicalAura = villageCardProperties MagicalAura
+>         [magicalAura] [] []
+>       where
+>         magicalAura =
+>             ("DUNGEON: All Weapons become Weight 0.  Draw one card.",
+>              undefined)
+> -- Magical Aura: When played with a Polearm, the Hero must still have a
+> -- Strength of 8 or more to gain the +6 bonus.  You must draw a card when
+> -- using this Dungeon Effect.
+
+>     cardProperties Pawnbroker = villageCardProperties Pawnbroker
+>         [] [] [destroyCardFor3,destroyThisFor2Gold]
+>       where
+>         destroyCardFor3 =
+>             ("VILLAGE: Destroy any card with a gold value to gain its "
+>              ++ "gold value plus 3 Gold.",
+>              undefined)
+>         destroyThisFor2Gold =
+>             ("VILLAGE: Destroy this card to gain 2 Gold.",
+>              undefined)
+> -- Pawnbroker: You can destroy both the Pawnbroker and another card to
+> -- produce X+5 gold in a single turn.  When you destroy a card with
+> -- Pawnbroker, do not add its inherent gold value to your total gold
+> -- that turn.
+
+>     cardProperties Polearm = villageCardProperties Polearm
+>         [] [polearm] []
+>       where
+>         polearm =
+>             ("ATTACK +2, or ATTACK +6 when attached to a Hero with 8 "
+>              ++ "or more Strength.",
+>              undefined)
+> -- Polearm: A Hero with a Strength of 2 can equip the Polearm for an
+> -- Attack bonus of +2.  A Hero with a Strength of 8 or higher gains +6
+> -- instead.
+
+>     cardProperties ShortSword = villageCardProperties ShortSword
+>         [] [shortSword] []
+>       where
+>         shortSword =
+>             ("ATTACK +4",
+>              undefined)
+> -- Short Sword: This is an Edged Weapon.
+
+>     cardProperties Spear = villageCardProperties Spear
+>         [throwSpear] [spear] []
+>       where
+>         throwSpear =
+>             ("DUNGEON: If you destroy (throw) the Spear, the Attack "
+>              ++ "bonus increases by an additional +3, for a total of "
+>              ++ "+5.  However, the Spear is still considered equipped "
+>              ++ "for the entire battle, even if you use the effect.",
+>              undefined)
+>         spear =
+>             ("ATTACK +2",
+>              undefined)
+
+>     cardProperties TownGuard = villageCardProperties TownGuard
+>         [] [] [draw2,draw3]
+>       where
+>         draw2 =
+>             ("VILLAGE: Draw two cards.",
+>              undefined)
+>         draw3 =
+>             ("VILLAGE: Destroy this card to draw three additional cards.",
+>              undefined)
+> -- Town Guard: Destroying this card allows you to draw a total of five
+> -- extra cards.
+
+>     cardProperties Trainer = villageCardProperties Trainer
+>         [] [] [destroyMilitiaFor2XP,destroyThisFor2Gold]
+>       where
+>         destroyMilitiaFor2XP =
+>             ("VILLAGE: Destroy one Militia to gain 2 XP.",
+>              undefined)
+>         destroyThisFor2Gold =
+>             ("VILLAGE: Destroy this card to gain 2 Gold.",
+>              undefined)
+> -- Trainer: Each Trainer in your hand may only destroy one Militia each
+> -- turn.
+
+>     cardProperties Warhammer = villageCardProperties Warhammer
+>         [] [warhammer] []
+>       where
+>         warhammer =
+>             ("ATTACK +3\nClerics gain an additional ATTACK +3 "
+>              ++ "against Doomknights and Undead.",
+>              undefined)
+> -- Warhammer: A Cleric attacking a Doomknight or Undead gains a total
+> -- Attack bonus of +6.
 
 >     cardProperties _ = undefined
