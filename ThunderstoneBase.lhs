@@ -74,7 +74,7 @@ Game mechanics:
 > where
 
 > import Control.Monad(filterM,mapM,mapM_,replicateM,unless,when)
-> import Data.List(nub,sortBy,(\\))
+> import Data.List(nub,partition,sortBy,(\\))
 > import Data.Maybe(catMaybes,listToMaybe)
 > import System.Random(StdGen)
 
@@ -404,6 +404,7 @@ Rest
 >   | PlayerHand PlayerId [Card]
 >   | PlayerPurchase PlayerId Card
 >   | PlayerUpgrade PlayerId HeroCard HeroCard
+>   | PlayerDiscard PlayerId Card
 >   | GameOverEvent [(PlayerId,Int)]
 
 Plus breach effects and other things that players should be notified of.
@@ -519,8 +520,6 @@ Game mechanics
 >             then return (zipWith option [1..] (filter isHero hand))
 >             else return (zipWith option [1..] hand)
 >       where
->         isHero (HeroCard _) = True
->         isHero _ = False
 >         option index card = ChooseOption (index,show card)
 
 >     optionsWhen WaitingForDiscards = return []
@@ -740,6 +739,64 @@ Rest:
 >         endTurn []
 
 >     performAction Resting _ = return Nothing
+
+Discarding:
+
+>     performAction playerState@Discarding {
+>                     discardingCards = cards,
+>                     discarding2CardsOr1Hero = cardsOrHero,
+>                     discardingHero = hero
+>                     } (ChooseOption (index,description)) = do
+>         hand <- getHand playerId
+>         let (discards,holds) = partition ((== index) . fst) (zip [1..] hand)
+>         if null discards || description /= show (snd $ head discards)
+>           then return Nothing
+>           else do
+>             let (_,card) = head discards
+>             let newHand = map snd holds
+>             if null newHand
+>               then do
+>                 setPlayerState playerId Waiting
+>                 setHand playerId newHand
+>                 return (Just [PlayerDiscard playerId card])
+>               else if not (isHero card) && cards == 0 && cardsOrHero == 0
+>                 then return Nothing
+>                 else do
+>                   if isHero card
+>                     then setPlayerState playerId discardHero
+>                     else setPlayerState playerId discardNonhero
+>                   setHand playerId newHand
+>                   return (Just [PlayerDiscard playerId card])
+>       where
+>         discardHero
+>           | cards + cardsOrHero + hero <= 1 = Waiting
+>           | hero > 0 = playerState { discardingHero = hero - 1 }
+>           | cardsOrHero > 0 =
+>                 playerState { discarding2CardsOr1Hero = cardsOrHero - 1 }
+>           | otherwise = playerState { discardingCards = cards - 1 }
+>         discardNonhero
+>           | hero == 0 && cardsOrHero == 0 && cards <= 1 = Waiting
+>           | cards > 0 = playerState { discardingCards = cards - 1 }
+>           | otherwise = playerState {
+>                             discardingCards = 1,
+>                             discarding2CardsOr1Hero = cardsOrHero - 1
+>                             }
+
+>     performAction Discarding {
+>                     discardingCards = cards,
+>                     discarding2CardsOr1Hero = cardsOrHero,
+>                     discardingHero = hero
+>                     } Backout = do
+>         hand <- getHand playerId
+>         if null hand || (all (== 0) [cards, cardsOrHero, hero])
+>             || (cards == 0 && all (not . isHero) hand)
+>           then do
+>             setPlayerState playerId Waiting
+>             return (Just [])
+>           else
+>             return Nothing
+
+>     performAction Discarding {} _ = return Nothing
 
 Generic choose option:
 
@@ -1029,6 +1086,13 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 =============================================================================
 
 Card properties
+
+> isHero :: Card -> Bool
+> isHero (HeroCard _) = True
+> isHero _ = False
+
+> hasClass :: Card -> CardClass -> Bool
+> hasClass card cardClass = undefined
 
 > data CardProperties = CardProperties {
 >     cardDungeonEffects :: [DungeonEffect],
