@@ -313,7 +313,7 @@ Game state:
 >     StartingTurn
 
 >   | UsingVillageEffects {
->         villageEffects :: [(Card,[VillageEffect])],
+>         villageEffects :: [(Card,[(Int,VillageEffect)])],
 >         villageEffectsNumberOfBuys :: Int,
 >         villageEffectsGold :: Int
 >         }
@@ -586,15 +586,19 @@ and draw six new cards to form a new hand.
 >         hand <- getHand playerId
 >         setPlayerState playerId
 >             UsingVillageEffects {
->                 villageEffects = map addVillageEffects hand,
+>                 villageEffects = cardsWithVillageEffects hand,
 >                 villageEffectsNumberOfBuys = 0,
 >                 villageEffectsGold = 0
 >                 }
 >         return (Just [PlayerEvent playerId VisitVillage,
 >                       PlayerHand playerId hand])
 >       where
+>         cardsWithVillageEffects hand =
+>             snd $ foldl enumerateEffects (1,[]) (map addVillageEffects hand)
 >         addVillageEffects card =
 >             (card,cardVillageEffects $ cardProperties card)
+>         enumerateEffects (n,cards) (card,effects) =
+>             (n + length effects,(card,zip [n..] effects):cards)
 
 >     performAction StartingTurn EnterDungeon = do
 >         hand <- getHand playerId
@@ -740,7 +744,7 @@ Rest:
 
 >     performAction Resting _ = return Nothing
 
-Discarding:
+Discarding as nonactive player:
 
 >     performAction playerState@Discarding {
 >                     discardingCards = cards,
