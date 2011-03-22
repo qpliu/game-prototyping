@@ -572,6 +572,7 @@ Game mechanics
 >       else do
 >         playerState <- getPlayerState playerId
 >         result <- performAction playerState playerAction
+>         checkIfDoneWaitingForDiscards
 >         gameOver <- isGameOver
 >         unless gameOver startNextTurnIfTurnFinished
 >         return result
@@ -599,6 +600,10 @@ Game mechanics
 >       where
 >         isWaiting Waiting = True
 >         isWaiting _ = False
+
+>     checkIfDoneWaitingForDiscards :: Thunderstone ()
+>     checkIfDoneWaitingForDiscards = do
+>         return ()
 
 End your turn by discarding all cards face up on your discard pile,
 and draw six new cards to form a new hand.
