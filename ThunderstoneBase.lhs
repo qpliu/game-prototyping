@@ -62,10 +62,9 @@ Game setup:
 
 Game state:
 
->      thunderstoneIsGameOver,
+>      thunderstonePublicState,
 >      thunderstonePlayerIds,
 >      thunderstonePlayerState,
->      thunderstoneScores,
 
 Game mechanics:
 
@@ -118,6 +117,15 @@ or randomly chosen cards.
 
 Various queries about the state of the game.
 
+> data ThunderstonePublicState = ThunderstonePublicState {
+>     publicStateGameOver :: Bool,
+>     publicStateScores :: [(PlayerId,Int)],
+>     publicStateTakingAction :: [PlayerId],
+>     publicStateDungeonHall :: [Card],
+>     publicStateHeroes :: [(HeroType,[HeroCard])],
+>     publicStateVillage :: [(VillageCard,Int)]
+>     }
+
 > data ThunderstonePlayerState = ThunderstonePlayerState {
 >     playerStateHand :: [Card],
 >     playerStateDeck :: Int,
@@ -129,8 +137,9 @@ Various queries about the state of the game.
 >     playerStateVillage :: [(VillageCard,Int)]
 >     }
 
-> thunderstoneIsGameOver :: ThunderstoneState -> Bool
-> thunderstoneIsGameOver state = thunderstoneGetState state isGameOver
+> thunderstonePublicState :: ThunderstoneState -> ThunderstonePublicState
+> thunderstonePublicState state =
+>     thunderstoneGetState state getThunderstonePublicState
 
 > thunderstonePlayerIds :: ThunderstoneState -> [PlayerId]
 > thunderstonePlayerIds state = thunderstoneGetState state getPlayerIds
@@ -139,9 +148,6 @@ Various queries about the state of the game.
 >                         -> ThunderstonePlayerState
 > thunderstonePlayerState state playerId =
 >     thunderstoneGetState state (getThunderstonePlayerState playerId)
-
-> thunderstoneScores :: ThunderstoneState -> [(PlayerId,Int)]
-> thunderstoneScores state = thunderstoneGetState state getScores
 
 A player takes an action.  If the action is legal, the updated state
 and a list of events are returned.
@@ -290,6 +296,7 @@ Game state:
 > type Thunderstone a = StateTransformer ThunderstoneState a
 
 > newtype PlayerId = PlayerId Int
+>     deriving Eq
 
 > data ThunderstoneState = ThunderstoneState {
 >     thunderstoneStdGen :: StdGen,
@@ -418,6 +425,29 @@ Game mechanics
 > isGameOver = do
 >     state <- getState
 >     return (thunderstoneGameOver state)
+
+> getThunderstonePublicState :: Thunderstone ThunderstonePublicState
+> getThunderstonePublicState = do
+>     state <- getState
+>     scores <- getScores
+>     playerIds <- getPlayerIds
+>     takingAction <- filterM takingAction playerIds
+>     return ThunderstonePublicState {
+>         publicStateGameOver = thunderstoneGameOver state,
+>         publicStateScores =
+>             if thunderstoneGameOver state then scores else [],
+>         publicStateTakingAction = takingAction,
+>         publicStateDungeonHall = take 3 (thunderstoneDungeon state),
+>         publicStateHeroes = thunderstoneHeroes state,
+>         publicStateVillage = thunderstoneVillage state
+>         }
+>   where
+>     takingAction playerId = do
+>         playerState <- getPlayerState playerId
+>         case playerState of
+>           Waiting -> return False
+>           WaitingForDiscards -> return False
+>           _ -> return True
 
 > getThunderstonePlayerState :: PlayerId
 >                            -> Thunderstone ThunderstonePlayerState
