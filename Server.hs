@@ -5,6 +5,8 @@ module Server
 where
 
 import Control.Concurrent(MVar,modifyMVar_,newMVar,putMVar,readMVar,takeMVar)
+import Control.Exception(SomeException)
+import qualified Control.Exception
 import Data.Char(isSpace)
 import Data.Map(Map,adjust,delete,empty,insert,size)
 import qualified Data.Map
@@ -66,9 +68,11 @@ server port maxClients apps users = listener port handler
         user <- fmap (Data.Map.lookup uid) (readMVar users)
         maybe (return ()) (processUserLine line) user
     processUserLine line user =
-        maybe (appProcessLine (userApp user) user line)
-              (($ drop 1 (words line)) . ($ user))
-              (findCommand (words line))
+        Control.Exception.catch
+              (maybe (appProcessLine (userApp user) user line)
+                     (($ drop 1 (words line)) . ($ user))
+                     (findCommand (words line)))
+              (\ e -> userWrite user [show (e :: SomeException)])
     findCommand [] = Nothing
     findCommand (cmd:_) = lookup cmd cmds
 
