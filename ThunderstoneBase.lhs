@@ -46,7 +46,7 @@ Data types:
 ThunderstoneState and PlayerId are opaque.
 
 >     (ThunderstoneState,PlayerId,
->      Card(..),ThunderstonePlayerState(..),
+>      Card(..),ThunderstonePlayerState(..),ThunderstonePublicState(..),
 >      PlayerAction(..),PlayerOption(..),
 >      ThunderstoneEvent(..),
 >      GameSetup,
@@ -405,6 +405,8 @@ Rest
 
 >   | ChooseOption (Int,String)
 >   | Backout
+
+>   deriving (Eq,Show)
 
 > data ThunderstoneEvent =
 >     PlayerEvent PlayerId PlayerAction

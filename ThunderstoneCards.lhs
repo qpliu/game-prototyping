@@ -2816,6 +2816,26 @@ Destroyed Militia remain until the end of the battle.
 
 > monsterDetails HordePlaceholder =
 >     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
+> monsterDetails Horde3 =
+>     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
+> monsterDetails Horde4 =
+>     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
+> monsterDetails Horde5 =
+>     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
+> monsterDetails Horde6 =
+>     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
+> monsterDetails Horde7 =
+>     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
+> monsterDetails Horde8 =
+>     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
+> monsterDetails Horde9 =
+>     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
+> monsterDetails Horde10 =
+>     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
+> monsterDetails Horde11 =
+>     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
+> monsterDetails Horde12 =
+>     undefinedCardDetails MonsterHordeHumanoid WrathOfTheElements
 
 > monsterDetails TheBloodless =
 >     undefinedCardDetails MonsterAbyssalThunderspawn DoomgateLegion
@@ -2851,6 +2871,26 @@ Destroyed Militia remain until the end of the battle.
 >     undefinedCardDetails MonsterEvilDruid DoomgateLegion
 
 > monsterDetails SwarmPlaceholder =
+>     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
+> monsterDetails Swarm4 =
+>     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
+> monsterDetails Swarm5 =
+>     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
+> monsterDetails Swarm6 =
+>     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
+> monsterDetails Swarm7 =
+>     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
+> monsterDetails Swarm8 =
+>     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
+> monsterDetails Swarm9 =
+>     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
+> monsterDetails Swarm10 =
+>     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
+> monsterDetails Swarm11 =
+>     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
+> monsterDetails Swarm12 =
+>     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
+> monsterDetails Swarm13 =
 >     undefinedCardDetails MonsterTheSwarmAnimal DoomgateLegion
 
 > monsterDetails Deathchill =
