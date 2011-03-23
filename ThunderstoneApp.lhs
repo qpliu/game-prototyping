@@ -267,6 +267,8 @@
 >     formatEvent getPlayerName (PlayerUseEffect playerId card text) =
 >         [getPlayerName playerId ++ " uses a card Effect: "
 >                                 ++ show card ++ " " ++ text]
+>     formatEvent getPlayerName (PlayerStartsTurn playerId) =
+>         [getPlayerName playerId ++ " begins turn."]
 >     formatEvent getPlayerName (GameOverEvent scores) =
 >         ["Game over.  Scores:"]
 >         ++ [" " ++ getPlayerName playerId ++ ": " ++ show score

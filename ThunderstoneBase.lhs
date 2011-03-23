@@ -416,6 +416,7 @@ Rest
 >   | PlayerDiscard PlayerId Card
 >   | PlayerDestroyCard PlayerId Card
 >   | PlayerUseEffect PlayerId Card String
+>   | PlayerStartsTurn PlayerId
 >   | GameOverEvent [(PlayerId,Int)]
 
 Plus breach effects and other things that players should be notified of.
@@ -576,15 +577,23 @@ Game mechanics
 >         result <- performAction playerState playerAction
 >         checkIfDoneWaitingForDiscards
 >         gameOver <- isGameOver
->         unless gameOver startNextTurnIfTurnFinished
->         return result
+>         if gameOver
+>           then do
+>             scores <- getScores
+>             return (fmap (++ [GameOverEvent scores]) result)
+>           else do
+>             nextTurn <- startNextTurnIfTurnFinished
+>             return (fmap (++ nextTurn) result)
 
 >   where
 
->     startNextTurnIfTurnFinished :: Thunderstone ()
+>     startNextTurnIfTurnFinished :: Thunderstone [ThunderstoneEvent]
 >     startNextTurnIfTurnFinished = do
 >         turnFinished <- isTurnFinished
->         when turnFinished (do
+>         if not turnFinished
+>           then
+>             return []
+>           else do
 >             state <- getState
 >             setState state {
 >                 thunderstoneCurrentPlayer =
@@ -592,7 +601,8 @@ Game mechanics
 >                         `mod` length (thunderstonePlayers state)
 >                 }
 >             currentPlayerId <- getCurrentPlayerId
->             setPlayerState currentPlayerId StartingTurn)
+>             setPlayerState currentPlayerId StartingTurn
+>             return [PlayerStartsTurn currentPlayerId]
 
 >     isTurnFinished :: Thunderstone Bool
 >     isTurnFinished = do
