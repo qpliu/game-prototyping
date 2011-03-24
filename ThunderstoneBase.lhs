@@ -1258,7 +1258,7 @@ Village Effect:
 >     (String,PlayerId -> PlayerState -> Int
 >                      -> Thunderstone (Maybe [ThunderstoneEvent]))
 > type BattleResult = (String,PlayerId -> Thunderstone Bool)
-> type BreachEffect = (String,Thunderstone ())
+> type BreachEffect = Maybe (String,Thunderstone ())
 
 > class HasCardProperties card where
 >     cardProperties :: card -> CardProperties
@@ -1728,12 +1728,13 @@ Village Effect:
 >     cardProperties _ = error "undefined HeroCard"
 
 > monsterCardProperties :: MonsterCard -> BattleResult -> BreachEffect
->                       -> CardProperties
-> monsterCardProperties monsterCard battleResult breachEffect =
+>                       -> [DungeonEffect] -> [SpoilsEffect] -> CardProperties
+> monsterCardProperties monsterCard battleResult
+>                       breachEffect trophyEffects spoilsEffects =
 >     CardProperties {
->         cardDungeonEffects = [],
+>         cardDungeonEffects = trophyEffects,
 >         cardBattleEffects = [],
->         cardSpoilsEffects = [],
+>         cardSpoilsEffects = spoilsEffects,
 >         cardBattleResult = battleResult,
 >         cardBreachEffect = breachEffect,
 >         cardVillageGold = 0,
@@ -1744,22 +1745,358 @@ Village Effect:
 > instance HasCardProperties MonsterCard where
 
 >     cardProperties ArchdukeOfPain = monsterCardProperties ArchdukeOfPain
->         archduke breach
+>         archduke breach [] []
 >       where
 >         archduke =
 >             ("Magic Attack Required\nBATTLE: Destroy all Clerics and "
 >              ++ "Wizards.",
 >              error "undefined")
 >         breach =
->             ("BREACH: Destroy the top two cards from each Hero deck "
->              ++ "in the Village.",
->              error "undefined")
+>             Just ("BREACH: Destroy the top two cards from each Hero deck "
+>                   ++ "in the Village.",
+>                   error "undefined")
 > -- Archduke of Pain: You must have a Magic Attack of at least +1 in order
 > -- to defeat the Archduke of Pain.  You may still choose to attack the
 > -- Archduke, even without Magic Attack present.  If there are no Cleric
 > -- and/or Wizard cards in the battle, there is no effect.  When the
 > -- Archduke reaches Rank 1 of he Dungeon Hall, destroy the top two cards
 > -- from each Hero stack in the Village, including Militia.
+
+>     cardProperties Grudgebeast = monsterCardProperties Grudgebeast
+>         battle Nothing [] []
+>       where
+>         battle = ("",undefined)
+> -- Grudgebeast: This Monster has no special Effects.
+
+>     cardProperties Succubus = monsterCardProperties Succubus
+>         battle Nothing [] []
+>       where
+>         battle = ("HALF-ATTACK without MAGIC ATTACK present",undefined)
+> -- Succubus: If you do not have at least +1 Magic Attack, the
+> -- total Attack Value is halved, round down.
+
+>     cardProperties Tormentor = monsterCardProperties Tormentor
+>         battle Nothing [] []
+>       where
+>         battle = ("HALF-ATTACK without a Weapon present\n"
+>                   ++ "BATTLE: Destroy one Cleric.",undefined)
+> -- Tormentor: If you do not have at least one equipped
+> -- Weapon in the battle, the total Attack Value is halved,
+> -- round down.  If there are no Cleric cards in the battle,
+> -- there is no effect.  Destroyed Cleric cards remain until
+> -- the end of the battle.
+
+>     cardProperties TheUnchained = monsterCardProperties TheUnchained
+>         battle Nothing trophy []
+>       where
+>         battle = ("BATTLE: Gain one Disease.",undefined)
+>         trophy = [("* MAGIC ATTACK +1",undefined)]
+> -- Unchained, the: Disease cards gained in battle go directly
+> -- to your discard pile.
+
+>     cardProperties Darkness = monsterCardProperties Darkness
+>         battle Nothing [] []
+>       where
+>         battle = ("Unequipped Heroes cannot attack\nLight -1",undefined)
+> -- Darkness: Heroes without a Weapon equipped have an
+> -- Attack Bonus of 0, but are still affected by Battle
+> -- Effects.  Militia are Heroes.  Increase the Light
+> -- Penalty by 1.  Light Penalties are applied before
+> -- the battle.
+
+>     cardProperties Judgement = monsterCardProperties Judgement
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: All Heroes suffer Strength -2 and ATTACK -1.",
+>                   undefined)
+> -- Judgement: You may choose to decrease Attack or Magic Attack
+> -- for this Battle Effect.  Affected Strength can cause
+> -- Weapons to become unequipped.  Militia are Heroes.
+
+>     cardProperties Knightmare = monsterCardProperties Knightmare
+>         battle Nothing [] []
+>       where
+>         battle = ("Light -2\nBATTLE: Destroy one Fighter.",undefined)
+> -- Knightmare: Icrease the Light Penalty of th Rank Knightmare
+> -- is in by 2.  Light Penalties are applied before the battle.
+> -- If there are no Fighters in the battle, there is no effect.
+
+>     cardProperties LordMortis = monsterCardProperties LordMortis
+>         battle Nothing [] []
+>       where
+>         battle = ("Light -1",undefined)
+> -- Lord Mortis: Increase the Light Penalty of the Rank
+> -- Lord Mortis is in by 2.  Light Penalties are applied
+> -- before the battle.
+
+>     cardProperties ThePrince = monsterCardProperties ThePrince
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: All Heroes suffer Strength -2.\n"
+>                   ++ "BATTLE: Destroy one Fighter.",undefined)
+> -- Prince, the: If there are no Fighter cards in the battle,
+> -- there is no effect.  Reduced Strength can cause Weapons
+> -- to become unequipped.
+
+>     cardProperties EbonFume = monsterCardProperties EbonFume
+>         battle Nothing trophy []
+>       where
+>         battle = ("Immune to Magic Attack\n"
+>                   ++ "BATTLE: Destroy one Hero with the highest Strength.",
+>                   undefined)
+>         trophy = [("* ATTACK +3",undefined)]
+> -- Ebon Fume: Magic Attacks against Ebon FUmedo not count
+> -- towards the total Attack Value.  If two Heroes have
+> -- the highest (modified) Strength, you choose which to
+> -- destroy.  Militia are considered Heroes.
+
+>     cardProperties Mythlurian = monsterCardProperties Mythlurian
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: Destroy one Hero.",undefined)
+> -- Mythlurian: If there are no Hero cards in the battle,
+> -- there is no effect.  Destroyed Hero cards remain until
+> -- the end of the battle.  Militia are considered Heroes.
+
+>     cardProperties Skaladak = monsterCardProperties Skaladak
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: Destroy one Weapon.",undefined)
+> -- Skaladak: If there are no Weapon cards in the battle,
+> -- there is no effect.  Destroyed Weapons remain until
+> -- the end of the battle.
+
+>     cardProperties TyxrTheOld = monsterCardProperties TyxrTheOld
+>         battle breach trophy []
+>      where
+>         battle = ("BATTLE: Destroy one Hero.",undefined)
+>         breach =
+>             Just ("BREACH: Each player must discard two cards.",undefined)
+>         trophy = [("* MAGIC ATTACK +2",undefined)]
+> -- Tyxr the Old: If there are no Hero cards in the battle,
+> -- there is no effect.  Destroyed Hero cards remain until
+> -- the end of the battle.  Militia are Heroes.  When Tyxr
+> -- reaches Rank 1 of the Dungeon Hall, all players must
+> -- discard two cards each, including the active player.
+> -- This takes place before the active player refills his hand.
+
+>     cardProperties UyrilUnending = monsterCardProperties UyrilUnending
+>         battle Nothing trophy []
+>       where
+>         battle = ("HALF-ATTACK without MAGIC ATTACK present\n"
+>                   ++ "BATTLE: Destroy one Militia.",undefined)
+>         trophy = [("* MAGIC ATTACK +1",undefined)]
+> -- Uyril Unending: If you do not have at least +1 Magic Attack,
+> -- the total Attack Value is halved, round down.  If there
+> -- are no Militia cards in the battle, there is no effect.
+> -- Destroyed Militia remain until the end of the battle.
+
+>     cardProperties BlinkDog = monsterCardProperties BlinkDog
+>         battle Nothing [] []
+>       where
+>         battle = ("Light -1\n"
+>                   ++ "Cannot be attacked if a Light Penalty persists.",
+>                   undefined)
+> -- Blink Dog: If you have a Light Penalt of 1 or more, you
+> -- cannot choose to attack the Blink Dog.  Therefore, without
+> -- sufficient light, you may not choose to attack it merely to
+> -- move it to the bottom of the Dungeon Deck.  Light Penalties
+> -- are applied before the battle.
+
+>     cardProperties Griffon = monsterCardProperties Griffon
+>         battle Nothing trophy []
+>       where
+>         battle = ("",undefined)
+>         trophy = [("* MAGIC ATTACK +1",undefined)]
+> -- Griffon: The Magic Attack bonus is a Trophy Effect.
+
+>     cardProperties Nixie = monsterCardProperties Nixie
+>         battle Nothing [] []
+>       where
+>         battle = ("",undefined)
+> -- Nixie: This Monster has no special Effects.
+
+>     cardProperties Pegasus = monsterCardProperties Pegasus
+>         battle Nothing trophy []
+>       where
+>         battle = ("",undefined)
+>         trophy = [("* ATTACK +1",undefined)]
+> -- Pegasus: The Attack bonus is a Trophy Effect.
+
+>     cardProperties Sphinx = monsterCardProperties Sphinx
+>         battle Nothing trophy spoils
+>       where
+>         battle = ("Magic Attack Only",undefined)
+>         trophy = [("* MAGIC ATTACK +2",undefined)]
+>         spoils = [("Spoils (Reveal six cards from your deck and destroy "
+>                    ++ "any of these cards you choose.  Discard the rest.)",
+>                    undefined)]
+> -- Sphinx: Only Magic Attack bonuses count against the Sphinx.
+> -- The six cards revealed from your deck do not affect or
+> -- replace your hand, and are drawn before any Breach or
+> -- Trap Effects are resolved.  This is a Spoils effect.
+
+>     cardProperties BloodskullOrc = monsterCardProperties BloodskullOrc
+>         battle Nothing [] []
+>       where
+>         battle = ("",undefined)
+> -- Bloodskull Orc: This monster has no special Effects.
+
+>     cardProperties DeadboneTroll = monsterCardProperties DeadboneTroll
+>         battle Nothing [] []
+>       where
+>         battle = ("",undefined)
+> -- Deadbone Troll: Disease cards gained in battle go directly
+> -- to your discard pile.
+
+>     cardProperties FirebrandCyclops = monsterCardProperties FirebrandCyclops
+>         battle Nothing [] []
+>       where
+>         battle = ("",undefined)
+> -- Firebrand Cyclops: This Monster has no special Effects.
+
+>     cardProperties GrayskinLizard = monsterCardProperties GrayskinLizard
+>         battle Nothing [] []
+>       where
+>         battle = ("",undefined)
+> -- Grayskin Lizard: This Battle Effect makes the vulnerable
+> -- to Weapons.  They lack thick skin.
+
+>     cardProperties GriknackGoblin = monsterCardProperties GriknackGoblin
+>         battle Nothing [] []
+>       where
+>         battle = ("",undefined)
+> -- Griknack Goblin: This Monster has no special Effects.
+
+>     cardProperties BlackSlime = monsterCardProperties BlackSlime
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: Destroy one Militia.",undefined)
+> -- Black Slime: If there are no Militia cards in the battle,
+> -- there is no effect.  Destroyed Militia remain until the
+> -- end of the battle.
+
+>     cardProperties GrayOoze = monsterCardProperties GrayOoze
+>         battle Nothing [] spoils
+>       where
+>         battle = ("BATTLE: Destroy one Hero unless at least one Weapon "
+>                   ++ "is attached to the Party.",undefined)
+>         spoils = [("Spoils (Food)",undefined)]
+> -- Gray Oooze: If at least one Hero has a Weapon equipped (or
+> -- there are not Heroes), there is no effect.  Destroyed
+> -- Hero cards remain until the end of the battle.  Militia
+> -- are Heroes, and can be destroyed.  After a victorious
+> -- battle, you may purchase one Food card from the Village,
+> -- using the gold in your hand.
+
+>     cardProperties GreenBlob = monsterCardProperties GreenBlob
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: Destroy one Food.",undefined)
+> -- Green Blob: If there are no Food cards in the battle,
+> -- there is no effect.
+
+>     cardProperties NoxiousSlag = monsterCardProperties NoxiousSlag
+>         battle Nothing [] []
+>       where
+>         battle = ("HALF-ATTACK from MAGIC ATTACK\n"
+>                 ++ "Immune to Edged Weapons",undefined)
+> -- Noxious Slag: Edged Weapons do not add to your total
+> -- Attack Value against the Noxious Slag.  After
+> -- calculating your total Magic Attack Value, cut the
+> -- total in half (round down).
+
+>     cardProperties RedJelly = monsterCardProperties RedJelly
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: Destroy one Weapon.",undefined)
+> -- Red Jelly: If there are no Weapon cards in the battle,
+> -- there is no effect.  The Light bonus is a Trophy Effect.
+> -- It only applies when the defeated Red Jelly is revealed
+> -- in your hand.  It is not a Battle Effect.
+
+>     cardProperties Famine = monsterCardProperties Famine
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: Gain one Disease.",undefined)
+> -- Famine: Disease cards gained in battle go directly to
+> -- your discard pile.
+
+>     cardProperties Harbinger = monsterCardProperties Harbinger
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: Destroy one Spell.",undefined)
+> -- Harbinger: If there are no Spell cards in the battle,
+> -- there is no effect.  Destroyed Spell cards remain
+> -- until the end of the battle.
+
+>     cardProperties Kingdom = monsterCardProperties Kingdom
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: Gain one Disease.",undefined)
+> -- Kingdom: Disease cards gained in battle go directly to
+> -- your dicard pile.
+
+>     cardProperties LordOfDeath = monsterCardProperties LordOfDeath
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: Gain two Diseases.",undefined)
+> -- Lord of Death: Disease cards gained in battle go directly
+> -- to your discard pile.
+
+>     cardProperties Suffering = monsterCardProperties Suffering
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: All Heroes suffer Strength -2.\n"
+>                 ++ "BATTLE: Gain one Disease.",undefined)
+> -- Suffering: Reduced Strength can cause Weapons to become
+> -- unequipped.  Disease cards gained in battle go directly
+> -- to your discard pile.
+
+>     cardProperties Ghost = monsterCardProperties Ghost
+>         battle Nothing [] []
+>       where
+>         battle = ("HALF-ATTACK without MAGIC ATTACK present\n"
+>                 ++ "BATTLE: All Heroes suffer Strength -2.",undefined)
+> -- Ghost: If you do not have at least +1 Magic Attack,
+> -- the total Attack Value is halved, rounded down.
+> -- Reduced Strength can cause Weapons to become unequipped.
+
+>     cardProperties Haunt = monsterCardProperties Haunt
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: One Hero cannot attack.",undefined)
+> -- Haunt: Choose one Hero (and any equipped Weapon).
+> -- All Light, Attack, and Magic Attack of the Hero
+> -- (and Weapon) are reduced to 0.  Militia are Heroes.
+
+>     cardProperties Revenant = monsterCardProperties Revenant
+>         battle Nothing [] []
+>       where
+>         battle = ("Magic Attack Required\n"
+>                   ++ "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
+>                   ++ "with Strength 0 or less are Destroyed.",
+>                   undefined)
+> -- Revenant: You must have at least +1 Magic Attack in order
+> -- to kill the Revenant.  Heroes destroyed by the Revenant
+> -- die at the end of the battle.  Reduce Strength can cause
+> -- Weapons to become unequipped.
+
+>     cardProperties Spectre = monsterCardProperties Spectre
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: Destroy one Militia.",undefined)
+> -- Spectre: If there are no Militia cards in the battle, there
+> -- is no effect.  Destroyed Militia remain until the end of
+> -- the battle.
+
+>     cardProperties Wraith = monsterCardProperties Wraith
+>         battle Nothing [] []
+>       where
+>         battle = ("BATTLE: Destroy one Militia.",undefined)
+> --Wraith: If there are no Militia cards in the battle,
+> -- there is no effect.  Destroyed Militia remain until
+> -- the end of the battle.
 
 >     cardProperties _ = error "undefined MonsterCard"
 
