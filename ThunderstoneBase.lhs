@@ -626,7 +626,7 @@ Game mechanics
 >             state <- getState
 >             setState state {
 >                 thunderstoneCurrentPlayer =
->                     thunderstoneCurrentPlayer state + 1
+>                     (thunderstoneCurrentPlayer state + 1)
 >                         `mod` length (thunderstonePlayers state)
 >                 }
 >             currentPlayerId <- getCurrentPlayerId
