@@ -98,12 +98,12 @@ Initialize the state with the random number generator.
 > thunderstoneInit :: StdGen -> ThunderstoneState
 > thunderstoneInit stdGen = ThunderstoneState {
 >     thunderstoneStdGen = stdGen,
->     thunderstoneCurrentPlayer = undefined,
+>     thunderstoneCurrentPlayer = error "undefined thunderstoneCurrentPlayer",
 >     thunderstonePlayers = [],
->     thunderstoneDungeon = undefined,
->     thunderstoneHeroes = undefined,
->     thunderstoneVillage = undefined,
->     thunderstoneGameOver = undefined
+>     thunderstoneDungeon = error "undefined thunderstoneDungeon",
+>     thunderstoneHeroes = error "undefined thunderstoneHeroes",
+>     thunderstoneVillage = error "undefined thunderstoneVillage",
+>     thunderstoneGameOver = error "undefined thunderstoneGameOver"
 >     }
 
 Start a game, specifying the number of players and choosing which
@@ -535,11 +535,11 @@ Game mechanics
 >           then return [EndTurn]
 >           else return [LevelUpHero,EndTurn]
 
->     optionsWhen UsingDungeonEffects = undefined
+>     optionsWhen UsingDungeonEffects = error "undefined optionsWhen UsingDungeonEffects"
 
->     optionsWhen AttackingMonster = undefined
+>     optionsWhen AttackingMonster = error "undefined optionsWhen AttackingMonster"
 
->     optionsWhen TakingSpoils = undefined
+>     optionsWhen TakingSpoils = error "undefined optionsWhen TakingSpoils"
 
 >     optionsWhen Resting = return [DestroyCard,EndTurn]
 
@@ -649,7 +649,7 @@ and draw six new cards to form a new hand.
 
 >     performAction StartingTurn EnterDungeon = do
 >         hand <- getHand playerId
->         undefined -- update player state
+>         -- undefined -- update player state
 >         return (Just [PlayerEvent playerId EnterDungeon,
 >                       PlayerHand playerId hand])
 
@@ -1175,7 +1175,7 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 >             } =
 >         playerState { villageEffects = removeIndex index hand }
 >     destroyIndexInState playerState@UsingDungeonEffects {} =
->         undefined
+>         error "destroyIndex UsingDungeonEffects" -- undefined
 >     destroyIndexInState playerState = playerState
 
 > multiple :: (Functor m, Monad m) => Int -> m (Maybe a) -> m [a]
@@ -1202,7 +1202,7 @@ Card properties
 > isHero _ = False
 
 > hasClass :: Card -> CardClass -> Bool
-> hasClass card cardClass = undefined
+> hasClass card cardClass = error "undefined hasClass"
 
 > data CardProperties = CardProperties {
 >     cardDungeonEffects :: [DungeonEffect],
@@ -1242,16 +1242,25 @@ Village Effect:
 >         cardDungeonEffects = [],
 >         cardBattleEffects = [],
 >         cardSpoilsEffects = [],
->         cardBattleResult = undefined,
->         cardBreachEffect = undefined,
+>         cardBattleResult = error "undefined DiseaseCard",
+>         cardBreachEffect = error "undefined DiseaseCard",
 >         cardVillageGold = 0,
->         cardVillagePrice = undefined,
+>         cardVillagePrice = error "undefined DiseaseCard",
 >         cardVillageEffects = []
 >         }
 >     cardProperties (ThunderstoneCard card) = cardProperties card
 
 > instance HasCardProperties ThunderstoneCard where
->     cardProperties _ = undefined
+>     cardProperties _ = CardProperties {
+>         cardDungeonEffects = [],
+>         cardBattleEffects = [],
+>         cardSpoilsEffects = [],
+>         cardBattleResult = error "undefined ThunderstoneCard",
+>         cardBreachEffect = error "undefined ThunderstoneCard",
+>         cardVillageGold = 0,
+>         cardVillagePrice = error "undefined ThunderstoneCard",
+>         cardVillageEffects = []
+>         }
 
 > heroCardProperties :: HeroCard -> [DungeonEffect] -> [BattleEffect]
 >                                -> [SpoilsEffect]
@@ -1261,8 +1270,8 @@ Village Effect:
 >         cardDungeonEffects = dungeonEffects,
 >         cardBattleEffects = battleEffects,
 >         cardSpoilsEffects = spoilsEffects,
->         cardBattleResult = undefined,
->         cardBreachEffect = undefined,
+>         cardBattleResult = error "undefined HeroCard",
+>         cardBreachEffect = error "undefined HeroCard",
 >         cardVillageGold = cardGold $ heroDetails heroCard,
 >         cardVillagePrice = heroPrice $ cardStats $ heroDetails heroCard,
 >         cardVillageEffects = []
@@ -1270,12 +1279,15 @@ Village Effect:
 
 > instance HasCardProperties HeroCard where
 
+>     cardProperties Militia = heroCardProperties Militia
+>         [] [] []
+
 >     cardProperties AmazonArcher = heroCardProperties AmazonArcher
 >         [] [amazon] []
 >       where
 >         amazon =
 >             ("ATTACK +1.\nAdditional ATTACK +2 at Rank 2 or 3.",
->              undefined)
+>              error "undefined")
 > -- Amazon: This Hero's Dungeon Effect is an Attack that is in addition
 > -- to the Amazon's normal Attack.
 
@@ -1284,7 +1296,7 @@ Village Effect:
 >       where
 >         amazon =
 >             ("ATTACK +2.\nAdditional ATTACK +3 at Rank 2 or 3.",
->              undefined)
+>              error "undefined")
 > -- Amazon: This Hero's Dungeon Effect is an Attack that is in addition
 > -- to the Amazon's normal Attack.
 
@@ -1293,7 +1305,7 @@ Village Effect:
 >       where
 >         amazon =
 >             ("ATTACK +2.\nAdditional ATTACK +4 at Rank 2 or 3.",
->              undefined)
+>              error "undefined")
 > -- Amazon: This Hero's Dungeon Effect is an Attack that is in addition
 > -- to the Amazon's normal Attack.
 
@@ -1302,10 +1314,10 @@ Village Effect:
 >       where
 >         destroyDisease =
 >             ("REPEAT DUNGEON: Destroy one Disease to draw one card.",
->              undefined)
+>              error "undefined")
 >         chalice =
 >             ("ATTACK +2",
->              undefined)
+>              error "undefined")
 > -- Chalice Quester and Defender: You man continue to destroy Disease
 > -- cards and draw new cards until you choose which Monster to attack.
 
@@ -1314,16 +1326,16 @@ Village Effect:
 >       where
 >         destroyDisease =
 >             ("REPEAT DUNGEON: Destroy one Disease to draw one card.",
->              undefined)
+>              error "undefined")
 >         drawCard =
 >             ("DUNGEON: Draw one card.",
->              undefined)
+>              error "undefined")
 >         attackPlus1 =
 >             ("DUNGEON: ATTACK +1 for each Item that produces Light.",
->              undefined)
+>              error "undefined")
 >         chalice =
 >             ("ATTACK +3",
->              undefined)
+>              error "undefined")
 > -- Chalice Quester and Defender: You man continue to destroy Disease
 > -- cards and draw new cards until you choose which Monster to attack.
 
@@ -1332,13 +1344,13 @@ Village Effect:
 >       where
 >         drawCard =
 >             ("DUNGEON: Draw one card.",
->              undefined)
+>              error "undefined")
 >         chalice =
 >             ("ATTACK +4",
->              undefined)
+>              error "undefined")
 >         spoils =
 >             ("Spoils (Village).",
->              undefined)
+>              error "undefined")
 > -- Chalic Paladin: You may purchase any one Village card (including
 > -- Basic and Hero cards) from the Village after a victorious battle,
 > -- using the gold in your hand.
@@ -1349,7 +1361,7 @@ Village Effect:
 >         dwarf =
 >             ("ATTACK +1\nAdditional ATTACK +3 when equipped with an "
 >              ++ "Edged Weapon.",
->              undefined)
+>              error "undefined")
 > -- Dwarf Guardian: His total Attack Value if an Edged Weapon is equipped
 > -- is +4.  This bonus is part of the Dwarf's ability which he retains even
 > -- if the Weapon later becomes useless (due to a Monster's Battle Effect,
@@ -1361,10 +1373,10 @@ Village Effect:
 >         dwarf =
 >             ("ATTACK +2\nAdditional ATTACK +4 when equipped with an "
 >              ++ "Edged Weapon.",
->              undefined)
+>              error "undefined")
 >         spoils =
 >             ("Spoils (Weapon).",
->              undefined)
+>              error "undefined")
 > -- Dwarf Janissary: If revealed during a Dungeon action, you may purchase
 > -- one Weapon card from the Village after a victorious battle, using the
 > -- gold in your hand.  His total Attack Vlaue if an Edged Weapon is
@@ -1376,7 +1388,7 @@ Village Effect:
 >         dwarf =
 >             ("ATTACK +3\nAdditional ATTACK +45 when equipped with an "
 >              ++ "Edged Weapon.",
->              undefined)
+>              error "undefined")
 > -- Dwarf Sentinel: His total Attack Value with an Edged Weapon equipped
 > -- is +8.
 
@@ -1385,18 +1397,18 @@ Village Effect:
 >       where
 >         elf =
 >             ("MAGIC ATTACK +2",
->              undefined)
+>              error "undefined")
 
 >     cardProperties ElfSorcerer = heroCardProperties ElfSorcerer
 >         [] [elf] [spoils]
 >       where
 >         elf =
 >             ("MAGIC ATTACK +3",
->              undefined)
+>              error "undefined")
 >         spoils =
 >             ("You may return one Monster to the bottom of the deck "
 >              ++ "after defeating a monster.  (Refill the hall.)",
->              undefined)
+>              error "undefined")
 > -- Elf Sorcerer/Archmage: When a Monster is returned to the bottom of
 > -- the monster deck, refill the Dungeon Hall.  If this results in a
 > -- Breach effect, resolve it immediately.  If the Thunderstone moves
@@ -1410,10 +1422,10 @@ Village Effect:
 >             ("DUNGEON: You may return one Monster to the bottom of "
 >              ++ "the deck and refill the hall before the beginning "
 >              ++ "of a battle.",
->              undefined)
+>              error "undefined")
 >         elf =
 >             ("MAGIC ATTACK +3",
->              undefined)
+>              error "undefined")
 > -- Elf Sorcerer/Archmage: When a Monster is returned to the bottom of
 > -- the monster deck, refill the Dungeon Hall.  If this results in a
 > -- Breach effect, resolve it immediately.  If the Thunderstone moves
@@ -1425,7 +1437,7 @@ Village Effect:
 >       where
 >         feayn =
 >             ("Cannot attack Rank 1.\nATTACK +2",
->              undefined)
+>              error "undefined")
 > -- Feayn: If a Dungeon Actions causes you to attack a Monster in
 > -- Rank 1, do not add the Feayn's Attack bonus to your Attack Value.
 > -- If Feayn does not attack, his Light bonus is lost.
@@ -1435,7 +1447,7 @@ Village Effect:
 >       where
 >         feayn =
 >             ("Cannot attack Rank 1.\nATTACK +3",
->              undefined)
+>              error "undefined")
 > -- Feayn: If a Dungeon Actions causes you to attack a Monster in
 > -- Rank 1, do not add the Feayn's Attack bonus to your Attack Value.
 > -- If Feayn does not attack, his Light bonus is lost.
@@ -1445,10 +1457,10 @@ Village Effect:
 >       where
 >         feayn =
 >             ("Cannot attack Rank 1.\nATTACK +4",
->              undefined)
+>              error "undefined")
 >         spoils =
 >             ("Gain +1 XP if you defeat a Monster in Rank 3.",
->              undefined)
+>              error "undefined")
 > -- Feayn: If a Dungeon Actions causes you to attack a Monster in
 > -- Rank 1, do not add the Feayn's Attack bonus to your Attack Value.
 > -- If Feayn does not attack, his Light bonus is lost.
@@ -1458,17 +1470,17 @@ Village Effect:
 >       where
 >         lorigg =
 >             ("ATTACK +1",
->              undefined)
+>              error "undefined")
 
 >     cardProperties LoriggRogue = heroCardProperties LoriggRogue
 >         [dungeon] [lorigg] []
 >       where
 >         dungeon =
 >             ("DUNGEON: All other players discard one card.",
->              undefined)
+>              error "undefined")
 >         lorigg =
 >             ("ATTACK +2",
->              undefined)
+>              error "undefined")
 > -- Lorigg Outlaw or Rogue: Regardless of whether the battle is victorious
 > -- or not, all other players must discard cards when this Hero enters the
 > -- Dungeon.
@@ -1478,10 +1490,10 @@ Village Effect:
 >       where
 >         dungeon =
 >             ("DUNGEON: All other players discard one card.",
->              undefined)
+>              error "undefined")
 >         lorigg =
 >             ("ATTACK +2",
->              undefined)
+>              error "undefined")
 > -- Lorigg Outlaw or Rogue: Regardless of whether the battle is victorious
 > -- or not, all other players must discard cards when this Hero enters the
 > -- Dungeon.
@@ -1491,10 +1503,10 @@ Village Effect:
 >       where
 >         dungeon =
 >             ("DUNGEON: Destroy one Food for an additional ATTACK +3.",
->              undefined)
+>              error "undefined")
 >         outlands =
 >             ("ATTACK +3",
->              undefined)
+>              error "undefined")
 
 >     cardProperties OutlandsSlayer = heroCardProperties OutlandsSlayer
 >         [dungeonMonster,dungeonFood] [outlands] []
@@ -1502,13 +1514,13 @@ Village Effect:
 >         dungeonMonster =
 >             ("DUNGEON: Gain +1 ATTACK for each Monster card revealed "
 >              ++ "from your hand.",
->              undefined)
+>              error "undefined")
 >         dungeonFood =
 >             ("REPEAT DUNGEON: Destroy one Food for an additional ATTACK +3.",
->              undefined)
+>              error "undefined")
 >         outlands =
 >             ("ATTACK +5",
->              undefined)
+>              error "undefined")
 > -- Outlands Slayer or Khan: The Hero gains an Attack bonus for each
 > -- Monster card revealed in your hand before the battle.
 
@@ -1518,10 +1530,10 @@ Village Effect:
 >         dungeon =
 >             ("DUNGEON: ATTACK +2 for each Monster card revealed "
 >              ++ "from your hand.",
->              undefined)
+>              error "undefined")
 >         outlands =
 >             ("ATTACK +7",
->              undefined)
+>              error "undefined")
 > -- Outlands Slayer or Khan: The Hero gains an Attack bonus for each
 > -- Monster card revealed in your hand before the battle.
 
@@ -1530,17 +1542,17 @@ Village Effect:
 >       where
 >         redblade =
 >             ("ATTACK +2",
->              undefined)
+>              error "undefined")
 
 >     cardProperties RedbladePoisoner = heroCardProperties RedbladePoisoner
 >         [dungeon] [redblade] []
 >       where
 >         dungeon =
 >             ("DUNGEON: All other players discard one card.",
->              undefined)
+>              error "undefined")
 >         redblade =
 >             ("ATTACK +3",
->              undefined)
+>              error "undefined")
 > -- Redblade Assassin or Poisoner: Regardless of whether the battle is
 > -- victorious or not, all other players must discard cards when this Hero
 > -- enters the Dungeon.
@@ -1550,10 +1562,10 @@ Village Effect:
 >       where
 >         dungeon =
 >             ("DUNGEON: All other players discard one Hero or two cards.",
->              undefined)
+>              error "undefined")
 >         redblade =
 >             ("ATTACK +4",
->              undefined)
+>              error "undefined")
 > -- Redblade Assassin or Poisoner: Regardless of whether the battle is
 > -- victorious or not, all other players must discard cards when this Hero
 > -- enters the Dungeon.
@@ -1563,10 +1575,10 @@ Village Effect:
 >       where
 >         dungeon =
 >             ("REPEAT DUNGEON: Destroy one Disease to draw one card.",
->              undefined)
+>              error "undefined")
 >         regian =
 >             ("MAGIC ATTACK +1",
->              undefined)
+>              error "undefined")
 > -- Regian: You may continue to destroy Disease cards and draw new cards
 > -- until the battle begins.
 
@@ -1575,13 +1587,13 @@ Village Effect:
 >       where
 >         dungeonCard =
 >             ("DUNGEON: Draw one card.",
->              undefined)
+>              error "undefined")
 >         dungeonDisease =
 >             ("REPEAT DUNGEON: Destroy one Disease to draw one card.",
->              undefined)
+>              error "undefined")
 >         regian =
 >             ("MAGIC ATTACK +2",
->              undefined)
+>              error "undefined")
 > -- Regian: You may continue to destroy Disease cards and draw new cards
 > -- until the battle begins.
 
@@ -1590,13 +1602,13 @@ Village Effect:
 >       where
 >         dungeonCard =
 >             ("DUNGEON: Draw two cards.",
->              undefined)
+>              error "undefined")
 >         dungeonDisease =
 >             ("REPEAT DUNGEON: Destroy one Disease to draw one card.",
->              undefined)
+>              error "undefined")
 >         regian =
 >             ("MAGIC ATTACK +3",
->              undefined)
+>              error "undefined")
 > -- Regian: You may continue to destroy Disease cards and draw new cards
 > -- until the battle begins.
 
@@ -1606,7 +1618,7 @@ Village Effect:
 >         selurin =
 >             ("MAGIC ATTACK +2\nAll Items and Magic Attack Spells gain "
 >              ++ "MAGIC ATTACK +1.",
->              undefined)
+>              error "undefined")
 > -- Selurin: Each Spell with a Magic Attack bonus gains a Magic Attack bonus
 > -- of +1.  Each Item (with the Item keyword), regardless of whether it has
 > -- an Attack bonus or not, gains a Magic Attack bonus of +1.
@@ -1616,7 +1628,7 @@ Village Effect:
 >       where
 >         selurin =
 >             ("MAGIC ATTACK +2\nTotal MAGIC ATTACK x2* (apply last)",
->              undefined)
+>              error "undefined")
 > -- Selurin Theurge or Warlock: The x2 multiplier of the Selurin Wizard
 > -- affects only Magic Attack bonuses, and is applied after all Magic Attack
 > -- bonuses have been calculated.  Multiple Wizards multiply together
@@ -1629,10 +1641,10 @@ Village Effect:
 >             ("DUNGEON: Each player discards one Hero or shows they "
 >              ++ "have none.  You may borrow one of those discarded "
 >              ++ "Heroes for the battle, returning it at the end.",
->              undefined)
+>              error "undefined")
 >         selurin =
 >             ("MAGIC ATTACK +2\nTotal MAGIC ATTACK x2* (apply last)",
->              undefined)
+>              error "undefined")
 > -- Selurin Theurge or Warlock: The x2 multiplier of the Selurin Wizard
 > -- affects only Magic Attack bonuses, and is applied after all Magic Attack
 > -- bonuses have been calculated.  Multiple Wizards multiply together
@@ -1645,10 +1657,10 @@ Village Effect:
 >       where
 >         dungeon =
 >             ("DUNGEON: Destroy one Food for additional ATTACK +2.",
->              undefined)
+>              error "undefined")
 >         thyrian =
 >             ("ATTACK +2",
->              undefined)
+>              error "undefined")
 > -- Thyrian: Food destroyed by this Dungeon Effect cannot also be used to
 > -- gain a Strength bonus or for any other effect.
 
@@ -1657,10 +1669,10 @@ Village Effect:
 >       where
 >         dungeon =
 >             ("DUNGEON: Destroy one Food for additional ATTACK +2.",
->              undefined)
+>              error "undefined")
 >         thyrian =
 >             ("ATTACK +4\nAll Militia gain ATTACK +1.",
->              undefined)
+>              error "undefined")
 > -- Thyrian: Food destroyed by this Dungeon Effect cannot also be used to
 > -- gain a Strength bonus or for any other effect.
 
@@ -1671,10 +1683,10 @@ Village Effect:
 >             ("DUNGEON: Destroy one Food to place one Monster from "
 >              ++ "the hall worth 1 or 2 VP into your discard pile.  "
 >              ++ "Refill the hall.",
->              undefined)
+>              error "undefined")
 >         thyrian =
 >             ("ATTACK +4\nAll Heroes other than Fighters gain ATTACK +2.",
->              undefined)
+>              error "undefined")
 > -- Thyrian: Food destroyed by this Dungeon Effect cannot also be used to
 > -- gain a Strength bonus or for any other effect.
 > -- Thyrian Lord: You may only select a Monster iwth 1 or 2 VP, and not
@@ -1684,7 +1696,7 @@ Village Effect:
 > -- Hall, the game ends immediately; you do not collect the Thunderstone.
 > -- You do not earn any Experience Points for the Effect.
 
->     cardProperties _ = undefined
+>     cardProperties _ = error "undefined HeroCard"
 
 > monsterCardProperties :: MonsterCard -> BattleResult -> BreachEffect
 >                       -> CardProperties
@@ -1696,7 +1708,7 @@ Village Effect:
 >         cardBattleResult = battleResult,
 >         cardBreachEffect = breachEffect,
 >         cardVillageGold = 0,
->         cardVillagePrice = undefined,
+>         cardVillagePrice = error "undefined MonsterCard",
 >         cardVillageEffects = []
 >         }
 
@@ -1708,11 +1720,11 @@ Village Effect:
 >         archduke =
 >             ("Magic Attack Required\nBATTLE: Destroy all Clerics and "
 >              ++ "Wizards.",
->              undefined)
+>              error "undefined")
 >         breach =
 >             ("BREACH: Destroy the top two cards from each Hero deck "
 >              ++ "in the Village.",
->              undefined)
+>              error "undefined")
 > -- Archduke of Pain: You must have a Magic Attack of at least +1 in order
 > -- to defeat the Archduke of Pain.  You may still choose to attack the
 > -- Archduke, even without Magic Attack present.  If there are no Cleric
@@ -1720,7 +1732,7 @@ Village Effect:
 > -- Archduke reaches Rank 1 of he Dungeon Hall, destroy the top two cards
 > -- from each Hero stack in the Village, including Militia.
 
->     cardProperties _ = undefined
+>     cardProperties _ = error "undefined MonsterCard"
 
 > villageCardProperties :: VillageCard -> [DungeonEffect] -> [BattleEffect]
 >                                      -> [VillageEffect]
@@ -1731,8 +1743,8 @@ Village Effect:
 >         cardDungeonEffects = dungeonEffects,
 >         cardBattleEffects = battleEffects,
 >         cardSpoilsEffects = [],
->         cardBattleResult = undefined,
->         cardBreachEffect = undefined,
+>         cardBattleResult = error "undefined VillageCard",
+>         cardBreachEffect = error "undefined VillageCard",
 >         cardVillageGold = cardGold $ villageDetails villageCard,
 >         cardVillagePrice =
 >             villagePrice $ cardStats $ villageDetails villageCard,
@@ -1741,13 +1753,22 @@ Village Effect:
 
 > instance HasCardProperties VillageCard where
 
+>     cardProperties Dagger = villageCardProperties Dagger
+>         [] [] []
+
+>     cardProperties IronRations = villageCardProperties IronRations
+>         [] [] []
+
+>     cardProperties Torch = villageCardProperties Torch
+>         [] [] []
+
 >     cardProperties ArcaneEnergies = villageCardProperties ArcaneEnergies
 >         [allAttacksBecomeMagic] [] []
 >       where
 >         allAttacksBecomeMagic =
 >             ("DUNGEON: All ATTACKS from Heroes with Weapons equipped "
 >              ++ "become MAGIC ATTACKS.  Draw one card.",
->              undefined)
+>              error "undefined")
 > -- Arcane Energies: You must draw a card when you use this dungeon
 > -- ability.
 
@@ -1758,7 +1779,7 @@ Village Effect:
 >             ("DUNGEON: Return one Monster to the bottom of the deck and "
 >              ++ "refill the hall, or rearrange the hall.  Destroy one "
 >              ++ "card from your hand.  Draw one card.",
->              undefined)
+>              error "undefined")
 > -- Banish: You must declare you are entering the Dungeon to play
 > -- Banish, but do not choose which Monster to attack until after the
 > -- Hall is refilled.  If Banish results in a Breach (or Trap) Effect,
@@ -1803,7 +1824,7 @@ Village Effect:
 >       where
 >         battleFury =
 >             ("DUNGEON: All Heroes gain ATTACK +1.",
->              undefined)
+>              error "undefined")
 > -- Battle Fury: Militia are Heroes, and gain the Attack bonus from this
 > -- spell.
 
@@ -1812,7 +1833,7 @@ Village Effect:
 >       where
 >         feast =
 >             ("DUNGEON: All Heroes gain Strength +1 and ATTACK +1.",
->              undefined)
+>              error "undefined")
 > -- Feast: Militia cards are Heroes, so they gain the Attack and Strength
 > -- bonuses from this card.
 
@@ -1821,7 +1842,7 @@ Village Effect:
 >       where
 >         fireball =
 >             ("MAGIC ATTACK +3",
->              undefined)
+>              error "undefined")
 > -- Fireball: You do not need Heroes present to use this Spell.
 
 >     cardProperties FlamingSword = villageCardProperties FlamingSword
@@ -1829,7 +1850,7 @@ Village Effect:
 >       where
 >         flamingSword =
 >             ("MAGIC ATTACK +3",
->              undefined)
+>              error "undefined")
 > -- Flaming Sword: You only gain the Light bonus if the Flaming Sword
 > -- is equipped to a Hero.
 
@@ -1839,7 +1860,7 @@ Village Effect:
 >         goodberries =
 >             ("DUNGEON: One Hero gains Strength +3 and ATTACK becomes "
 >              ++ "MAGIC ATTACK for that Hero.",
->              undefined)
+>              error "undefined")
 > -- Goodberries: After the final Attack bonus of the Hero is calculated,
 > -- its entire bonus becomes Magic Attack.  Militia are Heroes, and may
 > -- benefit from this card.
@@ -1849,7 +1870,7 @@ Village Effect:
 >       where
 >         hatchet =
 >             ("ATTACK +3",
->              undefined)
+>              error "undefined")
 > -- Hatchet: This is an Edged Weapon.
 
 >     cardProperties Lantern = villageCardProperties Lantern
@@ -1857,7 +1878,7 @@ Village Effect:
 >       where
 >         lantern =
 >             ("Light +2",
->              undefined)
+>              error "undefined")
 > -- Lantern: This Item always provides Light +2, even without a Hero present.
 
 >     cardProperties LightstoneGem = villageCardProperties LightstoneGem
@@ -1865,7 +1886,7 @@ Village Effect:
 >       where
 >         lightstoneGem =
 >             ("Light +3",
->              undefined)
+>              error "undefined")
 > -- Lightstone Gem: This Item always provides Light +3, even without a Hero
 > -- present.
 
@@ -1874,7 +1895,7 @@ Village Effect:
 >       where
 >         magicalAura =
 >             ("DUNGEON: All Weapons become Weight 0.  Draw one card.",
->              undefined)
+>              error "undefined")
 > -- Magical Aura: When played with a Polearm, the Hero must still have a
 > -- Strength of 8 or more to gain the +6 bonus.  You must draw a card when
 > -- using this Dungeon Effect.
@@ -1930,7 +1951,7 @@ Village Effect:
 >         polearm =
 >             ("ATTACK +2, or ATTACK +6 when attached to a Hero with 8 "
 >              ++ "or more Strength.",
->              undefined)
+>              error "undefined")
 > -- Polearm: A Hero with a Strength of 2 can equip the Polearm for an
 > -- Attack bonus of +2.  A Hero with a Strength of 8 or higher gains +6
 > -- instead.
@@ -1940,7 +1961,7 @@ Village Effect:
 >       where
 >         shortSword =
 >             ("ATTACK +4",
->              undefined)
+>              error "undefined")
 > -- Short Sword: This is an Edged Weapon.
 
 >     cardProperties Spear = villageCardProperties Spear
@@ -1951,10 +1972,10 @@ Village Effect:
 >              ++ "bonus increases by an additional +3, for a total of "
 >              ++ "+5.  However, the Spear is still considered equipped "
 >              ++ "for the entire battle, even if you use the effect.",
->              undefined)
+>              error "undefined")
 >         spear =
 >             ("ATTACK +2",
->              undefined)
+>              error "undefined")
 
 >     cardProperties TownGuard = villageCardProperties TownGuard
 >         [] [] [draw2,draw3]
@@ -2008,6 +2029,7 @@ Village Effect:
 >             hand <- getHand playerId
 >             case filter ((== (HeroCard Militia)) . snd) (zip [0..] hand) of
 >               (militiaIndex,_):_ -> do
+>                 destroyIndex playerId militiaIndex
 >                 xp <- getXP playerId
 >                 setXP playerId (xp + 2)
 >                 let (text,_) = destroyMilitiaFor2XP
@@ -2030,8 +2052,8 @@ Village Effect:
 >         warhammer =
 >             ("ATTACK +3\nClerics gain an additional ATTACK +3 "
 >              ++ "against Doomknights and Undead.",
->              undefined)
+>              error "undefined")
 > -- Warhammer: A Cleric attacking a Doomknight or Undead gains a total
 > -- Attack bonus of +6.
 
->     cardProperties _ = undefined
+>     cardProperties _ = error "undefined VillageCard"
