@@ -5,8 +5,8 @@ module Server
 where
 
 import Control.Concurrent(MVar,modifyMVar_,newMVar,putMVar,readMVar,takeMVar)
-import Control.Exception(SomeException)
-import qualified Control.Exception
+--import Control.Exception(SomeException)
+--import qualified Control.Exception
 import Data.Char(isSpace)
 import Data.Map(Map,adjust,delete,empty,insert,size)
 import qualified Data.Map
@@ -37,20 +37,26 @@ data User = User {
     }
 
 serve :: Int -> Int -> [App] -> IO ()
-serve port maxClients apps = newMVar empty >>= server port maxClients apps
+serve port maxClients apps = do
+    users <- newMVar empty
+    counter <- newMVar 0
+    server port maxClients apps users counter
 
-server :: Int -> Int -> [App] -> MVar (Map UserId User) -> IO ()
-server port maxClients apps users = listener port handler
+server :: Int -> Int -> [App] -> MVar (Map UserId User) -> MVar Int -> IO ()
+server port maxClients apps users counter = listener port handler
   where
     handler addr handle = do
-        (write,close) <- makeHandler (processLine (UserId addr))
-                                     (cleanup (UserId addr))
+        count <- takeMVar counter
+        putMVar counter (count + 1)
+        let uid = UserId (addr ++ "-" ++ show count)
+        (write,close) <- makeHandler (processLine uid)
+                                     (cleanup uid)
                                      handle
         userMap <- takeMVar users
         if size userMap < maxClients
             then do
-                putMVar users (insert (UserId addr) User {
-                                        userId = UserId addr,
+                putMVar users (insert uid User {
+                                        userId = uid,
                                         userName = addr,
                                         userApp = nullApp,
                                         userWrite = write,
@@ -68,11 +74,11 @@ server port maxClients apps users = listener port handler
         user <- fmap (Data.Map.lookup uid) (readMVar users)
         maybe (return ()) (processUserLine line) user
     processUserLine line user =
-        Control.Exception.catch
+        --Control.Exception.catch
               (maybe (appProcessLine (userApp user) user line)
                      (($ drop 1 (words line)) . ($ user))
                      (findCommand (words line)))
-              (\ e -> userWrite user [show (e :: SomeException)])
+        --      (\ e -> userWrite user [show (e :: SomeException)])
     findCommand [] = Nothing
     findCommand (cmd:_) = lookup cmd cmds
 
