@@ -14,7 +14,7 @@
 > import ThunderstoneBase
 >     (ThunderstoneState,PlayerId,
 >      Card(..),ThunderstonePublicState(..),ThunderstonePlayerState(..),
->      ThunderstoneEvent(..),
+>      ThunderstoneEvent(..),PlayerStateInfo(..),
 >      thunderstoneInit,
 >      thunderstoneStartGame,randomizedGame,
 >      thunderstonePublicState,thunderstonePlayerState,
@@ -211,6 +211,15 @@
 >          ++ " XP: " ++ show (playerStateXP state),
 >          "Hand:"]
 >         ++ [" " ++ show card | card <- playerStateHand state]
+>         ++ map showInfo (playerStateInfo state)
+>     showInfo (PlayerStatePurchases buys) = "Purchases: " ++ show buys
+>     showInfo (PlayerStateGold gold) = "Gold: " ++ show gold
+>     showInfo (PlayerStateAttack attack) = "Attack: " ++ show attack
+>     showInfo (PlayerStateMagicAttack attack) =
+>         "Magic attack: " ++ show attack
+>     showInfo (PlayerStateLight light) = "Light: " ++ show light
+>     showInfo (PlayerStateOption playerOption) =
+>         "Choosing: " ++ show playerOption
 
 > doCmd :: UserId -> [String] -> Game ThunderstoneGame ()
 > doCmd uid args = do

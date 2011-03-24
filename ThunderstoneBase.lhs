@@ -47,7 +47,7 @@ ThunderstoneState and PlayerId are opaque.
 
 >     (ThunderstoneState,PlayerId,
 >      Card(..),ThunderstonePlayerState(..),ThunderstonePublicState(..),
->      PlayerAction(..),PlayerOption(..),
+>      PlayerAction(..),PlayerOption(..),PlayerStateInfo(..),
 >      ThunderstoneEvent(..),
 >      GameSetup,
 
@@ -134,7 +134,8 @@ Various queries about the state of the game.
 >     playerStateOptions :: [PlayerAction],
 >     playerStateDungeonHall :: [Card],
 >     playerStateHeroes :: [(HeroType,[HeroCard])],
->     playerStateVillage :: [(VillageCard,Int)]
+>     playerStateVillage :: [(VillageCard,Int)],
+>     playerStateInfo :: [PlayerStateInfo]
 >     }
 
 > thunderstonePublicState :: ThunderstoneState -> ThunderstonePublicState
@@ -357,6 +358,15 @@ Game state:
 >   | WhichEffectToActivate
 >   deriving Show
 
+> data PlayerStateInfo =
+>     PlayerStatePurchases Int
+>   | PlayerStateGold Int
+>   | PlayerStateAttack Int
+>   | PlayerStateMagicAttack Int
+>   | PlayerStateLight Int
+>   | PlayerStateOption PlayerOption
+>   deriving Show
+
 Nonactive players may need to take actions due to card effects.
 
 The active player must either Visit the Village or Enter the Dungeon or Rest.
@@ -458,6 +468,8 @@ Game mechanics
 >     state <- getState
 >     player <- getPlayer playerId
 >     playerOptions <- getPlayerOptions playerId
+>     playerState <- getPlayerState playerId
+>     hand <- getHand playerId
 >     return ThunderstonePlayerState {
 >         playerStateHand = playerHand player,
 >         playerStateDeck = length (playerDeck player),
@@ -466,8 +478,25 @@ Game mechanics
 >         playerStateOptions = playerOptions,
 >         playerStateDungeonHall = take 3 (thunderstoneDungeon state),
 >         playerStateHeroes = thunderstoneHeroes state,
->         playerStateVillage = thunderstoneVillage state
+>         playerStateVillage = thunderstoneVillage state,
+>         playerStateInfo = getStateInfo hand playerState
 >         }
+>   where
+>     getStateInfo hand UsingVillageEffects {
+>             villageEffectsNumberOfBuys = buys,
+>             villageEffectsGold = gold
+>             } =
+>         [PlayerStatePurchases (buys + 1),
+>          PlayerStateGold
+>              (gold + sum (map (cardVillageGold . cardProperties) hand))]
+>     getStateInfo _ PurchasingCards {
+>             purchasingNumberOfBuys = buys,
+>             purchasingGold = gold
+>             } =
+>         [PlayerStatePurchases buys, PlayerStateGold gold]
+>     getStateInfo _ (ChoosingOption playerOption _ _) =
+>         [PlayerStateOption playerOption]
+>     getStateInfo _ _ = []
 
 > getScores :: Thunderstone [(PlayerId,Int)]
 > getScores = do
