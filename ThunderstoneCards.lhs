@@ -1715,170 +1715,170 @@ You do not earn any Experience Points for the Effect.
 >     }
 
 > heroDetails BlindNeophyte =
->     undefinedCardDetails HeroBlind WrathOfTheElements
+>     undefinedHeroDetails HeroBlind WrathOfTheElements 1
 > heroDetails BlindMonk =
->     undefinedCardDetails HeroBlind WrathOfTheElements
+>     undefinedHeroDetails HeroBlind WrathOfTheElements 2
 > heroDetails BlindGrandmaster =
->     undefinedCardDetails HeroBlind WrathOfTheElements
+>     undefinedHeroDetails HeroBlind WrathOfTheElements 3
 > heroDetails DiinIllusionist =
->     undefinedCardDetails HeroDiin WrathOfTheElements
+>     undefinedHeroDetails HeroDiin WrathOfTheElements 1
 > heroDetails DiinBeguiler =
->     undefinedCardDetails HeroDiin WrathOfTheElements
+>     undefinedHeroDetails HeroDiin WrathOfTheElements 2
 > heroDetails DiinEnchanter =
->     undefinedCardDetails HeroDiin WrathOfTheElements
+>     undefinedHeroDetails HeroDiin WrathOfTheElements 3
 > heroDetails DivineHealer =
->     undefinedCardDetails HeroDivine WrathOfTheElements
+>     undefinedHeroDetails HeroDivine WrathOfTheElements 1
 > heroDetails DivineChaplain =
->     undefinedCardDetails HeroDivine WrathOfTheElements
+>     undefinedHeroDetails HeroDivine WrathOfTheElements 2
 > heroDetails DivineProphet =
->     undefinedCardDetails HeroDivine WrathOfTheElements
+>     undefinedHeroDetails HeroDivine WrathOfTheElements 3
 > heroDetails GanglandThug =
->     undefinedCardDetails HeroGangland WrathOfTheElements
+>     undefinedHeroDetails HeroGangland WrathOfTheElements 1
 > heroDetails GanglandHeavy =
->     undefinedCardDetails HeroGangland WrathOfTheElements
+>     undefinedHeroDetails HeroGangland WrathOfTheElements 2
 > heroDetails GanglandCrook =
->     undefinedCardDetails HeroGangland WrathOfTheElements
+>     undefinedHeroDetails HeroGangland WrathOfTheElements 3
 > heroDetails GohlenTrapper =
->     undefinedCardDetails HeroGohlen WrathOfTheElements
+>     undefinedHeroDetails HeroGohlen WrathOfTheElements 1
 > heroDetails GohlenTracker =
->     undefinedCardDetails HeroGohlen WrathOfTheElements
+>     undefinedHeroDetails HeroGohlen WrathOfTheElements 2
 > heroDetails GohlenHunter =
->     undefinedCardDetails HeroGohlen WrathOfTheElements
+>     undefinedHeroDetails HeroGohlen WrathOfTheElements 3
 > heroDetails RunespawnAdept =
->     undefinedCardDetails HeroRunespawn WrathOfTheElements
+>     undefinedHeroDetails HeroRunespawn WrathOfTheElements 1
 > heroDetails RunespawnSiren =
->     undefinedCardDetails HeroRunespawn WrathOfTheElements
+>     undefinedHeroDetails HeroRunespawn WrathOfTheElements 2
 > heroDetails RunespawnWitch =
->     undefinedCardDetails HeroRunespawn WrathOfTheElements
+>     undefinedHeroDetails HeroRunespawn WrathOfTheElements 3
 > heroDetails TorynScrapper =
->     undefinedCardDetails HeroToryn WrathOfTheElements
+>     undefinedHeroDetails HeroToryn WrathOfTheElements 1
 > heroDetails TorynDuelist =
->     undefinedCardDetails HeroToryn WrathOfTheElements
+>     undefinedHeroDetails HeroToryn WrathOfTheElements 2
 > heroDetails TorynGladiator =
->     undefinedCardDetails HeroToryn WrathOfTheElements
+>     undefinedHeroDetails HeroToryn WrathOfTheElements 3
 
 > heroDetails DeepMiner =
->     undefinedCardDetails HeroDeep DoomgateLegion
+>     undefinedHeroDetails HeroDeep DoomgateLegion 1
 > heroDetails DeepDigger =
->     undefinedCardDetails HeroDeep DoomgateLegion
+>     undefinedHeroDetails HeroDeep DoomgateLegion 2
 > heroDetails DeepWrecker =
->     undefinedCardDetails HeroDeep DoomgateLegion
+>     undefinedHeroDetails HeroDeep DoomgateLegion 3
 > heroDetails DrunariOrphan =
->     undefinedCardDetails HeroDrunari DoomgateLegion
+>     undefinedHeroDetails HeroDrunari DoomgateLegion 1
 > heroDetails DrunariVagabond =
->     undefinedCardDetails HeroDrunari DoomgateLegion
+>     undefinedHeroDetails HeroDrunari DoomgateLegion 2
 > heroDetails DrunariGypsy =
->     undefinedCardDetails HeroDrunari DoomgateLegion
+>     undefinedHeroDetails HeroDrunari DoomgateLegion 3
 > heroDetails SidheNatural =
->     undefinedCardDetails HeroSidhe DoomgateLegion
+>     undefinedHeroDetails HeroSidhe DoomgateLegion 1
 > heroDetails SidheDruid =
->     undefinedCardDetails HeroSidhe DoomgateLegion
+>     undefinedHeroDetails HeroSidhe DoomgateLegion 2
 > heroDetails SidheSpirit =
->     undefinedCardDetails HeroSidhe DoomgateLegion
+>     undefinedHeroDetails HeroSidhe DoomgateLegion 3
 > heroDetails SlynnBowman =
->     undefinedCardDetails HeroSlynn DoomgateLegion
+>     undefinedHeroDetails HeroSlynn DoomgateLegion 1
 > heroDetails SlynnBowmaster =
->     undefinedCardDetails HeroSlynn DoomgateLegion
+>     undefinedHeroDetails HeroSlynn DoomgateLegion 2
 > heroDetails SlynnLongbowman =
->     undefinedCardDetails HeroSlynn DoomgateLegion
+>     undefinedHeroDetails HeroSlynn DoomgateLegion 3
 > heroDetails TempestAvenger =
->     undefinedCardDetails HeroTempest DoomgateLegion
+>     undefinedHeroDetails HeroTempest DoomgateLegion 1
 > heroDetails TempestReaver =
->     undefinedCardDetails HeroTempest DoomgateLegion
+>     undefinedHeroDetails HeroTempest DoomgateLegion 2
 > heroDetails TempestWarden =
->     undefinedCardDetails HeroTempest DoomgateLegion
+>     undefinedHeroDetails HeroTempest DoomgateLegion 3
 > heroDetails TholisMedium =
->     undefinedCardDetails HeroTholis DoomgateLegion
+>     undefinedHeroDetails HeroTholis DoomgateLegion 1
 > heroDetails TholisClairvoyant =
->     undefinedCardDetails HeroTholis DoomgateLegion
+>     undefinedHeroDetails HeroTholis DoomgateLegion 2
 > heroDetails TholisOracle =
->     undefinedCardDetails HeroTholis DoomgateLegion
+>     undefinedHeroDetails HeroTholis DoomgateLegion 3
 > heroDetails VerdanMinstrel =
->     undefinedCardDetails HeroVerdan DoomgateLegion
+>     undefinedHeroDetails HeroVerdan DoomgateLegion 1
 > heroDetails VerdanBard =
->     undefinedCardDetails HeroVerdan DoomgateLegion
+>     undefinedHeroDetails HeroVerdan DoomgateLegion 2
 > heroDetails VerdanTrouadour =
->     undefinedCardDetails HeroVerdan DoomgateLegion
+>     undefinedHeroDetails HeroVerdan DoomgateLegion 3
 
 > heroDetails PhalanxFootman =
->     undefinedCardDetails HeroPhalanx Dragonspire
+>     undefinedHeroDetails HeroPhalanx Dragonspire 1
 > heroDetails PhalanxOfficer =
->     undefinedCardDetails HeroPhalanx Dragonspire
+>     undefinedHeroDetails HeroPhalanx Dragonspire 2
 > heroDetails BelzurCurate =
->     undefinedCardDetails HeroBelzur Dragonspire
+>     undefinedHeroDetails HeroBelzur Dragonspire 1
 > heroDetails BelzurBishop =
->     undefinedCardDetails HeroBelzur Dragonspire
+>     undefinedHeroDetails HeroBelzur Dragonspire 2
 > heroDetails BelzurCardinal =
->     undefinedCardDetails HeroBelzur Dragonspire
+>     undefinedHeroDetails HeroBelzur Dragonspire 3
 > heroDetails CabalAstrologer =
->     undefinedCardDetails HeroCabal Dragonspire
+>     undefinedHeroDetails HeroCabal Dragonspire 1
 > heroDetails CabalSage =
->     undefinedCardDetails HeroCabal Dragonspire
+>     undefinedHeroDetails HeroCabal Dragonspire 2
 > heroDetails CabalMaster =
->     undefinedCardDetails HeroCabal Dragonspire
+>     undefinedHeroDetails HeroCabal Dragonspire 3
 > heroDetails ChulianRat =
->     undefinedCardDetails HeroChulian Dragonspire
+>     undefinedHeroDetails HeroChulian Dragonspire 1
 > heroDetails ChulianScavenger =
->     undefinedCardDetails HeroChulian Dragonspire
+>     undefinedHeroDetails HeroChulian Dragonspire 2
 > heroDetails ChulianLooter =
->     undefinedCardDetails HeroChulian Dragonspire
+>     undefinedHeroDetails HeroChulian Dragonspire 3
 > heroDetails EvokerAdept =
->     undefinedCardDetails HeroEvoker Dragonspire
+>     undefinedHeroDetails HeroEvoker Dragonspire 1
 > heroDetails EvokerScorcher =
->     undefinedCardDetails HeroEvoker Dragonspire
+>     undefinedHeroDetails HeroEvoker Dragonspire 2
 > heroDetails EvokerPyroclast =
->     undefinedCardDetails HeroEvoker Dragonspire
+>     undefinedHeroDetails HeroEvoker Dragonspire 3
 > heroDetails FlameWatch =
->     undefinedCardDetails HeroFlame Dragonspire
+>     undefinedHeroDetails HeroFlame Dragonspire 1
 > heroDetails FlameGuard =
->     undefinedCardDetails HeroFlame Dragonspire
+>     undefinedHeroDetails HeroFlame Dragonspire 2
 > heroDetails FlameHero =
->     undefinedCardDetails HeroFlame Dragonspire
+>     undefinedHeroDetails HeroFlame Dragonspire 3
 > heroDetails GorinthAmateur =
->     undefinedCardDetails HeroGorinth Dragonspire
+>     undefinedHeroDetails HeroGorinth Dragonspire 1
 > heroDetails GorinthHoarder =
->     undefinedCardDetails HeroGorinth Dragonspire
+>     undefinedHeroDetails HeroGorinth Dragonspire 2
 > heroDetails GorinthMiser =
->     undefinedCardDetails HeroGorinth Dragonspire
+>     undefinedHeroDetails HeroGorinth Dragonspire 3
 > heroDetails HalfOrcRaider =
->     undefinedCardDetails HeroHalfOrc Dragonspire
+>     undefinedHeroDetails HeroHalfOrc Dragonspire 1
 > heroDetails HalfOrcMarauder =
->     undefinedCardDetails HeroHalfOrc Dragonspire
+>     undefinedHeroDetails HeroHalfOrc Dragonspire 2
 > heroDetails HalfOrcDervish =
->     undefinedCardDetails HeroHalfOrc Dragonspire
+>     undefinedHeroDetails HeroHalfOrc Dragonspire 3
 > heroDetails StoneguardBrute =
->     undefinedCardDetails HeroStoneguard Dragonspire
+>     undefinedHeroDetails HeroStoneguard Dragonspire 1
 > heroDetails StoneguardBruiser =
->     undefinedCardDetails HeroStoneguard Dragonspire
+>     undefinedHeroDetails HeroStoneguard Dragonspire 2
 > heroDetails StoneguardTanker =
->     undefinedCardDetails HeroStoneguard Dragonspire
+>     undefinedHeroDetails HeroStoneguard Dragonspire 3
 > heroDetails TerakianDefender =
->     undefinedCardDetails HeroTerakian Dragonspire
+>     undefinedHeroDetails HeroTerakian Dragonspire 1
 > heroDetails TerakianPeer =
->     undefinedCardDetails HeroTerakian Dragonspire
+>     undefinedHeroDetails HeroTerakian Dragonspire 2
 > heroDetails TerakianTemplar =
->     undefinedCardDetails HeroTerakian Dragonspire
+>     undefinedHeroDetails HeroTerakian Dragonspire 3
 > heroDetails VeteranWarrior =
->     undefinedCardDetails HeroVeteran Dragonspire
+>     undefinedHeroDetails HeroVeteran Dragonspire 1
 > heroDetails VeteranBerserker =
->     undefinedCardDetails HeroVeteran Dragonspire
+>     undefinedHeroDetails HeroVeteran Dragonspire 2
 > heroDetails VeteranReaver =
->     undefinedCardDetails HeroVeteran Dragonspire
+>     undefinedHeroDetails HeroVeteran Dragonspire 3
 > heroDetails VeteranWarmonger =
->     undefinedCardDetails HeroVeteran Dragonspire
+>     undefinedHeroDetails HeroVeteran Dragonspire 4
 
 > heroDetails ClanSergeant =
->     undefinedCardDetails HeroClan Promotional
+>     undefinedHeroDetails HeroClan Promotional 1
 > heroDetails ClanCommander =
->     undefinedCardDetails HeroClan Promotional
+>     undefinedHeroDetails HeroClan Promotional 2
 > heroDetails ClanChampion =
->     undefinedCardDetails HeroClan Promotional
+>     undefinedHeroDetails HeroClan Promotional 3
 > heroDetails HarruliInitiate =
->     undefinedCardDetails HeroHarruli Promotional
+>     undefinedHeroDetails HeroHarruli Promotional 1
 > heroDetails HarruliSpellsword =
->     undefinedCardDetails HeroHarruli Promotional
+>     undefinedHeroDetails HeroHarruli Promotional 2
 > heroDetails HarruliAvatar =
->     undefinedCardDetails HeroHarruli Promotional
+>     undefinedHeroDetails HeroHarruli Promotional 3
 
 
 
@@ -3621,3 +3621,17 @@ Temporary code:
 >     cardVictoryPoints = undefined,
 >     cardStats = undefined
 >     }
+
+> undefinedHeroDetails :: HeroType -> Source -> Int
+>                         -> CardDetails HeroType HeroStats
+> undefinedHeroDetails cardType source level =
+>     (undefinedCardDetails cardType source) {
+>         cardStats = HeroStats {
+>             heroStrength = undefined,
+>             heroLevel = level,
+>             heroPrice = undefined,
+>             heroUpgrade = undefined,
+>             heroAttack = undefined,
+>             heroMagicAttack = undefined
+>             }
+>         }
