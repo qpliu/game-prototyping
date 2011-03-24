@@ -537,7 +537,7 @@ Game mechanics
 >         return (maybe False (const True) actionResult)
 
 >     optionsWhen StartingTurn =
->         return [VisitVillage, EnterDungeon, Rest]
+>         return [VisitVillage, {-EnterDungeon,-} Rest]
 
 >     optionsWhen UsingVillageEffects {
 >             villageEffects = villageHand
