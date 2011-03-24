@@ -1,7 +1,7 @@
 > module ThunderstoneApp(thunderstoneApp) where
 
 > import Control.Monad(when,unless)
-> import Data.List(find)
+> import Data.List(find,isInfixOf,nub)
 > import Data.Maybe(isNothing)
 > import System.Random(getStdGen)
 
@@ -87,7 +87,9 @@
 >                        ("/game",gameCmd),
 >                        ("/g",gameCmd),
 >                        ("/do",doCmd),
->                        ("/d",doCmd)]
+>                        ("/d",doCmd),
+>                        ("/inspect",inspectCmd),
+>                        ("/i",inspectCmd)]
 >     gameAppPollTime _ _ = Nothing
 >     gameAppPoll = return ()
 
@@ -252,6 +254,51 @@
 >                       $ thunderstonePlayerState (tsState state) playerId
 >         actionResult = thunderstoneTakeAction (tsState state) playerId option
 >         Just (newState,events) = actionResult
+
+> inspectCmd :: UserId -> [String] -> Game ThunderstoneGame ()
+> inspectCmd uid args = do
+>     state <- gameGetState
+>     doInspect state
+>   where
+>     doInspect state
+>       | not (tsGameStarted state) =
+>             gameMessageToUser uid ["There is no game being played."]
+>       | null args =
+>             gameMessageToUser uid ["Specify the card to inspect."]
+>       | not (userInGame state uid) =
+>             gameMessageToUser uid
+>                 (inspectCards (unwords args) (tail cardSets))
+>       | otherwise = do
+>             gameMessageToUser uid
+>                 (inspectCards (unwords args) cardSets)
+>       where
+>         cardSets = [nub cardsInHand, nub cardsShowing]
+>         cardsInHand = maybe [] getHand (getPlayerId state uid)
+>         getHand playerId =
+>             playerStateHand $ thunderstonePlayerState (tsState state)
+>                                                       playerId
+>         cardsShowing = 
+>             concatMap ($ thunderstonePublicState (tsState state))
+>                 [publicStateDungeonHall,
+>                  concatMap (map HeroCard . take 1 . snd) . publicStateHeroes,
+>                  map (VillageCard . fst) . publicStateVillage]
+>         inspectCards arg [] = ["No matching cards."]
+>         inspectCards arg (cards:moreCards)
+>           | null (matchingElements arg cards) = inspectCards arg moreCards
+>           | length (matchingElements arg cards) == 1 =
+>                 inspectCard $ head $ matchingElements arg cards
+>           | otherwise =
+>                 ["Matching cards:"]
+>                 ++ [" " ++ show card | card <- matchingElements arg cards]
+>     inspectCard card = ["Details of " ++ show card ++ " to be filled in."]
+
+> matchingElements :: Show e => String -> [e] -> [e]
+> matchingElements str elts
+>   | not (null fullMatches) = fullMatches
+>   | otherwise = partialMatches
+>   where
+>     fullMatches = filter ((== str) . show) elts
+>     partialMatches = filter (isInfixOf str . show) elts
 
 > broadcastEvents :: [ThunderstoneEvent] -> Game ThunderstoneGame ()
 > broadcastEvents events = do
