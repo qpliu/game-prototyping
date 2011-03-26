@@ -10,10 +10,18 @@
 >    xmlQuoteChar c = [c]
 
 > xmlItem :: Show a => String -> a -> String
-> xmlItem item value = xmlItemStr item (show value)
+> xmlItem item value = xmlString item (show value)
 
-> xmlItemStr :: String -> String -> String
-> xmlItemStr item value = "<" ++ item ++ ">" ++ value ++ "</" ++ item ++ ">"
+> xmlOption :: Show a => String -> Maybe a -> String
+> xmlOption item value = maybe "" (xmlItem item) value
+
+> xmlString :: String -> String -> String
+> xmlString item value = "<" ++ item ++ ">" ++ value ++ "</" ++ item ++ ">"
+
+> xmlList :: String -> [String] -> String
+> xmlList item values =
+>     concat ["<" ++ item ++ ">" ++ value ++ "</" ++ item ++ ">"
+>             | value <- values]
 
 <card id="">
   <!-- for all cards -->
@@ -30,13 +38,12 @@
   <text>...</text>...
 
   <!-- on some cards -->
-  <defense>...</defense>
+  <health>...</health>
   <gold>...</gold>
   <weight>...</weight>
   <price>...</price>
   <light>...</light>
   <levelup>...</levelup>
-  <levelupTo>...</levelupTo>...
   <xp>...</xp>
   <vp>...</vp>
 </card>
@@ -44,46 +51,35 @@
 > class ThunderstoneXML item where
 >     thunderstoneXML :: item -> String
 
-> thunderstoneCardXML ::
->     (Show card, Show cardType, ThunderstoneXML cardStats) =>
->     String -> (card -> CardDetails cardType cardStats) -> card -> String
+> thunderstoneCardXML :: (Show cardType, Show card) =>
+>                        String -> (card -> CardDetails cardType) -> card
+>                     -> String
 > thunderstoneCardXML kind cardDetails card =
->     thunderstoneCardXML' kind (cardDetails card) thunderstoneXML card
-
-> thunderstoneCardXML' :: (Show cardType, Show card) =>
->                         String
->                      -> CardDetails cardType cardStats
->                      -> (cardStats -> String)
->                      -> card
->                      -> String
-> thunderstoneCardXML' kind cardDetails cardStatsXML card =
->     "<card id=\"" ++ show card ++ "\">"
->     ++ xmlItem "source" (cardSource cardDetails)
->     ++ (if null (cardClarification cardDetails) then "" else
->         xmlItemStr "glossary" (xmlQuote $ cardClarification cardDetails))
->     ++ xmlItemStr "type" kind
->     ++ xmlItem "count" (cardCount cardDetails)
->     ++ xmlItemStr "name" (cardName cardDetails)
->     ++ xmlItem "group" (cardType cardDetails)
->     ++ xmlItemStr "icon" (drop 8 $ show $ cardIcon cardDetails)
->     ++ concat [xmlItemStr "class" (drop 5 $ show cl)
->                | cl <- cardClasses cardDetails]
->     ++ concat [xmlItemStr "text" (xmlQuote text)
->                | text <- cardText cardDetails]
->     ++ (if cardGold cardDetails > 0
->             || cardClasses cardDetails == [ClassMilitia, ClassHero]
->           then xmlItem "gold" (cardGold cardDetails) else "")
->     ++ (if cardLight cardDetails > 0
->           then xmlItem "light" (cardLight cardDetails) else "")
->     ++ (if cardVictoryPoints cardDetails > 0
->           then xmlItem "vp" (cardVictoryPoints cardDetails) else "")
->     ++ cardStatsXML (cardStats cardDetails)
+>     "<card id=\"" ++ show card ++ "\" type=\"" ++ kind ++ "\">"
+>     ++ xmlString "name" (cardName details)
+>     ++ xmlItem "source" (cardSource details)
+>     ++ xmlItem "group" (cardType details)
+>     ++ xmlString "icon" (drop 8 $ show $ cardIcon details)
+>     ++ xmlItem "count" (cardCount details)
+>     ++ xmlList "class" (map (drop 5 . show) (cardClasses details))
+>     ++ xmlOption "gold" (cardGold details)
+>     ++ xmlOption "light" (cardLight details)
+>     ++ xmlOption "vp" (cardVictoryPoints details)
+>     ++ xmlOption "strength" (cardStrength details)
+>     ++ xmlOption "price" (cardPrice details)
+>     ++ xmlOption "xp" (cardXP details)
+>     ++ xmlOption "health" (cardHealth details)
+>     ++ xmlOption "weight" (cardWeight details)
+>     ++ xmlOption "levelup" (cardLevelUp details)
+>     ++ xmlList "text" (map xmlQuote (cardText details))
+>     ++ xmlList "glossary" (cardGlossary details)
 >     ++ "</card>"
+>   where
+>     details = cardDetails card
 
 > instance ThunderstoneXML ThunderstoneCard where
 >     thunderstoneXML card =
->         thunderstoneCardXML' "Thunderstone"
->             (thunderstoneDetails card) (const "") card
+>         thunderstoneCardXML "Thunderstone" thunderstoneDetails card
 
 > instance ThunderstoneXML GuardianCard where
 >     thunderstoneXML card = undefined
@@ -99,44 +95,22 @@
 
 > instance ThunderstoneXML DiseaseCard where
 >     thunderstoneXML card =
->         "<card id=\"Disease\">"
+>         "<card id=\"Disease\" type=\"Disease\">"
+>         ++ xmlString "name" "Disease"
 >         ++ xmlItem "source" ThunderstoneBase
->         ++ xmlItemStr "glossary" "Disease: Any time a Disease card is revealed, it must be played.  It has no effect in the Village."
->         ++ xmlItemStr "type" "Disease"
+>         ++ xmlString "group" "Disease"
+>         ++ xmlString "icon" (drop 8 $ show $ CardIconBasic)
 >         ++ xmlItem "count" 15
->         ++ xmlItemStr "name" "Disease"
->         ++ xmlItem "group" "Disease"
->         ++ xmlItemStr "icon" (drop 8 $ show $ CardIconBasic)
->         ++ concat [xmlItemStr "class" (drop 5 $ show cl)
->                    | cl <- [ClassDisease]]
->         ++ concat [xmlItemStr "text" (xmlQuote text)
->                    | text <- ["* ATTACK -1"]]
+>         ++ xmlList "class" [drop 5 $ show ClassDisease]
+>         ++ xmlList "text" ["* ATTACK -1"]
+>         ++ xmlList "glossary"
+>                    ["Disease: Any time a Disease card is revealed, it "
+>                     ++ "must be played.  It has no effect in the Village."]
 >         ++ "</card>"
 
-> instance ThunderstoneXML HeroStats where
->     thunderstoneXML stats =
->         xmlItem "strength" (heroStrength stats)
->         ++ xmlItem "level" (heroLevel stats)
->         ++ xmlItem "price" (heroPrice stats)
->         ++ (if null (snd $ heroUpgrade stats) then ""
->               else xmlItem "levelup" (fst $ heroUpgrade stats)
->                    ++ concat [xmlItem "levelupTo" item
->                               | item <- snd $ heroUpgrade stats])
-
-> instance ThunderstoneXML VillageStats where
->     thunderstoneXML stats =
->         xmlItem "price" (villagePrice stats)
->         ++ (if villageWeight stats > 0
->               then xmlItem "weight" (villageWeight stats) else "")
-
-> instance ThunderstoneXML MonsterStats where
->     thunderstoneXML stats =
->         xmlItem "health" (monsterHealth stats)
->         ++ xmlItem "xp" (monsterXP stats)
-
-> cardsFrom :: Source -> String
+> cardsFrom :: [Source] -> String
 > cardsFrom source =
->     xmlItemStr "cards"
+>     xmlString "cards"
 >         (cardsXML heroDetails
 >          ++ cardsXML villageDetails
 >          ++ cardsXML monsterDetails
@@ -145,7 +119,7 @@
 >     cardsXML cardDetails =
 >         concat [thunderstoneXML card
 >                 | card <- [minBound..maxBound],
->                   cardSource (cardDetails card) == source]
+>                   cardSource (cardDetails card) `elem` source]
 
 > main :: IO ()
-> main = putStrLn $ cardsFrom ThunderstoneBase
+> main = putStrLn $ cardsFrom [ThunderstoneBase]

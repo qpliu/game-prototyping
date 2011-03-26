@@ -690,53 +690,72 @@ Doomgate Legion:
 Card details
 ===============================================================================
 
-> data CardDetails cardType stats = CardDetails {
+> data CardDetails cardType = CardDetails {
 >     cardName :: String,
 >     cardSource :: Source,
 >     cardType :: cardType,
 >     cardIcon :: CardIcon,
 >     cardCount :: Int,
 >     cardClasses :: [CardClass],
->     cardGold :: Int,
->     cardLight :: Int,
->     cardVictoryPoints :: Int,
->     cardStats :: stats,
+>     cardGold :: Maybe Int,
+>     cardLight :: Maybe Int,
+>     cardVictoryPoints :: Maybe Int,
+>     cardStrength :: Maybe Int,
+>     cardPrice :: Maybe Int,
+>     cardXP :: Maybe Int,
+>     cardHealth :: Maybe Int,
+>     cardWeight :: Maybe Int,
+>     cardLevelUp :: Maybe Int,
 >     cardText :: [String],
->     cardClarification :: String
+>     cardGlossary :: [String]
 >     }
 
 > data CardIcon =
 >     CardIconBasic
->   | CardIconHero1
->   | CardIconHero2
->   | CardIconHero3
->   | CardIconHero4
+>   | CardIconHero Int
 >   | CardIconMonster
 >   | CardIconVillage
 >   deriving (Eq,Show)
 
+> initCardDetails :: CardDetails cardType
+> initCardDetails = CardDetails {
+>     cardName = undefined,
+>     cardSource = undefined,
+>     cardType = undefined,
+>     cardIcon = undefined,
+>     cardCount = undefined,
+>     cardClasses = undefined,
+>     cardGold = Nothing,
+>     cardLight = Nothing,
+>     cardVictoryPoints = Nothing,
+>     cardStrength = Nothing,
+>     cardPrice = Nothing,
+>     cardXP = Nothing,
+>     cardHealth = Nothing,
+>     cardWeight = Nothing,
+>     cardLevelUp = Nothing,
+>     cardText = [],
+>     cardGlossary = []
+>     }
+
 Thunderstone cards:
 
-> thunderstoneDetails :: ThunderstoneCard
->         -> CardDetails ThunderstoneCard ()
+> thunderstoneDetails :: ThunderstoneCard -> CardDetails ThunderstoneCard
 
-> thunderstoneDetails StoneOfMystery = CardDetails {
+> thunderstoneDetails StoneOfMystery = initCardDetails {
 >     cardName = "Stone of Mystery",
 >     cardSource = ThunderstoneBase,
 >     cardType = StoneOfMystery,
 >     cardIcon = CardIconBasic,
 >     cardCount = 1,
 >     cardClasses = [ClassThunderstone],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 3,
->     cardStats = (),
+>     cardVictoryPoints = Just 3,
 >     cardText = ["...and the thunder of the wind shouts back."],
->     cardClarification =
->        "Stone of Mystery: This is the only Thunderstone card "
->        ++ "in the basic set.  Some expansions will include "
->        ++ "other Stones, each with its own powers.  You are "
->        ++ "welcome to use any Thunderstone card during setup."
+>     cardGlossary =
+>        ["Stone of Mystery: This is the only Thunderstone card "
+>         ++ "in the basic set.  Some expansions will include "
+>         ++ "other Stones, each with its own powers.  You are "
+>         ++ "welcome to use any Thunderstone card during setup."]
 >     }
 
 > thunderstoneDetails StoneOfAgony =
@@ -750,920 +769,637 @@ Thunderstone cards:
 
 Hero cards:
 
-> data HeroStats = HeroStats {
->     heroStrength :: Int,
->     heroLevel :: Int,
->     heroPrice :: Int,
->     heroUpgrade :: (Int,[HeroCard]),
->     heroAttack :: Int,
->     heroMagicAttack :: Int
->     }
+> heroDetails :: HeroCard -> CardDetails HeroType
 
-> heroDetails :: HeroCard -> CardDetails HeroType HeroStats
-
-> heroDetails Militia = CardDetails {
+> heroDetails Militia = initCardDetails {
 >     cardName = "Militia",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroMilitia,
 >     cardIcon = CardIconBasic,
 >     cardCount = 30,
 >     cardClasses = [ClassMilitia,ClassHero],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 2,
->         heroLevel = 0,
->         heroPrice = 0,
->         heroUpgrade = (3,levelOneHeroes),
->         heroAttack = 1,
->         heroMagicAttack = 0
->         },
+>     cardGold = Just 0,
+>     cardStrength = Just 2,
+>     cardPrice = Just 0,
+>     cardLevelUp = Just 3,
 >     cardText = ["ATTACK +1"],
->     cardClarification =
->        "Militia: Militia are considered Heroes for all "
->        ++ "purposes.  Militia have a gold value of 0.  "
->        ++ "This is a asic card included in every game."
+>     cardGlossary =
+>        ["Militia: Militia are considered Heroes for all "
+>         ++ "purposes.  Militia have a gold value of 0.  "
+>         ++ "This is a asic card included in every game."]
 >     }
->   where
->     levelOneHeroes = filter levelOne [minBound .. maxBound]
->     levelOne card = (heroLevel $ cardStats $ heroDetails card) == 1
 
-> heroDetails AmazonArcher = CardDetails {
+> heroDetails AmazonArcher = initCardDetails {
 >     cardName = "Amazon Archer",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroAmazon,
->     cardIcon = CardIconHero1,
+>     cardIcon = CardIconHero 1,
 >     cardCount = 6,
 >     cardClasses = [ClassFighter,ClassArcher],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 4,
->         heroLevel = 1,
->         heroPrice = 6,
->         heroUpgrade = (2,[AmazonHuntress]),
->         heroAttack = 1,
->         heroMagicAttack = 0
->         },
+>     cardStrength = Just 4,
+>     cardPrice = Just 6,
+>     cardLevelUp = Just 2,
 >     cardText = ["ATTACK +1","Additional ATTACK +2 at Rank 2 or 3."],
->     cardClarification =
->         "Amazon: This Hero's Dungeon Effect is an Attack that "
->         ++ "is in addition to the Amazon's normal Attack."
+>     cardGlossary =
+>         ["Amazon: This Hero's Dungeon Effect is an Attack that "
+>          ++ "is in addition to the Amazon's normal Attack."]
 >     }
 
-> heroDetails AmazonHuntress = CardDetails {
+> heroDetails AmazonHuntress = initCardDetails {
 >     cardName = "Amazon Huntress",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroAmazon,
->     cardIcon = CardIconHero2,
+>     cardIcon = CardIconHero 2,
 >     cardCount = 4,
 >     cardClasses = [ClassFighter,ClassArcher],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 5,
->         heroLevel = 2,
->         heroPrice = 9,
->         heroUpgrade = (3,[AmazonQueen]),
->         heroAttack = 2,
->         heroMagicAttack = 0
->         },
+>     cardStrength = Just 5,
+>     cardPrice = Just 9,
+>     cardLevelUp = Just 3,
 >     cardText = ["ATTACK +2","Additional ATTACK +3 at Rank 2 or 3."],
->     cardClarification =
->         "Amazon: This Hero's Dungeon Effect is an Attack that "
->         ++ "is in addition to the Amazon's normal Attack."
+>     cardGlossary =
+>         ["Amazon: This Hero's Dungeon Effect is an Attack that "
+>          ++ "is in addition to the Amazon's normal Attack."]
 >     }
 
-> heroDetails AmazonQueen = CardDetails {
+> heroDetails AmazonQueen = initCardDetails {
 >     cardName = "Amazon Queen",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroAmazon,
->     cardIcon = CardIconHero3,
+>     cardIcon = CardIconHero 3,
 >     cardCount = 2,
 >     cardClasses = [ClassFighter,ClassArcher],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = HeroStats {
->         heroStrength = 6,
->         heroLevel = 3,
->         heroPrice = 11,
->         heroUpgrade = (0,[]),
->         heroAttack = 2,
->         heroMagicAttack = 0
->         },
+>     cardVictoryPoints = Just 2,
+>     cardStrength = Just 6,
+>     cardPrice = Just 11,
 >     cardText = ["ATTACK +2","Additional ATTACK +4 at Rank 2 or 3."],
->     cardClarification =
->         "Amazon: This Hero's Dungeon Effect is an Attack that "
->         ++ "is in addition to the Amazon's normal Attack."
+>     cardGlossary =
+>         ["Amazon: This Hero's Dungeon Effect is an Attack that "
+>          ++ "is in addition to the Amazon's normal Attack."]
 >     }
 
-> heroDetails ChaliceQuester = CardDetails {
+> heroDetails ChaliceQuester = initCardDetails {
 >     cardName = "Chalice Quester",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroChalice,
->     cardIcon = CardIconHero1,
+>     cardIcon = CardIconHero 1,
 >     cardCount = 6,
 >     cardClasses = [ClassFighter,ClassCleric],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 5,
->         heroLevel = 1,
->         heroPrice = 7,
->         heroUpgrade = (2,[ChaliceDefender]),
->         heroAttack = 2,
->         heroMagicAttack = 0
->         },
+>     cardStrength = Just 5,
+>     cardPrice = Just 7,
+>     cardLevelUp = Just 2,
 >     cardText = ["ATTACK +2",
 >                 "REPEAT DUNGEON: Destroy one Disease to draw one card."],
->     cardClarification =
->         "Chalice Quester and Defender: You man continue to destroy "
->         ++ "Disease cards and draw new cards until you choose "
->         ++ "which Monster to attack."
+>     cardGlossary =
+>         ["Chalice Quester and Defender: You man continue to destroy "
+>          ++ "Disease cards and draw new cards until you choose "
+>          ++ "which Monster to attack."]
 >     }
 
-> heroDetails ChaliceDefender = CardDetails {
+> heroDetails ChaliceDefender = initCardDetails {
 >     cardName = "Chalice Defender",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroChalice,
->     cardIcon = CardIconHero2,
+>     cardIcon = CardIconHero 2,
 >     cardCount = 4,
 >     cardClasses = [ClassFighter,ClassCleric],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 6,
->         heroLevel = 2,
->         heroPrice = 10,
->         heroUpgrade = (3,[ChalicePaladin]),
->         heroAttack = 3,
->         heroMagicAttack = 0
->         },
+>     cardStrength = Just 6,
+>     cardPrice = Just 10,
+>     cardLevelUp = Just 3,
 >     cardText = ["ATTACK +3",
 >                 "DUNGEON: ATTACK +1 for each Item that produces Light.",
 >                 "DUNGEON: Draw one card.",
 >                 "REPEAT DUNGEON: Destroy one Disease to draw one card."],
->     cardClarification =
->         "Chalice Quester and Defender: You man continue to destroy "
->         ++ "Disease cards and draw new cards until you choose which "
->         ++ "Monster to attack.\n"
->         ++ "Chalice Defender: Only Items (not Weapons) that provide a "
->         ++ "Light bonus increase the Defender's Attack Value."
+>     cardGlossary =
+>         ["Chalice Quester and Defender: You man continue to destroy "
+>          ++ "Disease cards and draw new cards until you choose which "
+>          ++ "Monster to attack.",
+>          "Chalice Defender: Only Items (not Weapons) that provide a "
+>          ++ "Light bonus increase the Defender's Attack Value."]
 >     }
 
-> heroDetails ChalicePaladin = CardDetails {
+> heroDetails ChalicePaladin = initCardDetails {
 >     cardName = "Chalice Paladin",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroChalice,
->     cardIcon = CardIconHero3,
+>     cardIcon = CardIconHero 3,
 >     cardCount = 2,
 >     cardClasses = [ClassFighter,ClassCleric],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = HeroStats {
->         heroStrength = 7,
->         heroLevel = 3,
->         heroPrice = 12,
->         heroUpgrade = (0,[]),
->         heroAttack = 4,
->         heroMagicAttack = 0
->         },
+>     cardVictoryPoints = Just 2,
+>     cardStrength = Just 7,
+>     cardPrice = Just 12,
 >     cardText = ["ATTACK +4","DUNGEON: Draw one card.","Spoils (Village)."],
->     cardClarification =
->         "Chalic Paladin: You may purchase any one Village card "
->         ++ "(including Basic and Hero cards) from the Village "
->         ++ "after a victorious battle, using the gold in your hand."
+>     cardGlossary =
+>         ["Chalic Paladin: You may purchase any one Village card "
+>          ++ "(including Basic and Hero cards) from the Village "
+>          ++ "after a victorious battle, using the gold in your hand."]
 >     }
 
-> heroDetails DwarfGuardian = CardDetails {
+> heroDetails DwarfGuardian = initCardDetails {
 >     cardName = "Dwarf Guardian",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroDwarf,
->     cardIcon = CardIconHero1,
+>     cardIcon = CardIconHero 1,
 >     cardCount = 6,
 >     cardClasses = [ClassFighter],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 5,
->         heroLevel = 1,
->         heroPrice = 6,
->         heroUpgrade = (2,[DwarfJanissary]),
->         heroAttack = 1,
->         heroMagicAttack = 0
->         },
+>     cardStrength = Just 5,
+>     cardPrice = Just 6,
+>     cardLevelUp = Just 2,
 >     cardText = ["ATTACK +1",
 >                 "Additional ATTACK +3 when equipped with an Edged Weapon."],
->     cardClarification =
->         "Dwarf Guardian: His total Attack Value if an Edged Weapon "
->         ++ "is equipped is +4.  This bonus is part of the Dwarf's "
->         ++ "ability which he retains even if the Weapon later "
->         ++ "becomes useless (due to a Monster's Battle Effect, for "
->         ++ "instance)."
+>     cardGlossary =
+>         ["Dwarf Guardian: His total Attack Value if an Edged Weapon "
+>          ++ "is equipped is +4.  This bonus is part of the Dwarf's "
+>          ++ "ability which he retains even if the Weapon later "
+>          ++ "becomes useless (due to a Monster's Battle Effect, for "
+>          ++ "instance)."]
 >     }
 
-> heroDetails DwarfJanissary = CardDetails {
+> heroDetails DwarfJanissary = initCardDetails {
 >     cardName = "Dwarf Janissary",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroDwarf,
->     cardIcon = CardIconHero2,
+>     cardIcon = CardIconHero 2,
 >     cardCount = 4,
 >     cardClasses = [ClassFighter],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 6,
->         heroLevel = 2,
->         heroPrice = 9,
->         heroUpgrade = (3,[DwarfSentinel]),
->         heroAttack = 2,
->         heroMagicAttack = 0
->         },
+>     cardStrength = Just 6,
+>     cardPrice = Just 9,
+>     cardLevelUp = Just 3,
 >     cardText = ["ATTACK +2",
 >                 "Additional ATTACK +4 when equipped with an Edged Weapon.",
 >                 "Spoils (Weapon)."],
->     cardClarification =
->         "Dwarf Janissary: If revealed during a Dungeon action, you "
->         ++ "may purchase one Weapon card from the Village after a "
->         ++ "victorious battle, using the gold in your hand.  His "
->         ++ "total Attack Vlaue if an Edged Weapon is equipped is +6."
+>     cardGlossary =
+>         ["Dwarf Janissary: If revealed during a Dungeon action, you "
+>          ++ "may purchase one Weapon card from the Village after a "
+>          ++ "victorious battle, using the gold in your hand.  His "
+>          ++ "total Attack Vlaue if an Edged Weapon is equipped is +6."]
 >     }
 
-> heroDetails DwarfSentinel = CardDetails {
+> heroDetails DwarfSentinel = initCardDetails {
 >     cardName = "Dwarf Sentinel",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroDwarf,
->     cardIcon = CardIconHero3,
+>     cardIcon = CardIconHero 3,
 >     cardCount = 2,
 >     cardClasses = [ClassFighter],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = HeroStats {
->         heroStrength = 8,
->         heroLevel = 3,
->         heroPrice = 12,
->         heroUpgrade = (0,[]),
->         heroAttack = 3,
->         heroMagicAttack = 0
->         },
+>     cardVictoryPoints = Just 2,
+>     cardStrength = Just 8,
+>     cardPrice = Just 12,
 >     cardText = ["ATTACK +3",
 >                 "Additional ATTACK +5 when equipped with an Edged Weapon."],
->     cardClarification =
->         "Dwarf Sentinel: His total Attack Value with an Edged Weapon "
->         ++ "equipped is +8."
+>     cardGlossary =
+>         ["Dwarf Sentinel: His total Attack Value with an Edged Weapon "
+>          ++ "equipped is +8."]
 >     }
 
-> heroDetails ElfWizard = CardDetails {
+> heroDetails ElfWizard = initCardDetails {
 >     cardName = "Elf Wizard",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroElf,
->     cardIcon = CardIconHero1,
+>     cardIcon = CardIconHero 1,
 >     cardCount = 6,
 >     cardClasses = [ClassWizard],
->     cardGold = 0,
->     cardLight = 1,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 3,
->         heroLevel = 1,
->         heroPrice = 5,
->         heroUpgrade = (2,[ElfSorcerer]),
->         heroAttack = 0,
->         heroMagicAttack = 2
->         },
->     cardText = ["MAGIC ATTACK +2"],
->     cardClarification = ""
+>     cardLight = Just 1,
+>     cardStrength = Just 3,
+>     cardPrice = Just 5,
+>     cardLevelUp = Just 2,
+>     cardText = ["MAGIC ATTACK +2"]
 >     }
 
-> heroDetails ElfSorcerer = CardDetails {
+> heroDetails ElfSorcerer = initCardDetails {
 >     cardName = "Elf Sorcerer",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroElf,
->     cardIcon = CardIconHero2,
+>     cardIcon = CardIconHero 2,
 >     cardCount = 4,
 >     cardClasses = [ClassWizard],
->     cardGold = 0,
->     cardLight = 2,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 3,
->         heroLevel = 2,
->         heroPrice = 8,
->         heroUpgrade = (2,[ElfArchmage]),
->         heroAttack = 0,
->         heroMagicAttack = 3
->         },
+>     cardLight = Just 2,
+>     cardStrength = Just 3,
+>     cardPrice = Just 8,
+>     cardLevelUp = Just 2,
 >     cardText = ["MAGIC ATTACK +3",
 >                 "You may return one Monster to the bottom of the deck "
 >                 ++ "after defeating a monster.  (Refill the hall.)"],
->     cardClarification =
->         "Elf Sorcerer/Archmage: When a Monster is returned to the "
->         ++ "bottom of the monster deck, refill the Dungeon Hall.  "
->         ++ "If this results in a Breach effect, resolve it "
->         ++ "immediately.  If the Thunderstone moves to Rank 1 of "
->         ++ "the Dungeon Hall, the game ends immediately; you do "
->         ++ "not collect the Thunderstone."
+>     cardGlossary =
+>         ["Elf Sorcerer/Archmage: When a Monster is returned to the "
+>          ++ "bottom of the monster deck, refill the Dungeon Hall.  "
+>          ++ "If this results in a Breach effect, resolve it "
+>          ++ "immediately.  If the Thunderstone moves to Rank 1 of "
+>          ++ "the Dungeon Hall, the game ends immediately; you do "
+>          ++ "not collect the Thunderstone."]
 >     }
 
-> heroDetails ElfArchmage = CardDetails {
+> heroDetails ElfArchmage = initCardDetails {
 >     cardName = "Elf Archmage",
-
-MAGIC ATTACK +4
-
-DUNGEON: You may return one Monster to the bottom of the deck and
-refill the hall before the beginning of a battle.
-
-Elf Sorcerer/Archmage: When a Monster is returned to the bottom of
-the monster deck, refill the Dungeon Hall.  If this results in a
-Breach effect, resolve it immediately.  If the Thunderstone moves
-to Rank 1 of the Dungeon Hall, the game ends immediately; you do
-not collect the Thunderstone.
-
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroElf,
->     cardIcon = CardIconHero3,
+>     cardIcon = CardIconHero 3,
 >     cardCount = 2,
 >     cardClasses = [ClassWizard],
->     cardGold = 0,
->     cardLight = 2,
->     cardVictoryPoints = 2,
->     cardStats = HeroStats {
->         heroStrength = 4,
->         heroLevel = 3,
->         heroPrice = 10,
->         heroUpgrade = (0,[]),
->         heroAttack = 0,
->         heroMagicAttack = 4
->         },
+>     cardLight = Just 2,
+>     cardVictoryPoints = Just 2,
+>     cardStrength = Just 4,
+>     cardPrice = Just 10,
 >     cardText = ["MAGIC ATTACK +4",
->                 "You may return one Monster to the bottom of the deck "
->                 ++ "and refill the hall before the beginning of a battle."],
->     cardClarification =
->         "Elf Sorcerer/Archmage: When a Monster is returned to the "
->         ++ "bottom of the monster deck, refill the Dungeon Hall.  "
->         ++ "If this results in a Breach effect, resolve it "
->         ++ "immediately.  If the Thunderstone moves to Rank 1 of "
->         ++ "the Dungeon Hall, the game ends immediately; you do "
->         ++ "not collect the Thunderstone."
+>                 "DUNGEON You may return one Monster to the bottom of "
+>                 ++ "the deck and refill the hall before the beginning of "
+>                 ++ "a battle."],
+>     cardGlossary =
+>         ["Elf Sorcerer/Archmage: When a Monster is returned to the "
+>          ++ "bottom of the monster deck, refill the Dungeon Hall.  "
+>          ++ "If this results in a Breach effect, resolve it "
+>          ++ "immediately.  If the Thunderstone moves to Rank 1 of "
+>          ++ "the Dungeon Hall, the game ends immediately; you do "
+>          ++ "not collect the Thunderstone."]
 >     }
 
-> heroDetails FeaynArcher = CardDetails {
+> heroDetails FeaynArcher = initCardDetails {
 >     cardName = "Feayn Archer",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroFeayn,
->     cardIcon = CardIconHero1,
+>     cardIcon = CardIconHero 1,
 >     cardCount = 6,
 >     cardClasses = [ClassFighter,ClassArcher],
->     cardGold = 0,
->     cardLight = 1,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 4,
->         heroLevel = 1,
->         heroPrice = 7,
->         heroUpgrade = (2,[FeaynMarksman]),
->         heroAttack = 2,
->         heroMagicAttack = 0
->         },
+>     cardLight = Just 1,
+>     cardStrength = Just 4,
+>     cardPrice = Just 7,
+>     cardLevelUp = Just 2,
 >     cardText = ["Cannot attack Rank 1.","ATTACK +2"],
->     cardClarification =
->         "Feayn: If a Dungeon Actions causes you to attack a Monster "
->         ++ "in Rank 1, do not add the Feayn's Attack bonus to your "
->         ++ "Attack Value.  If Feayn does not attack, his Light bonus "
->         ++ "is lost."
+>     cardGlossary =
+>         ["Feayn: If a Dungeon Actions causes you to attack a Monster "
+>          ++ "in Rank 1, do not add the Feayn's Attack bonus to your "
+>          ++ "Attack Value.  If Feayn does not attack, his Light bonus "
+>          ++ "is lost."]
 >     }
 
-> heroDetails FeaynMarksman = CardDetails {
+> heroDetails FeaynMarksman = initCardDetails {
 >     cardName = "Feayn Marksman",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroFeayn,
->     cardIcon = CardIconHero2,
+>     cardIcon = CardIconHero 2,
 >     cardCount = 4,
 >     cardClasses = [ClassFighter,ClassArcher],
->     cardGold = 0,
->     cardLight = 1,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 5,
->         heroLevel = 2,
->         heroPrice = 10,
->         heroUpgrade = (3,[FeaynSniper]),
->         heroAttack = 3,
->         heroMagicAttack = 0
->         },
+>     cardLight = Just 1,
+>     cardStrength = Just 5,
+>     cardPrice = Just 10,
+>     cardLevelUp = Just 3,
 >     cardText = ["Cannot attack Rank 1.","ATTACK +3"],
->     cardClarification =
->         "Feayn: If a Dungeon Actions causes you to attack a "
->         ++ "Monster in Rank 1, do not add the Feayn's Attack "
->         ++ "bonus to your Attack Value.  If Feayn does not "
->         ++ "attack, his Light bonus is lost."
+>     cardGlossary =
+>         ["Feayn: If a Dungeon Actions causes you to attack a "
+>          ++ "Monster in Rank 1, do not add the Feayn's Attack "
+>          ++ "bonus to your Attack Value.  If Feayn does not "
+>          ++ "attack, his Light bonus is lost."]
 >     }
 
-> heroDetails FeaynSniper = CardDetails {
+> heroDetails FeaynSniper = initCardDetails {
 >     cardName = "Feayn Sniper",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroFeayn,
->     cardIcon = CardIconHero3,
+>     cardIcon = CardIconHero 3,
 >     cardCount = 2,
 >     cardClasses = [ClassFighter,ClassArcher],
->     cardGold = 0,
->     cardLight = 2,
->     cardVictoryPoints = 2,
->     cardStats = HeroStats {
->         heroStrength = 6,
->         heroLevel = 3,
->         heroPrice = 12,
->         heroUpgrade = (0,[]),
->         heroAttack = 4,
->         heroMagicAttack = 0
->         },
+>     cardLight = Just 2,
+>     cardVictoryPoints = Just 2,
+>     cardStrength = Just 6,
+>     cardPrice = Just 12,
 >     cardText = ["Cannot attack Rank 1.",
 >                 "ATTACK +4",
 >                 "Gain +1 XP if you defeat a Monster in Rank 3."],
->     cardClarification =
->         "Feayn: If a Dungeon Actions causes you to attack a Monster "
->         ++ "in Rank 1, do not add the Feayn's Attack bonus to your "
->         ++ "Attack Value.  If Feayn does not attack, his Light bonus "
->         ++ "is lost."
+>     cardGlossary =
+>         ["Feayn: If a Dungeon Actions causes you to attack a Monster "
+>          ++ "in Rank 1, do not add the Feayn's Attack bonus to your "
+>          ++ "Attack Value.  If Feayn does not attack, his Light bonus "
+>          ++ "is lost."]
 >     }
 
-> heroDetails LoriggThief = CardDetails {
+> heroDetails LoriggThief = initCardDetails {
 >     cardName = "Lorigg Thief",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroLorigg,
->     cardIcon = CardIconHero1,
+>     cardIcon = CardIconHero 1,
 >     cardCount = 6,
 >     cardClasses = [ClassThief],
->     cardGold = 2,
->     cardLight = 1,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 4,
->         heroLevel = 1,
->         heroPrice = 5,
->         heroUpgrade = (2,[LoriggRogue]),
->         heroAttack = 1,
->         heroMagicAttack = 0
->         },
->     cardText = ["ATTACK +1"],
->     cardClarification = ""
+>     cardGold = Just 2,
+>     cardLight = Just 1,
+>     cardStrength = Just 4,
+>     cardPrice = Just 5,
+>     cardLevelUp = Just 2,
+>     cardText = ["ATTACK +1"]
 >     }
 
-> heroDetails LoriggRogue = CardDetails {
+> heroDetails LoriggRogue = initCardDetails {
 >     cardName = "Lorigg Rogue",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroLorigg,
->     cardIcon = CardIconHero2,
+>     cardIcon = CardIconHero 2,
 >     cardCount = 4,
 >     cardClasses = [ClassThief],
->     cardGold = 3,
->     cardLight = 1,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 4,
->         heroLevel = 2,
->         heroPrice = 8,
->         heroUpgrade = (3,[LoriggOutlaw]),
->         heroAttack = 2,
->         heroMagicAttack = 0
->         },
+>     cardGold = Just 3,
+>     cardLight = Just 1,
+>     cardStrength = Just 4,
+>     cardPrice = Just 8,
+>     cardLevelUp = Just 3,
 >     cardText = ["ATTACK +2","DUNGEON: All other players discard one card."],
->     cardClarification =
->         "Lorigg Outlaw or Rogue: Regardless of whether the battle "
->         ++ "is victorious or not, all other players must discard "
->         ++ "cards when this Hero enters the Dungeon."
+>     cardGlossary =
+>         ["Lorigg Outlaw or Rogue: Regardless of whether the battle "
+>          ++ "is victorious or not, all other players must discard "
+>          ++ "cards when this Hero enters the Dungeon."]
 >     }
 
-> heroDetails LoriggOutlaw = CardDetails {
+> heroDetails LoriggOutlaw = initCardDetails {
 >     cardName = "Lorigg Outlaw",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroLorigg,
->     cardIcon = CardIconHero3,
+>     cardIcon = CardIconHero 3,
 >     cardCount = 2,
 >     cardClasses = [ClassThief],
->     cardGold = 4,
->     cardLight = 2,
->     cardVictoryPoints = 1,
->     cardStats = HeroStats {
->         heroStrength = 5,
->         heroLevel = 3,
->         heroPrice = 10,
->         heroUpgrade = (0,[]),
->         heroAttack = 2,
->         heroMagicAttack = 0
->         },
+>     cardGold = Just 4,
+>     cardLight = Just 2,
+>     cardVictoryPoints = Just 1,
+>     cardStrength = Just 5,
+>     cardPrice = Just 10,
 >     cardText = ["ATTACK +2","DUNGEON: All other players discard one card."],
->     cardClarification =
->         "Lorigg Outlaw or Rogue: Regardless of whether the battle "
->         ++ "is victorious or not, all other players must discard "
->         ++ "cards when this Hero enters the Dungeon."
+>     cardGlossary =
+>         ["Lorigg Outlaw or Rogue: Regardless of whether the battle "
+>          ++ "is victorious or not, all other players must discard "
+>          ++ "cards when this Hero enters the Dungeon."]
 >     }
 
-> heroDetails OutlandsWarrior = CardDetails {
+> heroDetails OutlandsWarrior = initCardDetails {
 >     cardName = "Outlands Warrior",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroOutlands,
->     cardIcon = CardIconHero1,
+>     cardIcon = CardIconHero 1,
 >     cardCount = 6,
 >     cardClasses = [ClassFighter],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 7,
->         heroLevel = 1,
->         heroPrice = 8,
->         heroUpgrade = (2,[OutlandsSlayer]),
->         heroAttack = 3,
->         heroMagicAttack = 0
->         },
+>     cardStrength = Just 7,
+>     cardPrice = Just 8,
+>     cardLevelUp = Just 2,
 >     cardText = ["ATTACK +3",
->                 "DUNGEON: Destroy one Food for an additional ATTACK +3."],
->     cardClarification = ""
+>                 "DUNGEON: Destroy one Food for an additional ATTACK +3."]
 >     }
 
-> heroDetails OutlandsSlayer = CardDetails {
+> heroDetails OutlandsSlayer = initCardDetails {
 >     cardName = "Outlands Slayer",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroOutlands,
->     cardIcon = CardIconHero2,
+>     cardIcon = CardIconHero 2,
 >     cardCount = 4,
 >     cardClasses = [ClassFighter],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 8,
->         heroLevel = 2,
->         heroPrice = 11,
->         heroUpgrade = (3,[OutlandsKhan]),
->         heroAttack = 5,
->         heroMagicAttack = 0
->         },
+>     cardStrength = Just 8,
+>     cardPrice = Just 11,
+>     cardLevelUp = Just 3,
 >     cardText = ["ATTACK +5",
 >                 "DUNGEON: Gain +1 ATTACK for each Monster card "
 >                 ++ "revealed from your hand.",
 >                 "REPEAT DUNGEON: Destroy one Food for an additional "
 >                 ++ "ATTACK +3."],
->     cardClarification =
->         "Outlands Slayer or Khan: The Hero gains an Attack bonus "
->         ++ "for each Monster card revealed in your hand before the battle."
+>     cardGlossary =
+>         ["Outlands Slayer or Khan: The Hero gains an Attack bonus "
+>          ++ "for each Monster card revealed in your hand before the battle."]
 >     }
 
-> heroDetails OutlandsKhan = CardDetails {
+> heroDetails OutlandsKhan = initCardDetails {
 >     cardName = "Outlands Khan",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroOutlands,
->     cardIcon = CardIconHero3,
+>     cardIcon = CardIconHero 3,
 >     cardCount = 2,
 >     cardClasses = [ClassFighter],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 3,
->     cardStats = HeroStats {
->         heroStrength = 8,
->         heroLevel = 3,
->         heroPrice = 13,
->         heroUpgrade = (0,[]),
->         heroAttack = 7,
->         heroMagicAttack = 0
->         },
+>     cardVictoryPoints = Just 3,
+>     cardStrength = Just 8,
+>     cardPrice = Just 13,
 >     cardText = ["ATTACK +7",
 >                 "DUNGEON: ATTACK +2 for each Monster card revealed "
 >                 ++ "from your hand."],
->     cardClarification =
->         "Outlands Slayer or Khan: The Hero gains an Attack bonus for "
->        ++ "each Monster card revealed in your hand before the battle."
+>     cardGlossary =
+>         ["Outlands Slayer or Khan: The Hero gains an Attack bonus for "
+>          ++ "each Monster card revealed in your hand before the battle."]
 >     }
 
-> heroDetails RedbladeKiller = CardDetails {
+> heroDetails RedbladeKiller = initCardDetails {
 >     cardName = "Redblade Killer",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroRedblade,
->     cardIcon = CardIconHero1,
+>     cardIcon = CardIconHero 1,
 >     cardCount = 6,
 >     cardClasses = [ClassFighter,ClassThief],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 5,
->         heroLevel = 1,
->         heroPrice = 5,
->         heroUpgrade = (2,[RedbladePoisoner]),
->         heroAttack = 2,
->         heroMagicAttack = 0
->         },
->     cardText = ["ATTACK +2"],
->     cardClarification = ""
+>     cardGold = Just 1,
+>     cardStrength = Just 5,
+>     cardPrice = Just 5,
+>     cardLevelUp = Just 2,
+>     cardText = ["ATTACK +2"]
 >     }
 
-> heroDetails RedbladePoisoner = CardDetails {
+> heroDetails RedbladePoisoner = initCardDetails {
 >     cardName = "Redblade Poisoner",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroRedblade,
->     cardIcon = CardIconHero2,
+>     cardIcon = CardIconHero 2,
 >     cardCount = 4,
 >     cardClasses = [ClassFighter,ClassThief],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 5,
->         heroLevel = 2,
->         heroPrice = 8,
->         heroUpgrade = (3,[RedbladeAssassin]),
->         heroAttack = 3,
->         heroMagicAttack = 0
->         },
+>     cardGold = Just 2,
+>     cardStrength = Just 5,
+>     cardPrice = Just 8,
+>     cardLevelUp = Just 3,
 >     cardText = ["ATTACK +3",
 >                 "DUNGEON: All other players discard one card."],
->     cardClarification =
->         "Redblade Assassin or Poisoner: Regardless of whether the "
->         ++ "battle is victorious or not, all other players must "
->         ++ "discard cards when this Hero enters the Dungeon."
+>     cardGlossary =
+>         ["Redblade Assassin or Poisoner: Regardless of whether the "
+>          ++ "battle is victorious or not, all other players must "
+>          ++ "discard cards when this Hero enters the Dungeon."]
 >     }
 
-> heroDetails RedbladeAssassin = CardDetails {
+> heroDetails RedbladeAssassin = initCardDetails {
 >     cardName = "Redblade Assassin",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroRedblade,
->     cardIcon = CardIconHero3,
+>     cardIcon = CardIconHero 3,
 >     cardCount = 2,
 >     cardClasses = [ClassFighter,ClassThief],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = HeroStats {
->         heroStrength = 6,
->         heroLevel = 3,
->         heroPrice = 9,
->         heroUpgrade = (0,[]),
->         heroAttack = 4,
->         heroMagicAttack = 0
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 2,
+>     cardStrength = Just 6,
+>     cardPrice = Just 9,
 >     cardText = ["ATTACK +4",
 >                 "DUNGEON: All other players discard one Hero or two cards."],
->     cardClarification =
->         "Redblade Assassin or Poisoner: Regardless of whether the "
->         ++ "battle is victorious or not, all other players must "
->         ++ "discard cards when this Hero enters the Dungeon."
+>     cardGlossary =
+>         ["Redblade Assassin or Poisoner: Regardless of whether the "
+>          ++ "battle is victorious or not, all other players must "
+>          ++ "discard cards when this Hero enters the Dungeon."]
 >     }
 
-> heroDetails RegianCleric = CardDetails {
+> heroDetails RegianCleric = initCardDetails {
 >     cardName = "Regian Cleric",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroRegian,
->     cardIcon = CardIconHero1,
+>     cardIcon = CardIconHero 1,
 >     cardCount = 6,
 >     cardClasses = [ClassCleric],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 4,
->         heroLevel = 1,
->         heroPrice = 5,
->         heroUpgrade = (2,[RegianPriest]),
->         heroAttack = 0,
->         heroMagicAttack = 1
->         },
+>     cardStrength = Just 4,
+>     cardPrice = Just 5,
+>     cardLevelUp = Just 2,
 >     cardText = ["MAGIC ATTACK +1",
 >                 "REPEAT DUNGEON: Destroy one Disease to draw one card."],
->     cardClarification =
->         "Regian: You may continue to destroy Disease cards and draw "
->         ++ "new cards ntil the battle begins."
+>     cardGlossary =
+>         ["Regian: You may continue to destroy Disease cards and draw "
+>          ++ "new cards ntil the battle begins."]
 >     }
 
-> heroDetails RegianPriest = CardDetails {
+> heroDetails RegianPriest = initCardDetails {
 >     cardName = "Regian Priest",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroRegian,
->     cardIcon = CardIconHero2,
+>     cardIcon = CardIconHero 2,
 >     cardCount = 4,
 >     cardClasses = [ClassCleric],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 4,
->         heroLevel = 2,
->         heroPrice = 8,
->         heroUpgrade = (3,[RegianBishop]),
->         heroAttack = 0,
->         heroMagicAttack = 2
->         },
+>     cardStrength = Just 4,
+>     cardPrice = Just 8,
+>     cardLevelUp = Just 3,
 >     cardText = ["MAGIC ATTACK +2","DUNGEON: Draw one card.",
 >                 "REPEAT DUNGEON: Destroy one Disease to draw one card."],
->     cardClarification =
->         "Regian: You may continue to destroy Disease cards and draw "
->         ++ "new cards until the battle begins."
+>     cardGlossary =
+>         ["Regian: You may continue to destroy Disease cards and draw "
+>          ++ "new cards until the battle begins."]
 >     }
 
-> heroDetails RegianBishop = CardDetails {
+> heroDetails RegianBishop = initCardDetails {
 >     cardName = "Regian Bishop",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroRegian,
->     cardIcon = CardIconHero3,
+>     cardIcon = CardIconHero 3,
 >     cardCount = 2,
 >     cardClasses = [ClassCleric],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = HeroStats {
->         heroStrength = 5,
->         heroLevel = 3,
->         heroPrice = 11,
->         heroUpgrade = (0,[]),
->         heroAttack = 0,
->         heroMagicAttack = 3
->         },
+>     cardVictoryPoints = Just 2,
+>     cardStrength = Just 5,
+>     cardPrice = Just 11,
 >     cardText = ["MAGIC ATTACK +3","DUNGEON: Draw two cards.",
 >                 "REPEAT DUNGEON: Destroy one Disease to draw one card."],
->     cardClarification =
->         "Regian: You may continue to destroy Disease cards and draw "
->         ++ "new cards until the battle begins."
+>     cardGlossary =
+>         ["Regian: You may continue to destroy Disease cards and draw "
+>          ++ "new cards until the battle begins."]
 >     }
 
-> heroDetails SelurinMagician = CardDetails {
+> heroDetails SelurinMagician = initCardDetails {
 >     cardName = "Selurin Magician",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroSelurin,
->     cardIcon = CardIconHero1,
+>     cardIcon = CardIconHero 1,
 >     cardCount = 6,
 >     cardClasses = [ClassWizard],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 2,
->         heroLevel = 1,
->         heroPrice = 8,
->         heroUpgrade = (2,[SelurinWarlock]),
->         heroAttack = 0,
->         heroMagicAttack = 2
->         },
+>     cardStrength = Just 2,
+>     cardPrice = Just 8,
+>     cardLevelUp = Just 2,
 >     cardText = ["MAGIC ATTACK +2",
 >                 "All Items and Magic Attack Spells gain MAGIC ATTACK +1."],
->     cardClarification =
->         "Selurin: Each Spell with a Magic Attack bonus gains a "
->         ++ "Magic Attack bonus of +1.  Each Item (with the Item "
->         ++ "keyword), regardless of whether it has an Attack bonus "
->         ++ "or not, gains a Magic Attack bonus of +1."
+>     cardGlossary =
+>         ["Selurin: Each Spell with a Magic Attack bonus gains a "
+>          ++ "Magic Attack bonus of +1.  Each Item (with the Item "
+>          ++ "keyword), regardless of whether it has an Attack bonus "
+>          ++ "or not, gains a Magic Attack bonus of +1."]
 >     }
 
-> heroDetails SelurinWarlock = CardDetails {
+> heroDetails SelurinWarlock = initCardDetails {
 >     cardName = "Selurin Warlock",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroSelurin,
->     cardIcon = CardIconHero2,
+>     cardIcon = CardIconHero 2,
 >     cardCount = 4,
 >     cardClasses = [ClassWizard],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 2,
->         heroLevel = 2,
->         heroPrice = 10,
->         heroUpgrade = (3,[SelurinTheurge]),
->         heroAttack = 0,
->         heroMagicAttack = 2
->         },
+>     cardStrength = Just 2,
+>     cardPrice = Just 10,
+>     cardLevelUp = Just 3,
 >     cardText = ["MAGIC ATTACK +2","Total MAGIC ATTACK x2* (apply last)"],
->     cardClarification =
->         "Selurin Theurge or Warlock: The x2 multiplier of the "
->         ++ "Selurin Wizard affects only Magic Attack bonuses, "
->         ++ "and is applied after all Magic Attack bonuses have "
->         ++ "been calculated.  Multiple Wizards multiply together "
->         ++ "(two become x4, three become x8, etc.)."
+>     cardGlossary =
+>         ["Selurin Theurge or Warlock: The x2 multiplier of the "
+>          ++ "Selurin Wizard affects only Magic Attack bonuses, "
+>          ++ "and is applied after all Magic Attack bonuses have "
+>          ++ "been calculated.  Multiple Wizards multiply together "
+>          ++ "(two become x4, three become x8, etc.)."]
 >     }
 
-> heroDetails SelurinTheurge = CardDetails {
+> heroDetails SelurinTheurge = initCardDetails {
 >     cardName = "Selurin Theurge",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroSelurin,
->     cardIcon = CardIconHero3,
+>     cardIcon = CardIconHero 3,
 >     cardCount = 2,
 >     cardClasses = [ClassWizard],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 1,
->     cardStats = HeroStats {
->         heroStrength = 3,
->         heroLevel = 3,
->         heroPrice = 13,
->         heroUpgrade = (0,[]),
->         heroAttack = 0,
->         heroMagicAttack = 2
->         },
+>     cardVictoryPoints = Just 1,
+>     cardStrength = Just 3,
+>     cardPrice = Just 13,
 >     cardText = ["MAGIC ATTACK +2","Total MAGIC ATTACK x2* (apply last)",
 >                 "DUNGEON: Each player discards one Hero or shows they "
 >                 ++ "have none.  You may borrow one of those discarded "
 >                 ++ "Heroes for the battle, returning it at the end."],
->     cardClarification =
->         "Selurin Theurge or Warlock: The x2 multiplier of the "
->         ++ "Selurin Wizard affects only Magic Attack bonuses, and is "
->         ++ "applied after all Magic Attack bonuses have been "
->         ++ "calculated.  Multiple Wizards multiply together (two "
->         ++ "become x4, three become x8, etc.).\n"
->         ++ "Selurin Theurge: If the borrowed Hero is destroyed by a "
->         ++ "Battle Effect, it is not returned to the original owner.  "
->         ++ "Instead, destroy the card."
+>     cardGlossary =
+>         ["Selurin Theurge or Warlock: The x2 multiplier of the "
+>          ++ "Selurin Wizard affects only Magic Attack bonuses, and is "
+>          ++ "applied after all Magic Attack bonuses have been "
+>          ++ "calculated.  Multiple Wizards multiply together (two "
+>          ++ "become x4, three become x8, etc.).",
+>          "Selurin Theurge: If the borrowed Hero is destroyed by a "
+>          ++ "Battle Effect, it is not returned to the original owner.  "
+>          ++ "Instead, destroy the card."]
 >     }
 
-> heroDetails ThyrianSquire = CardDetails {
+> heroDetails ThyrianSquire = initCardDetails {
 >     cardName = "Thyrian Squire",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroThyrian,
->     cardIcon = CardIconHero1,
+>     cardIcon = CardIconHero 1,
 >     cardCount = 6,
 >     cardClasses = [ClassFighter],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 6,
->         heroLevel = 1,
->         heroPrice = 7,
->         heroUpgrade = (2,[ThyrianKnight]),
->         heroAttack = 2,
->         heroMagicAttack = 0
->         },
+>     cardStrength = Just 6,
+>     cardPrice = Just 7,
+>     cardLevelUp = Just 2,
 >     cardText = ["ATTACK +2",
 >                 "DUNGEON: Destroy one Food for additional ATTACK +2."],
->     cardClarification =
->         "Thyrian: Food destroyed by this Dungeon Effect cannot also "
->         ++ "be used to gain a Strength bonus or for any other effect."
+>     cardGlossary =
+>         ["Thyrian: Food destroyed by this Dungeon Effect cannot also "
+>          ++ "be used to gain a Strength bonus or for any other effect."]
 >     }
 
-> heroDetails ThyrianKnight = CardDetails {
+> heroDetails ThyrianKnight = initCardDetails {
 >     cardName = "Thyrian Knight",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroThyrian,
->     cardIcon = CardIconHero2,
+>     cardIcon = CardIconHero 2,
 >     cardCount = 4,
 >     cardClasses = [ClassFighter],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = HeroStats {
->         heroStrength = 8,
->         heroLevel = 2,
->         heroPrice = 9,
->         heroUpgrade = (3,[ThyrianLord]),
->         heroAttack = 2,
->         heroMagicAttack = 0
->         },
+>     cardStrength = Just 8,
+>     cardPrice = Just 9,
+>     cardLevelUp = Just 3,
 >     cardText = ["ATTACK +4","All Militia gain ATTACK +1.",
 >                 "DUNGEON: Destroy one Food for additional ATTACK +2."],
->     cardClarification =
->         "Thyrian: Food destroyed by this Dungeon Effect cannot also "
->         ++ "be used to gain a Strength bonus or for any other effect."
+>     cardGlossary =
+>         ["Thyrian: Food destroyed by this Dungeon Effect cannot also "
+>          ++ "be used to gain a Strength bonus or for any other effect."]
 >     }
 
-> heroDetails ThyrianLord = CardDetails {
+> heroDetails ThyrianLord = initCardDetails {
 >     cardName = "Thyrian Lord",
 >     cardSource = ThunderstoneBase,
 >     cardType = HeroThyrian,
->     cardIcon = CardIconHero3,
+>     cardIcon = CardIconHero 3,
 >     cardCount = 2,
 >     cardClasses = [ClassFighter],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = HeroStats {
->         heroStrength = 9,
->         heroLevel = 3,
->         heroPrice = 11,
->         heroUpgrade = (0,[]),
->         heroAttack = 4,
->         heroMagicAttack = 0
->         },
+>     cardVictoryPoints = Just 2,
+>     cardStrength = Just 9,
+>     cardPrice = Just 11,
 >     cardText = ["ATTACK +4","All Heroes other than Fighters gain ATTACK +2.",
 >                 "DUNGEON: Destroy one Food to place one Monster from "
 >                 ++ "the hall worth 1 or 2 VP into your discard pile.  "
 >                 ++ "Refill the hall."],
->     cardClarification =
->         "Thyrian: Food destroyed by this Dungeon Effect cannot also "
->         ++ "be used to gain a Strength bonus or for any other effect.\n"
->         ++ "Thyrian Lord: You may only select a Monster with 1 or 2 VP, "
->         ++ "and not 0 VP.  When a Monster is placed in your discard pile, "
->         ++ "refill the Dungeon Hall.  If this results in a Breach effect, "
->         ++ "resolve it immediately.  If the Thunderstone moves to Rank 1 "
->         ++ "of the Dungeon Hall, the game ends immediately; you do not "
->         ++ "collect the Thunderstone.  You do not earn any Experience "
->         ++ "Points for the Effect."
+>     cardGlossary =
+>         ["Thyrian: Food destroyed by this Dungeon Effect cannot also "
+>          ++ "be used to gain a Strength bonus or for any other effect.",
+>          "Thyrian Lord: You may only select a Monster with 1 or 2 VP, "
+>          ++ "and not 0 VP.  When a Monster is placed in your discard pile, "
+>          ++ "refill the Dungeon Hall.  If this results in a Breach effect, "
+>          ++ "resolve it immediately.  If the Thunderstone moves to Rank 1 "
+>          ++ "of the Dungeon Hall, the game ends immediately; you do not "
+>          ++ "collect the Thunderstone.  You do not earn any Experience "
+>          ++ "Points for the Effect."]
 >     }
 
 > heroDetails BlindNeophyte =
@@ -1835,868 +1571,736 @@ not collect the Thunderstone.
 
 
 
-> data MonsterStats = MonsterStats {
->     monsterHealth :: Int,
->     monsterXP :: Int
->     }
 
-> monsterDetails :: MonsterCard -> CardDetails MonsterType MonsterStats
+> monsterDetails :: MonsterCard -> CardDetails MonsterType
 
-> monsterDetails ArchdukeOfPain = CardDetails {
+> monsterDetails ArchdukeOfPain = initCardDetails {
 >     cardName = "Archduke of Pain",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterAbyssal,
 >     cardIcon = CardIconMonster,
 >     cardCount = 1,
 >     cardClasses = [ClassAbyssal],
->     cardGold = 3,
->     cardLight = 0,
->     cardVictoryPoints = 8,
->     cardStats = MonsterStats {
->         monsterHealth = 10,
->         monsterXP = 3
->         },
+>     cardGold = Just 3,
+>     cardVictoryPoints = Just 8,
+>     cardHealth = Just 10,
+>     cardXP = Just 3,
 >     cardText = ["Magic Attack Required",
 >                 "BREACH: Destroy the top two cards from each Hero deck "
 >                 ++ "in the Village.",
 >                 "BATTLE: Destroy all Clerics and Wizards."],
->     cardClarification =
->         "Archduke of Pain: You must have a Magic Attack of at least "
->         ++ "+1 in order to defeat the Archduke of Pain.  You may still "
->         ++ "choose to attack the Archduke, even without Magic Attack "
->         ++ "present.  If there are no Cleric and/or Wizard cards in "
->         ++ "the battle, there is no effect.  When the Archduke reaches "
->         ++ "Rank 1 of he Dungeon Hall, destroy the top two cards from "
->         ++ "each Hero stack in the Village, including Militia."
+>     cardGlossary =
+>         ["Archduke of Pain: You must have a Magic Attack of at least "
+>          ++ "+1 in order to defeat the Archduke of Pain.  You may still "
+>          ++ "choose to attack the Archduke, even without Magic Attack "
+>          ++ "present.  If there are no Cleric and/or Wizard cards in "
+>          ++ "the battle, there is no effect.  When the Archduke reaches "
+>          ++ "Rank 1 of he Dungeon Hall, destroy the top two cards from "
+>          ++ "each Hero stack in the Village, including Militia."]
 >     }
 
-> monsterDetails Grudgebeast = CardDetails {
+> monsterDetails Grudgebeast = initCardDetails {
 >     cardName = "Grudgebeast",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterAbyssal,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassAbyssal],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = MonsterStats {
->         monsterHealth = 4,
->         monsterXP = 1
->         },
->     cardText = [],
->     cardClarification = "Grudgebeast: This Monster has no special Effects."
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 2,
+>     cardHealth = Just 4,
+>     cardXP = Just 1,
+>     cardGlossary = ["Grudgebeast: This Monster has no special Effects."]
 >     }
 
-> monsterDetails Succubus = CardDetails {
+> monsterDetails Succubus = initCardDetails {
 >     cardName = "Succubus",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterAbyssal,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassAbyssal],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 4,
->     cardStats = MonsterStats {
->         monsterHealth = 6,
->         monsterXP = 2
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 4,
+>     cardHealth = Just 6,
+>     cardXP = Just 2,
 >     cardText = ["HALF-ATTACK without MAGIC ATTACK present"],
->     cardClarification =
->         "Succubus: If you do not have at least +1 Magic Attack, the "
->         ++ "total Attack Value is halved, round down."
+>     cardGlossary =
+>         ["Succubus: If you do not have at least +1 Magic Attack, the "
+>          ++ "total Attack Value is halved, round down."]
 >     }
 
-> monsterDetails Tormentor = CardDetails {
+> monsterDetails Tormentor = initCardDetails {
 >     cardName = "Tormentor",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterAbyssal,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassAbyssal],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 6,
->     cardStats = MonsterStats {
->         monsterHealth = 8,
->         monsterXP = 3
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 6,
+>     cardHealth = Just 8,
+>     cardXP = Just 3,
 >     cardText = ["HALF-ATTACK without a Weapon present",
 >                 "BATTLE: Destroy one Cleric."],
->     cardClarification =
->         "Tormentor: If you do not have at least one equipped "
->         ++ "Weapon in the battle, the total Attack Value is halved, "
->         ++ "round down.  If there are no Cleric cards in the battle, "
->         ++ "there is no effect.  Destroyed Cleric cards remain until "
->         ++ "the end of the battle."
+>     cardGlossary =
+>         ["Tormentor: If you do not have at least one equipped "
+>          ++ "Weapon in the battle, the total Attack Value is halved, "
+>          ++ "round down.  If there are no Cleric cards in the battle, "
+>          ++ "there is no effect.  Destroyed Cleric cards remain until "
+>          ++ "the end of the battle."]
 >     }
 
-> monsterDetails TheUnchained = CardDetails {
+> monsterDetails TheUnchained = initCardDetails {
 >     cardName = "The Unchained",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterAbyssal,
 >     cardIcon = CardIconMonster,
 >     cardCount = 3,
 >     cardClasses = [ClassAbyssal],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 3,
->     cardStats = MonsterStats {
->         monsterHealth = 5,
->         monsterXP = 1
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 3,
+>     cardHealth = Just 5,
+>     cardXP = Just 1,
 >     cardText = ["BATTLE: Gain one Disease.","* MAGIC ATTACK +1"],
->     cardClarification =
->         "Unchained, the: Disease cards gained in battle go directly "
->         ++ "to your discard pile."
+>     cardGlossary =
+>         ["Unchained, the: Disease cards gained in battle go directly "
+>          ++ "to your discard pile."]
 >     }
 
-> monsterDetails Darkness = CardDetails {
+> monsterDetails Darkness = initCardDetails {
 >     cardName = "Darkness",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDoomknightHumanoid,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassDoomknight,ClassHumanoid],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 4,
->     cardStats = MonsterStats {
->         monsterHealth = 6,
->         monsterXP = 2
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 4,
+>     cardHealth = Just 6,
+>     cardXP = Just 2,
 >     cardText = ["Unequipped Heroes cannot attack","Light -1"],
->     cardClarification =
->         "Darkness: Heroes without a Weapon equipped have an "
->         ++ "Attack Bonus of 0, but are still affected by Battle "
->         ++ "Effects.  Militia are Heroes.  Increase the Light "
->         ++ "Penalty by 1.  Light Penalties are applied before "
->         ++ "the battle."
+>     cardGlossary =
+>         ["Darkness: Heroes without a Weapon equipped have an "
+>          ++ "Attack Bonus of 0, but are still affected by Battle "
+>          ++ "Effects.  Militia are Heroes.  Increase the Light "
+>          ++ "Penalty by 1.  Light Penalties are applied before "
+>          ++ "the battle."]
 >     }
 
-> monsterDetails Judgement = CardDetails {
+> monsterDetails Judgement = initCardDetails {
 >     cardName = "Judgement",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDoomknightHumanoid,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassDoomknight,ClassHumanoid],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 3,
->     cardStats = MonsterStats {
->         monsterHealth = 5,
->         monsterXP = 1
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 3,
+>     cardHealth = Just 5,
+>     cardXP = Just 1,
 >     cardText = ["BATTLE: All Heroes suffer Strength -2 and ATTACK -1."],
->     cardClarification =
->         "Judgement: You may choose to decrease Attack or Magic Attack "
->         ++ "for this Battle Effect.  Affected Strength can cause "
->         ++ "Weapons to become unequipped.  Militia are Heroes."
+>     cardGlossary =
+>         ["Judgement: You may choose to decrease Attack or Magic Attack "
+>          ++ "for this Battle Effect.  Affected Strength can cause "
+>          ++ "Weapons to become unequipped.  Militia are Heroes."]
 >     }
 
-> monsterDetails Knightmare = CardDetails {
+> monsterDetails Knightmare = initCardDetails {
 >     cardName = "Knightmare",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDoomknightHumanoid,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassDoomknight,ClassHumanoid],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 6,
->     cardStats = MonsterStats {
->         monsterHealth = 8,
->         monsterXP = 3
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 6,
+>     cardHealth = Just 8,
+>     cardXP = Just 3,
 >     cardText = ["Light -2","BATTLE: Destroy one Fighter."],
->     cardClarification =
->         "Knightmare: Icrease the Light Penalty of th Rank Knightmare "
->         ++ "is in by 2.  Light Penalties are applied before the battle.  "
->         ++ "If there are no Fighters in the battle, there is no effect."
+>     cardGlossary =
+>         ["Knightmare: Increase the Light Penalty of the Rank Knightmare "
+>          ++ "is in by 2.  Light Penalties are applied before the battle.  "
+>          ++ "If there are no Fighters in the battle, there is no effect."]
 >     }
 
-> monsterDetails LordMortis = CardDetails {
+> monsterDetails LordMortis = initCardDetails {
 >     cardName = "Lord Mortis",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDoomknightHumanoid,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassDoomknight,ClassHumanoid],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = MonsterStats {
->         monsterHealth = 4,
->         monsterXP = 1
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 2,
+>     cardHealth = Just 4,
+>     cardXP = Just 1,
 >     cardText = ["Light -1"],
->     cardClarification =
->         "Lord Mortis: Increase the Light Penalty of the Rank "
->         ++ "Lord Mortis is in by 2.  Light Penalties are applied "
->         ++ "before the battle."
+>     cardGlossary =
+>         ["Lord Mortis: Increase the Light Penalty of the Rank "
+>          ++ "Lord Mortis is in by 2.  Light Penalties are applied "
+>          ++ "before the battle."]
 >     }
 
-> monsterDetails ThePrince = CardDetails {
+> monsterDetails ThePrince = initCardDetails {
 >     cardName = "The Prince",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDoomknightHumanoid,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassDoomknight,ClassHumanoid],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 5,
->     cardStats = MonsterStats {
->         monsterHealth = 7,
->         monsterXP = 2
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 5,
+>     cardHealth = Just 7,
+>     cardXP = Just 2,
 >     cardText = ["BATTLE: All Heroes suffer Strength -2.",
 >                 "BATTLE: Destroy one Fighter."],
->     cardClarification =
->         "Prince, the: If there are no Fighter cards in the battle, "
->         ++ "there is no effect.  Reduced Strength can cause Weapons "
->         ++ "to become unequipped."
+>     cardGlossary =
+>         ["Prince, the: If there are no Fighter cards in the battle, "
+>          ++ "there is no effect.  Reduced Strength can cause Weapons "
+>          ++ "to become unequipped."]
 >     }
 
-> monsterDetails EbonFume = CardDetails {
+> monsterDetails EbonFume = initCardDetails {
 >     cardName = "Ebon Fume",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDragon,
 >     cardIcon = CardIconMonster,
 >     cardCount = 1,
 >     cardClasses = [ClassDragon,ClassBlack],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 8,
->     cardStats = MonsterStats {
->         monsterHealth = 11,
->         monsterXP = 3
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 8,
+>     cardHealth = Just 11,
+>     cardXP = Just 3,
 >     cardText = ["Immune to Magic Attack",
 >                 "BATTLE: Destroy one Hero with the highest Strength.",
 >                 "* ATTACK +3"],
->     cardClarification =
->         "Ebon Fume: Magic Attacks against Ebon FUmedo not count "
->         ++ "towards the total Attack Value.  If two Heroes have "
->         ++ "the highest (modified) Strength, you choose which to "
->         ++ "destroy.  Militia are considered Heroes."
+>     cardGlossary =
+>         ["Ebon Fume: Magic Attacks against Ebon Fume do not count "
+>          ++ "towards the total Attack Value.  If two Heroes have "
+>          ++ "the highest (modified) Strength, you choose which to "
+>          ++ "destroy.  Militia are considered Heroes."]
 >     }
 
-> monsterDetails Mythlurian = CardDetails {
+> monsterDetails Mythlurian = initCardDetails {
 >     cardName = "Mythlurian",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDragon,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassDragon,ClassGreen],
->     cardGold = 3,
->     cardLight = 0,
->     cardVictoryPoints = 4,
->     cardStats = MonsterStats {
->         monsterHealth = 8,
->         monsterXP = 2
->         },
+>     cardGold = Just 3,
+>     cardVictoryPoints = Just 4,
+>     cardHealth = Just 8,
+>     cardXP = Just 2,
 >     cardText = ["BATTLE: Destroy one Hero."],
->     cardClarification =
->         "Mythlurian: If there are no Hero cards in the battle, "
->         ++ "there is no effect.  Destroyed Hero cards remain until "
->         ++ "the end of the battle.  Militia are considered Heroes."
+>     cardGlossary =
+>         ["Mythlurian: If there are no Hero cards in the battle, "
+>          ++ "there is no effect.  Destroyed Hero cards remain until "
+>          ++ "the end of the battle.  Militia are considered Heroes."]
 >     }
 
-> monsterDetails Skaladak = CardDetails {
+> monsterDetails Skaladak = initCardDetails {
 >     cardName = "Skaladak",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDragon,
 >     cardIcon = CardIconMonster,
 >     cardCount = 3,
 >     cardClasses = [ClassDragon,ClassWhite],
->     cardGold = 3,
->     cardLight = 0,
->     cardVictoryPoints = 3,
->     cardStats = MonsterStats {
->         monsterHealth = 7,
->         monsterXP = 2
->         },
+>     cardGold = Just 3,
+>     cardVictoryPoints = Just 3,
+>     cardHealth = Just 7,
+>     cardXP = Just 2,
 >     cardText = ["BATTLE: Destroy one Weapon."],
->     cardClarification =
->         "Skaladak: If there are no Weapon cards in the battle, "
->         ++ "there is no effect.  Destroyed Weapons remain until "
->         ++ "the end of the battle."
+>     cardGlossary =
+>         ["Skaladak: If there are no Weapon cards in the battle, "
+>          ++ "there is no effect.  Destroyed Weapons remain until "
+>          ++ "the end of the battle."]
 >     }
 
-> monsterDetails TyxrTheOld = CardDetails {
+> monsterDetails TyxrTheOld = initCardDetails {
 >     cardName = "Tyxr the Old",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDragon,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassDragon,ClassRed],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 6,
->     cardStats = MonsterStats {
->         monsterHealth = 10,
->         monsterXP = 3
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 6,
+>     cardHealth = Just 10,
+>     cardXP = Just 3,
 >     cardText = ["BREACH: Each player must discard two cards.",
 >                 "BATTLE: Destroy one Hero.",
 >                 "* MAGIC ATTACK +2"],
->     cardClarification =
->         "Tyxr the Old: If there are no Hero cards in the battle, "
->         ++ "there is no effect.  Destroyed Hero cards remain until "
->         ++ "the end of the battle.  Militia are Heroes.  When Tyxr "
->         ++ "reaches Rank 1 of the Dungeon Hall, all players must "
->         ++ "discard two cards each, including the active player.  "
->         ++ "This takes place before the active player refills his hand."
+>     cardGlossary =
+>         ["Tyxr the Old: If there are no Hero cards in the battle, "
+>          ++ "there is no effect.  Destroyed Hero cards remain until "
+>          ++ "the end of the battle.  Militia are Heroes.  When Tyxr "
+>          ++ "reaches Rank 1 of the Dungeon Hall, all players must "
+>          ++ "discard two cards each, including the active player.  "
+>          ++ "This takes place before the active player refills his hand."]
 >     }
 
-> monsterDetails UyrilUnending = CardDetails {
+> monsterDetails UyrilUnending = initCardDetails {
 >     cardName = "Uyril Unending",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterDragon,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassDragon,ClassBlue],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 5,
->     cardStats = MonsterStats {
->         monsterHealth = 9,
->         monsterXP = 2
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 5,
+>     cardHealth = Just 9,
+>     cardXP = Just 2,
 >     cardText = ["HALF-ATTACK without MAGIC ATTACK present",
 >                 "BATTLE: Destroy one Militia.",
 >                 "* MAGIC ATTACK +1"],
->     cardClarification =
->         "Uyril Unending: If you do not have at least +1 Magic Attack, "
->         ++ "the total Attack Value is halved, round down.  If there "
->         ++ "are no Militia cards in the battle, there is no effect.  "
->         ++ "Destroyed Militia remain until the end of the battle."
+>     cardGlossary =
+>         ["Uyril Unending: If you do not have at least +1 Magic Attack, "
+>          ++ "the total Attack Value is halved, round down.  If there "
+>          ++ "are no Militia cards in the battle, there is no effect.  "
+>          ++ "Destroyed Militia remain until the end of the battle."]
 >     }
 
-> monsterDetails BlinkDog = CardDetails {
+> monsterDetails BlinkDog = initCardDetails {
 >     cardName = "Blink Dog",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterEnchanted,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassEnchanted],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = MonsterStats {
->         monsterHealth = 3,
->         monsterXP = 1
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 2,
+>     cardHealth = Just 3,
+>     cardXP = Just 1,
 >     cardText = ["Light -1",
 >                 "Cannot be attacked if a Light Penalty persists."],
->     cardClarification =
->         "Blink Dog: If you have a Light Penalt of 1 or more, you "
->         ++ "cannot choose to attack the Blink Dog.  Therefore, without "
->         ++ "sufficient light, you may not choose to attack it merely to "
->         ++ "move it to the bottom of the Dungeon Deck.  Light Penalties "
->         ++ "are applied before the battle."
+>     cardGlossary =
+>         ["Blink Dog: If you have a Light Penalty of 1 or more, you "
+>          ++ "cannot choose to attack the Blink Dog.  Therefore, without "
+>          ++ "sufficient light, you may not choose to attack it merely to "
+>          ++ "move it to the bottom of the Dungeon Deck.  Light Penalties "
+>          ++ "are applied before the battle."]
 >     }
 
-> monsterDetails Griffon = CardDetails {
+> monsterDetails Griffon = initCardDetails {
 >     cardName = "Griffon",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterEnchanted,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassEnchanted],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 4,
->     cardStats = MonsterStats {
->         monsterHealth = 7,
->         monsterXP = 2
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 4,
+>     cardHealth = Just 7,
+>     cardXP = Just 2,
 >     cardText = ["* MAGIC ATTACK +1"],
->     cardClarification = "Griffon: The Magic Attack bonus is a Trophy Effect."
+>     cardGlossary = ["Griffon: The Magic Attack bonus is a Trophy Effect."]
 >     }
 
-> monsterDetails Nixie = CardDetails {
+> monsterDetails Nixie = initCardDetails {
 >     cardName = "Nixie",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterEnchanted,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassEnchanted],
->     cardGold = 4,
->     cardLight = 0,
->     cardVictoryPoints = 1,
->     cardStats = MonsterStats {
->         monsterHealth = 5,
->         monsterXP = 1
->         },
->     cardText = [],
->     cardClarification = "Nixie: This Monster has no special Effects."
+>     cardGold = Just 4,
+>     cardVictoryPoints = Just 1,
+>     cardHealth = Just 5,
+>     cardXP = Just 1,
+>     cardGlossary = ["Nixie: This Monster has no special Effects."]
 >     }
 
-> monsterDetails Pegasus = CardDetails {
+> monsterDetails Pegasus = initCardDetails {
 >     cardName = "Pegasus",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterEnchanted,
 >     cardIcon = CardIconMonster,
 >     cardCount = 3,
 >     cardClasses = [ClassEnchanted],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = MonsterStats {
->         monsterHealth = 6,
->         monsterXP = 1
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 2,
+>     cardHealth = Just 6,
+>     cardXP = Just 1,
 >     cardText = ["* ATTACK +1"],
->     cardClarification = "Pegasus: The Attack bonus is a Trophy Effect."
+>     cardGlossary = ["Pegasus: The Attack bonus is a Trophy Effect."]
 >     }
 
-> monsterDetails Sphinx = CardDetails {
+> monsterDetails Sphinx = initCardDetails {
 >     cardName = "Sphinx",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterEnchanted,
 >     cardIcon = CardIconMonster,
 >     cardCount = 1,
 >     cardClasses = [ClassEnchanted],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 7,
->     cardStats = MonsterStats {
->         monsterHealth = 8,
->         monsterXP = 3
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 7,
+>     cardHealth = Just 8,
+>     cardXP = Just 3,
 >     cardText = ["Magic Attack Only",
 >                 "Spoils (Reveal six cards from your deck and destroy "
 >                 ++ "any of these cards you choose.  Discard the rest.)",
 >                 "* MAGIC ATTACK +2"],
->     cardClarification =
->         "Sphinx: Only Magic Attack bonuses count against the Sphinx.  "
->         ++ "The six cards revealed from your deck do not affect or "
->         ++ "replace your hand, and are drawn before any Breach or "
->         ++ "Trap Effects are resolved.  This is a Spoils effect."
+>     cardGlossary =
+>         ["Sphinx: Only Magic Attack bonuses count against the Sphinx.  "
+>          ++ "The six cards revealed from your deck do not affect or "
+>          ++ "replace your hand, and are drawn before any Breach or "
+>          ++ "Trap Effects are resolved.  This is a Spoils effect."]
 >     }
 
-> monsterDetails BloodskullOrc = CardDetails {
+> monsterDetails BloodskullOrc = initCardDetails {
 >     cardName = "Bloodskull Orc",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterHumanoid,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassHumanoid],
->     cardGold = 3,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = MonsterStats {
->         monsterHealth = 5,
->         monsterXP = 1
->         },
->     cardText = [],
->     cardClarification =
->         "Bloodskull Orc: This monster has no special Effects."
+>     cardGold = Just 3,
+>     cardHealth = Just 5,
+>     cardXP = Just 1,
+>     cardGlossary =
+>         ["Bloodskull Orc: This monster has no special Effects."]
 >     }
 
-> monsterDetails DeadboneTroll = CardDetails {
+> monsterDetails DeadboneTroll = initCardDetails {
 >     cardName = "Deadbone Troll",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterHumanoid,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassHumanoid],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 5,
->     cardStats = MonsterStats {
->         monsterHealth = 7,
->         monsterXP = 2
->         },
->     cardText = [],
->     cardClarification =
->         "Deadbone Troll: Disease cards gained in battle go directly "
->         ++ "to your discard pile."
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 5,
+>     cardHealth = Just 7,
+>     cardXP = Just 2,
+>     cardGlossary =
+>         ["Deadbone Troll: Disease cards gained in battle go directly "
+>          ++ "to your discard pile."]
 >     }
 
-> monsterDetails FirebrandCyclops = CardDetails {
+> monsterDetails FirebrandCyclops = initCardDetails {
 >     cardName = "Firebrand Cyclops",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterHumanoid,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassHumanoid],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 4,
->     cardStats = MonsterStats {
->         monsterHealth = 6,
->         monsterXP = 2
->         },
->     cardText = [],
->     cardClarification =
->         "Firebrand Cyclops: This Monster has no special Effects."
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 4,
+>     cardHealth = Just 6,
+>     cardXP = Just 2,
+>     cardGlossary =
+>         ["Firebrand Cyclops: This Monster has no special Effects."]
 >     }
 
-> monsterDetails GrayskinLizard = CardDetails {
+> monsterDetails GrayskinLizard = initCardDetails {
 >     cardName = "Grayskin Lizard",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterHumanoid,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassHumanoid],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 3,
->     cardStats = MonsterStats {
->         monsterHealth = 6,
->         monsterXP = 1
->         },
->     cardText = [],
->     cardClarification =
->         "Grayskin Lizard: This Battle Effect makes the vulnerable "
->         ++ "to Weapons.  They lack thick skin."
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 3,
+>     cardHealth = Just 6,
+>     cardXP = Just 1,
+>     cardGlossary =
+>         ["Grayskin Lizard: This Battle Effect makes the vulnerable "
+>          ++ "to Weapons.  They lack thick skin."]
 >     }
 
-> monsterDetails GriknackGoblin = CardDetails {
+> monsterDetails GriknackGoblin = initCardDetails {
 >     cardName = "Griknack Goblin",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterHumanoid,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassHumanoid],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 1,
->     cardStats = MonsterStats {
->         monsterHealth = 4,
->         monsterXP = 1
->         },
->     cardText = [],
->     cardClarification =
->         "Griknack Goblin: This Monster has no special Effects."
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 1,
+>     cardHealth = Just 4,
+>     cardXP = Just 1,
+>     cardGlossary =
+>         ["Griknack Goblin: This Monster has no special Effects."]
 >     }
 
-> monsterDetails BlackSlime = CardDetails {
+> monsterDetails BlackSlime = initCardDetails {
 >     cardName = "Black Slime",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterOoze,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassOoze],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = MonsterStats {
->         monsterHealth = 5,
->         monsterXP = 1
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 2,
+>     cardHealth = Just 5,
+>     cardXP = Just 1,
 >     cardText = ["BATTLE: Destroy one Militia."],
->     cardClarification =
->         "Black Slime: If there are no Militia cards in the battle, "
->         ++ "there is no effect.  Destroyed Militia remain until the "
->         ++ "end of the battle."
+>     cardGlossary =
+>         ["Black Slime: If there are no Militia cards in the battle, "
+>          ++ "there is no effect.  Destroyed Militia remain until the "
+>          ++ "end of the battle."]
 >     }
 
-> monsterDetails GrayOoze = CardDetails {
+> monsterDetails GrayOoze = initCardDetails {
 >     cardName = "Gray Ooze",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterOoze,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassOoze],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 3,
->     cardStats = MonsterStats {
->         monsterHealth = 6,
->         monsterXP = 2
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 3,
+>     cardHealth = Just 6,
+>     cardXP = Just 2,
 >     cardText = ["BATTLE: Destroy one Hero unless at least one Weapon "
 >                 ++ "is attached to the Party.",
 >                 "Spoils (Food)"],
->     cardClarification =
->         "Gray Oooze: If at least one Hero has a Weapon equipped (or "
->         ++ "there are not Heroes), there is no effect.  Destroyed "
->         ++ "Hero cards remain until the end of the battle.  Militia "
->         ++ "are Heroes, and can be destroyed.  After a victorious "
->         ++ "battle, you may purchase one Food card from the Village, "
->         ++ "using the gold in your hand."
+>     cardGlossary =
+>         ["Gray Oooze: If at least one Hero has a Weapon equipped (or "
+>          ++ "there are not Heroes), there is no effect.  Destroyed "
+>          ++ "Hero cards remain until the end of the battle.  Militia "
+>          ++ "are Heroes, and can be destroyed.  After a victorious "
+>          ++ "battle, you may purchase one Food card from the Village, "
+>          ++ "using the gold in your hand."]
 >     }
 
-> monsterDetails GreenBlob = CardDetails {
+> monsterDetails GreenBlob = initCardDetails {
 >     cardName = "Green Blob",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterOoze,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassOoze],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = MonsterStats {
->         monsterHealth = 5,
->         monsterXP = 1
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 2,
+>     cardHealth = Just 5,
+>     cardXP = Just 1,
 >     cardText = ["BATTLE: Destroy one Food."],
->     cardClarification =
->         "Green Blob: If there are no Food cards in the battle, "
->         ++ "there is no effect."
+>     cardGlossary =
+>         ["Green Blob: If there are no Food cards in the battle, "
+>          ++ "there is no effect."]
 >     }
 
-> monsterDetails NoxiousSlag = CardDetails {
+> monsterDetails NoxiousSlag = initCardDetails {
 >     cardName = "Noxious Slag",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterOoze,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassOoze],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 6,
->     cardStats = MonsterStats {
->         monsterHealth = 7,
->         monsterXP = 3
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 6,
+>     cardHealth = Just 7,
+>     cardXP = Just 3,
 >     cardText = ["HALF-ATTACK from MAGIC ATTACK","Immune to Edged Weapons"],
->     cardClarification =
->         "Noxious Slag: Edged Weapons do not add to your total "
->         ++ "Attack Value against the Noxious Slag.  After "
->         ++ "calculating your total Magic Attack Value, cut the "
->         ++ "total in half (round down)."
+>     cardGlossary =
+>         ["Noxious Slag: Edged Weapons do not add to your total "
+>          ++ "Attack Value against the Noxious Slag.  After "
+>          ++ "calculating your total Magic Attack Value, cut the "
+>          ++ "total in half (round down)."]
 >     }
 
-> monsterDetails RedJelly = CardDetails {
+> monsterDetails RedJelly = initCardDetails {
 >     cardName = "Red Jelly",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterOoze,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassOoze],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = MonsterStats {
->         monsterHealth = 6,
->         monsterXP = 2
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 2,
+>     cardHealth = Just 6,
+>     cardXP = Just 2,
 >     cardText = ["BATTLE: Destroy one Weapon."],
->     cardClarification =
->         "Red Jelly: If there are no Weapon cards in the battle, "
->         ++ "there is no effect.  The Light bonus is a Trophy Effect.  "
->         ++ "It only applies when the defeated Red Jelly is revealed "
->         ++ "in your hand.  It is not a Battle Effect."
+>     cardGlossary =
+>         ["Red Jelly: If there are no Weapon cards in the battle, "
+>          ++ "there is no effect.  The Light bonus is a Trophy Effect.  "
+>          ++ "It only applies when the defeated Red Jelly is revealed "
+>          ++ "in your hand.  It is not a Battle Effect."]
 >     }
 
-> monsterDetails Famine = CardDetails {
+> monsterDetails Famine = initCardDetails {
 >     cardName = "Famine",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadDoom,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassUndead,ClassDoom],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = MonsterStats {
->         monsterHealth = 4,
->         monsterXP = 1
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 2,
+>     cardHealth = Just 4,
+>     cardXP = Just 1,
 >     cardText = ["BATTLE: Gain one Disease."],
->     cardClarification =
->         "Famine: Disease cards gained in battle go directly to "
->         ++ "your discard pile."
+>     cardGlossary =
+>         ["Famine: Disease cards gained in battle go directly to "
+>          ++ "your discard pile."]
 >     }
 
-> monsterDetails Harbinger = CardDetails {
+> monsterDetails Harbinger = initCardDetails {
 >     cardName = "Harbinger",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadDoom,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassUndead,ClassDoom],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 1,
->     cardStats = MonsterStats {
->         monsterHealth = 3,
->         monsterXP = 1
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 1,
+>     cardHealth = Just 3,
+>     cardXP = Just 1,
 >     cardText = ["BATTLE: Destroy one Spell."],
->     cardClarification =
->         "Harbinger: If there are no Spell cards in the battle, "
->         ++ "there is no effect.  Destroyed Spell cards remain "
->         ++ "until the end of the battle."
+>     cardGlossary =
+>         ["Harbinger: If there are no Spell cards in the battle, "
+>          ++ "there is no effect.  Destroyed Spell cards remain "
+>          ++ "until the end of the battle."]
 >     }
 
-> monsterDetails Kingdom = CardDetails {
+> monsterDetails Kingdom = initCardDetails {
 >     cardName = "Kingdom",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadDoom,
 >     cardIcon = CardIconMonster,
 >     cardCount = 3,
 >     cardClasses = [ClassUndead,ClassDoom],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 3,
->     cardStats = MonsterStats {
->         monsterHealth = 5,
->         monsterXP = 1
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 3,
+>     cardHealth = Just 5,
+>     cardXP = Just 1,
 >     cardText = ["BATTLE: Gain one Disease."],
->     cardClarification =
->         "Kingdom: Disease cards gained in battle go directly to "
->         ++ "your dicard pile."
+>     cardGlossary =
+>         ["Kingdom: Disease cards gained in battle go directly to "
+>          ++ "your dicard pile."]
 >     }
 
-> monsterDetails LordOfDeath = CardDetails {
+> monsterDetails LordOfDeath = initCardDetails {
 >     cardName = "Lord of Death",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadDoom,
 >     cardIcon = CardIconMonster,
 >     cardCount = 1,
 >     cardClasses = [ClassUndead,ClassDoom],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 7,
->     cardStats = MonsterStats {
->         monsterHealth = 9,
->         monsterXP = 3
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 7,
+>     cardHealth = Just 9,
+>     cardXP = Just 3,
 >     cardText = ["BATTLE: Gain two Diseases."],
->     cardClarification =
->         "Lord of Death: Disease cards gained in battle go directly "
->         ++ "to your discard pile."
+>     cardGlossary =
+>         ["Lord of Death: Disease cards gained in battle go directly "
+>          ++ "to your discard pile."]
 >     }
 
-> monsterDetails Suffering = CardDetails {
+> monsterDetails Suffering = initCardDetails {
 >     cardName = "Suffering",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadDoom,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassUndead,ClassDoom],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 4,
->     cardStats = MonsterStats {
->         monsterHealth = 6,
->         monsterXP = 2
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 4,
+>     cardHealth = Just 6,
+>     cardXP = Just 2,
 >     cardText = ["BATTLE: All Heroes suffer Strength -2.",
 >                 "BATTLE: Gain one Disease."],
->     cardClarification =
->         "Suffering: Reduced Strength can cause Weapons to become "
->         ++ "unequipped.  Disease cards gained in battle go directly "
->         ++ "to your discard pile."
+>     cardGlossary =
+>         ["Suffering: Reduced Strength can cause Weapons to become "
+>          ++ "unequipped.  Disease cards gained in battle go directly "
+>          ++ "to your discard pile."]
 >     }
 
-> monsterDetails Ghost = CardDetails {
+> monsterDetails Ghost = initCardDetails {
 >     cardName = "Ghost",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadSpirit,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassUndead,ClassSpirit],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 4,
->     cardStats = MonsterStats {
->         monsterHealth = 6,
->         monsterXP = 1
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 4,
+>     cardHealth = Just 6,
+>     cardXP = Just 1,
 >     cardText = ["HALF-ATTACK without MAGIC ATTACK present",
 >                 "BATTLE: All Heroes suffer Strength -2."],
->     cardClarification =
->         "Ghost: If you do not have at least +1 Magic Attack, "
->         ++ "the total Attack Value is halved, rounded down.  "
->         ++ "Reduced Strength can cause Weapons to become unequipped."
+>     cardGlossary =
+>         ["Ghost: If you do not have at least +1 Magic Attack, "
+>          ++ "the total Attack Value is halved, rounded down.  "
+>          ++ "Reduced Strength can cause Weapons to become unequipped."]
 >     }
 
-> monsterDetails Haunt = CardDetails {
+> monsterDetails Haunt = initCardDetails {
 >     cardName = "Haunt",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadSpirit,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassUndead,ClassSpirit],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 2,
->     cardStats = MonsterStats {
->         monsterHealth = 4,
->         monsterXP = 1
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 2,
+>     cardHealth = Just 4,
+>     cardXP = Just 1,
 >     cardText = ["BATTLE: One Hero cannot attack."],
->     cardClarification =
->         "Haunt: Choose one Hero (and any equipped Weapon).  "
->         ++ "All Light, Attack, and Magic Attack of the Hero "
->         ++ "(and Weapon) are reduced to 0.  Militia are Heroes."
+>     cardGlossary =
+>         ["Haunt: Choose one Hero (and any equipped Weapon).  "
+>          ++ "All Light, Attack, and Magic Attack of the Hero "
+>          ++ "(and Weapon) are reduced to 0.  Militia are Heroes."]
 >     }
 
-> monsterDetails Revenant = CardDetails {
+> monsterDetails Revenant = initCardDetails {
 >     cardName = "Revenant",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadSpirit,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassUndead,ClassSpirit],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 5,
->     cardStats = MonsterStats {
->         monsterHealth = 7,
->         monsterXP = 2
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 5,
+>     cardHealth = Just 7,
+>     cardXP = Just 2,
 >     cardText = ["Magic Attack Required",
 >                 "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 >                 ++ "with Strength 0 or less are Destroyed."],
->     cardClarification =
->         "Revenant: You must have at least +1 Magic Attack in order "
->         ++ "to kill the Revenant.  Heroes destroyed by the Revenant "
->         ++ "die at the end of the battle.  Reduce Strength can cause "
->         ++ "Weapons to become unequipped."
+>     cardGlossary =
+>         ["Revenant: You must have at least +1 Magic Attack in order "
+>          ++ "to kill the Revenant.  Heroes destroyed by the Revenant "
+>          ++ "die at the end of the battle.  Reduce Strength can cause "
+>          ++ "Weapons to become unequipped."]
 >     }
 
-> monsterDetails Spectre = CardDetails {
+> monsterDetails Spectre = initCardDetails {
 >     cardName = "Spectre",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadSpirit,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassUndead,ClassSpirit],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 3,
->     cardStats = MonsterStats {
->         monsterHealth = 5,
->         monsterXP = 1
->         },
+>     cardGold = Just 1,
+>     cardVictoryPoints = Just 3,
+>     cardHealth = Just 5,
+>     cardXP = Just 1,
 >     cardText = ["BATTLE: Destroy one Militia."],
->     cardClarification =
->         "Spectre: If there are no Militia cards in the battle, there "
->         ++ "is no effect.  Destroyed Militia remain until the end of "
->         ++ "the battle."
+>     cardGlossary =
+>         ["Spectre: If there are no Militia cards in the battle, there "
+>          ++ "is no effect.  Destroyed Militia remain until the end of "
+>          ++ "the battle."]
 >     }
 
-> monsterDetails Wraith = CardDetails {
+> monsterDetails Wraith = initCardDetails {
 >     cardName = "Wraith",
 >     cardSource = ThunderstoneBase,
 >     cardType = MonsterUndeadSpirit,
 >     cardIcon = CardIconMonster,
 >     cardCount = 2,
 >     cardClasses = [ClassUndead,ClassSpirit],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 4,
->     cardStats = MonsterStats {
->         monsterHealth = 6,
->         monsterXP = 2
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 4,
+>     cardHealth = Just 6,
+>     cardXP = Just 2,
 >     cardText = ["BATTLE: Destroy one Militia."],
->     cardClarification =
->         "Wraith: If there are no Militia cards in the battle, "
->         ++ "there is no effect.  Destroyed Militia remain until "
->         ++ "the end of the battle."
+>     cardGlossary =
+>         ["Wraith: If there are no Militia cards in the battle, "
+>          ++ "there is no effect.  Destroyed Militia remain until "
+>          ++ "the end of the battle."]
 >     }
 
 > monsterDetails AirWrath =
@@ -2915,477 +2519,370 @@ not collect the Thunderstone.
 > monsterDetails Mammoth =
 >     undefinedCardDetails MonsterEvilDruid Promotional
 
-> data VillageStats = VillageStats {
->     villageWeight :: Int,
->     villagePrice :: Int
->     }
 
-> villageDetails :: VillageCard -> CardDetails VillageCard VillageStats
-> villageDetails Dagger = CardDetails {
+
+
+
+
+> villageDetails :: VillageCard -> CardDetails VillageCard
+> villageDetails Dagger = initCardDetails {
 >     cardName = "Dagger",
 >     cardSource = ThunderstoneBase,
 >     cardType = Dagger,
 >     cardIcon = CardIconBasic,
 >     cardCount = 15,
 >     cardClasses = [ClassWeapon,ClassEdged],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 2,
->         villagePrice = 3
->         },
+>     cardGold = Just 1,
+>     cardWeight = Just 2,
+>     cardPrice = Just 3,
 >     cardText = ["ATTACK +1"],
->     cardClarification =
->         "Dagger: This is an Edged Weapon.  It is a Basic card "
->         ++ "included in every game."
+>     cardGlossary =
+>         ["Dagger: This is an Edged Weapon.  It is a Basic card "
+>          ++ "included in every game."]
 >     }
 
-> villageDetails IronRations = CardDetails {
+> villageDetails IronRations = initCardDetails {
 >     cardName = "Iron Rations",
 >     cardSource = ThunderstoneBase,
 >     cardType = IronRations,
 >     cardIcon = CardIconBasic,
 >     cardCount = 15,
 >     cardClasses = [ClassItem,ClassFood],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 2
->         },
+>     cardGold = Just 2,
+>     cardPrice = Just 2,
 >     cardText = ["DUNGEON: One Hero gains Strength +2."],
->     cardClarification =
->         "Iron Rations: You can use multiple Iron Rations to "
->         ++ "increase the same Hero's Strength.  If a Dungeon Effect "
->         ++ "destroys Iron Rations, you cannot use it to gain the "
->         ++ "Strength bonus.  It is a Basic card included in every game."
+>     cardGlossary =
+>         ["Iron Rations: You can use multiple Iron Rations to "
+>          ++ "increase the same Hero's Strength.  If a Dungeon Effect "
+>          ++ "destroys Iron Rations, you cannot use it to gain the "
+>          ++ "Strength bonus.  It is a Basic card included in every game."]
 >     }
 
-> villageDetails Torch = CardDetails {
+> villageDetails Torch = initCardDetails {
 >     cardName = "Torch",
 >     cardSource = ThunderstoneBase,
 >     cardType = Torch,
 >     cardIcon = CardIconBasic,
 >     cardCount = 15,
 >     cardClasses = [ClassItem,ClassLight],
->     cardGold = 2,
->     cardLight = 1,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 3
->         },
->     cardText = [],
->     cardClarification =
->         "Torch: This Item always provides Light +1, even when no "
->         ++ "Hero is present.  It is a Basic card included in every game."
+>     cardGold = Just 2,
+>     cardLight = Just 1,
+>     cardPrice = Just 3,
+>     cardGlossary =
+>         ["Torch: This Item always provides Light +1, even when no "
+>          ++ "Hero is present.  It is a Basic card included in every game."]
 >     }
 
-> villageDetails ArcaneEnergies = CardDetails {
+> villageDetails ArcaneEnergies = initCardDetails {
 >     cardName = "Arcane Energies",
 >     cardSource = ThunderstoneBase,
 >     cardType = ArcaneEnergies,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassSpell],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 2
->         },
+>     cardPrice = Just 2,
 >     cardText = ["DUNGEON: All ATTACKS from Heroes with Weapons "
 >                 ++ "equipped become MAGIC ATTACKS.  Draw one card."],
->     cardClarification =
->         "Arcane Energies: You must draw a card when you use this "
->         ++ "dungeon ability."
+>     cardGlossary =
+>         ["Arcane Energies: You must draw a card when you use this "
+>          ++ "dungeon ability."]
 >     }
 
-> villageDetails Banish = CardDetails {
+> villageDetails Banish = initCardDetails {
 >     cardName = "Banish",
 >     cardSource = ThunderstoneBase,
 >     cardType = Banish,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassSpell],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 4
->         },
+>     cardPrice = Just 4,
 >     cardText = ["DUNGEON: Return one Monster to the bottom of the "
 >                 ++ "deck and refill the hall, or rearrange the hall.  "
 >                 ++ "Destroy one card from your hand.  Draw one card."],
->     cardClarification =
->         "Banish: You must declare you are entering the Dungeon "
->         ++ "to play Banish, but do not choose which Monster to "
->         ++ "attack until after the Hall is refilled.  If Banish "
->         ++ "results in a Breach (or Trap) Effect, resolve it "
->         ++ "immediately.  You may rearrange the hall so as to "
->         ++ "place the Thunderstone in Rank 1 of the Dungeon Hall, "
->         ++ "ending the game immediately without collecting the "
->         ++ "Thunderstone.  Multiple Banish cards can be used "
->         ++ "before choosing which Monster to attack, but each must "
->         ++ "be completely resolved before the next can be played.  "
->         ++ "You must draw a card when using this Dungeon Ability."
+>     cardGlossary =
+>         ["Banish: You must declare you are entering the Dungeon "
+>          ++ "to play Banish, but do not choose which Monster to "
+>          ++ "attack until after the Hall is refilled.  If Banish "
+>          ++ "results in a Breach (or Trap) Effect, resolve it "
+>          ++ "immediately.  You may rearrange the hall so as to "
+>          ++ "place the Thunderstone in Rank 1 of the Dungeon Hall, "
+>          ++ "ending the game immediately without collecting the "
+>          ++ "Thunderstone.  Multiple Banish cards can be used "
+>          ++ "before choosing which Monster to attack, but each must "
+>          ++ "be completely resolved before the next can be played.  "
+>          ++ "You must draw a card when using this Dungeon Ability."]
 >     }
 
-> villageDetails Barkeep = CardDetails {
+> villageDetails Barkeep = initCardDetails {
 >     cardName = "Barkeep",
 >     cardSource = ThunderstoneBase,
 >     cardType = Barkeep,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassVillager],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 2
->         },
+>     cardGold = Just 1,
+>     cardPrice = Just 2,
 >     cardText = ["VILLAGE: You may purchase one additional card this turn.",
 >                 "VILLAGE: Destroy this card to gain 2 Gold."],
->     cardClarification =
->         "Barkeep: Each additional Barkeep allows you to purchase one "
->         ++ "additional card.  You do not gain the gold value of the "
->         ++ "Barkeep when it is destroyed."
+>     cardGlossary =
+>         ["Barkeep: Each additional Barkeep allows you to purchase one "
+>          ++ "additional card.  You do not gain the gold value of the "
+>          ++ "Barkeep when it is destroyed."]
 >     }
 
-> villageDetails BattleFury = CardDetails {
+> villageDetails BattleFury = initCardDetails {
 >     cardName = "BattleFury",
 >     cardSource = ThunderstoneBase,
 >     cardType = BattleFury,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassSpell],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 3
->         },
+>     cardPrice = Just 3,
 >     cardText = ["DUNGEON: All Heroes gain ATTACK +1."],
->     cardClarification =
->         "Battle Fury: Militia are Heroes, and gain the Attack bonus "
->         ++ "from this spell."
+>     cardGlossary =
+>         ["Battle Fury: Militia are Heroes, and gain the Attack bonus "
+>          ++ "from this spell."]
 >     }
 
-> villageDetails Feast = CardDetails {
+> villageDetails Feast = initCardDetails {
 >     cardName = "Feast",
 >     cardSource = ThunderstoneBase,
 >     cardType = Feast,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassItem,ClassFood],
->     cardGold = 3,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 5
->         },
+>     cardGold = Just 3,
+>     cardPrice = Just 5,
 >     cardText = ["DUNGEON: All Heroes gain Strength +1 and ATTACK +1."],
->     cardClarification =
->         "Feast: Militia cards are Heroes, so they gain the Attack and "
->         ++ "Strength bonuses from this card."
+>     cardGlossary =
+>         ["Feast: Militia cards are Heroes, so they gain the Attack and "
+>          ++ "Strength bonuses from this card."]
 >     }
 
-> villageDetails Fireball = CardDetails {
+> villageDetails Fireball = initCardDetails {
 >     cardName = "Fireball",
 >     cardSource = ThunderstoneBase,
 >     cardType = Fireball,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassSpell],
->     cardGold = 0,
->     cardLight = 1,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 9
->         },
+>     cardLight = Just 1,
+>     cardPrice = Just 9,
 >     cardText = ["MAGIC ATTACK +3"],
->     cardClarification =
->         "Fireball: You do not need Heroes present to use this Spell."
+>     cardGlossary =
+>         ["Fireball: You do not need Heroes present to use this Spell."]
 >     }
 
-> villageDetails FlamingSword = CardDetails {
+> villageDetails FlamingSword = initCardDetails {
 >     cardName = "Flaming Sword",
 >     cardSource = ThunderstoneBase,
 >     cardType = FlamingSword,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassWeapon,ClassEdged],
->     cardGold = 2,
->     cardLight = 1,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 5,
->         villagePrice = 5
->         },
+>     cardGold = Just 2,
+>     cardLight = Just 1,
+>     cardWeight = Just 5,
+>     cardPrice = Just 5,
 >     cardText = ["MAGIC ATTACK +3"],
->     cardClarification =
->         "Flaming Sword: You only gain the Light bonus if the "
->         ++ "Flaming Sword is equipped to a Hero."
+>     cardGlossary =
+>         ["Flaming Sword: You only gain the Light bonus if the "
+>          ++ "Flaming Sword is equipped to a Hero."]
 >     }
 
-> villageDetails Goodberries = CardDetails {
+> villageDetails Goodberries = initCardDetails {
 >     cardName = "Goodberries",
 >     cardSource = ThunderstoneBase,
 >     cardType = Goodberries,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassItem,ClassFood,ClassMagic],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 4
->         },
+>     cardGold = Just 2,
+>     cardVictoryPoints = Just 1,
+>     cardPrice = Just 4,
 >     cardText = ["DUNGEON: One Hero gains Strength +3 and ATTACK "
 >                 ++ "becomes MAGIC ATTACK for that Hero."],
->     cardClarification =
->         "Goodberries: After the final Attack bonus of the Hero is "
->         ++ "calculated, its entire bonus becomes Magic Attack.  "
->         ++ "Militia are Heroes, and may benefit from this card."
+>     cardGlossary =
+>         ["Goodberries: After the final Attack bonus of the Hero is "
+>          ++ "calculated, its entire bonus becomes Magic Attack.  "
+>          ++ "Militia are Heroes, and may benefit from this card."]
 >     }
 
-> villageDetails Hatchet = CardDetails {
+> villageDetails Hatchet = initCardDetails {
 >     cardName = "Hatchet",
 >     cardSource = ThunderstoneBase,
 >     cardType = Hatchet,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassWeapon,ClassEdged],
->     cardGold = 1,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 3,
->         villagePrice = 4
->         },
+>     cardGold = Just 1,
+>     cardWeight = Just 3,
+>     cardPrice = Just 4,
 >     cardText = ["ATTACK +3"],
->     cardClarification = "Hatchet: This is an Edged Weapon."
+>     cardGlossary = ["Hatchet: This is an Edged Weapon."]
 >     }
 
-> villageDetails Lantern = CardDetails {
+> villageDetails Lantern = initCardDetails {
 >     cardName = "Lantern",
 >     cardSource = ThunderstoneBase,
 >     cardType = Lantern,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassItem,ClassLight],
->     cardGold = 2,
->     cardLight = 2,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 4
->         },
->     cardText = [],
->     cardClarification =
->         "Lantern: This Item always provides Light +2, even without "
->         ++ "a Hero present."
+>     cardGold = Just 2,
+>     cardLight = Just 2,
+>     cardPrice = Just 4,
+>     cardGlossary =
+>         ["Lantern: This Item always provides Light +2, even without "
+>          ++ "a Hero present."]
 >     }
 
-> villageDetails LightstoneGem = CardDetails {
+> villageDetails LightstoneGem = initCardDetails {
 >     cardName = "Lightstone Gem",
 >     cardSource = ThunderstoneBase,
 >     cardType = LightstoneGem,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassItem,ClassLight,ClassMagic],
->     cardGold = 3,
->     cardLight = 3,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 6
->         },
->     cardText = [],
->     cardClarification =
->         "Lightstone Gem: This Item always provides Light +3, even "
->         ++ "without a Hero present."
+>     cardGold = Just 3,
+>     cardLight = Just 3,
+>     cardPrice = Just 6,
+>     cardGlossary =
+>         ["Lightstone Gem: This Item always provides Light +3, even "
+>          ++ "without a Hero present."]
 >     }
 
-> villageDetails MagicalAura = CardDetails {
+> villageDetails MagicalAura = initCardDetails {
 >     cardName = "Magical Aura",
 >     cardSource = ThunderstoneBase,
 >     cardType = MagicalAura,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassSpell],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 4
->         },
+>     cardGold = Just 2,
+>     cardPrice = Just 4,
 >     cardText = ["DUNGEON: All Weapons become Weight 0.  Draw one card."],
->     cardClarification =
->         "Magical Aura: When played with a Polearm, the Hero must still "
->         ++ "have a Strength of 8 or more to gain the +6 bonus.  You "
->         ++ "must draw a card when using this Dungeon Effect."
+>     cardGlossary =
+>         ["Magical Aura: When played with a Polearm, the Hero must still "
+>          ++ "have a Strength of 8 or more to gain the +6 bonus.  You "
+>          ++ "must draw a card when using this Dungeon Effect."]
 >     }
 
-> villageDetails Pawnbroker = CardDetails {
+> villageDetails Pawnbroker = initCardDetails {
 >     cardName = "Pawnbroker",
 >     cardSource = ThunderstoneBase,
 >     cardType = Pawnbroker,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassVillager],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 3
->         },
+>     cardPrice = Just 3,
 >     cardText = ["VILLAGE: Destroy any card with a gold value to gain "
 >                 ++ "its gold value plus 3 Gold.",
 >                 "VILLAGE: Destroy this card to gain 2 Gold."],
->     cardClarification =
->         "Pawnbroker: You can destroy both the Pawnbroker and another "
->         ++ "card to produce X+5 gold in a single turn.  When you "
->         ++ "destroy a card with Pawnbroker, do not add its inherent "
->         ++ "gold value to your total gold that turn."
+>     cardGlossary =
+>         ["Pawnbroker: You can destroy both the Pawnbroker and another "
+>          ++ "card to produce X+5 gold in a single turn.  When you "
+>          ++ "destroy a card with Pawnbroker, do not add its inherent "
+>          ++ "gold value to your total gold that turn."]
 >     }
 
-> villageDetails Polearm = CardDetails {
+> villageDetails Polearm = initCardDetails {
 >     cardName = "Polearm",
 >     cardSource = ThunderstoneBase,
 >     cardType = Polearm,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassWeapon,ClassEdged],
->     cardGold = 3,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 2,
->         villagePrice = 7
->         },
+>     cardGold = Just 3,
+>     cardWeight = Just 2,
+>     cardPrice = Just 7,
 >     cardText = ["ATTACK +2, or ATTACK +6 when attached to a Hero "
 >                 ++ "with 8 or more Strength."],
->     cardClarification =
->         "Polearm: A Hero with a Strength of 2 can equip the Polearm "
->         ++ "for an Attack bonus of +2.  A Hero with a Strength of 8 "
->         ++ "or higher gains +6 instead."
+>     cardGlossary =
+>         ["Polearm: A Hero with a Strength of 2 can equip the Polearm "
+>          ++ "for an Attack bonus of +2.  A Hero with a Strength of 8 "
+>          ++ "or higher gains +6 instead."]
 >     }
 
-> villageDetails ShortSword = CardDetails {
+> villageDetails ShortSword = initCardDetails {
 >     cardName = "Short Sword",
 >     cardSource = ThunderstoneBase,
 >     cardType = ShortSword,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassWeapon,ClassEdged],
->     cardGold = 3,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 4,
->         villagePrice = 6
->         },
+>     cardGold = Just 3,
+>     cardWeight = Just 4,
+>     cardPrice = Just 6,
 >     cardText = ["ATTACK +4"],
->     cardClarification = "Short Sword: This is an Edged Weapon."
+>     cardGlossary = ["Short Sword: This is an Edged Weapon."]
 >     }
 
-> villageDetails Spear = CardDetails {
+> villageDetails Spear = initCardDetails {
 >     cardName = "Spear",
 >     cardSource = ThunderstoneBase,
 >     cardType = Spear,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassWeapon,ClassEdged],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 4,
->         villagePrice = 4
->         },
+>     cardGold = Just 2,
+>     cardWeight = Just 4,
+>     cardPrice = Just 4,
 >     cardText = ["ATTACK +2"],
->     cardClarification =
->         "Spear: If you destroy (throw) the Spear, the Attack bonus "
->         ++ "increases by an additional +3, for a total of +5.  "
->         ++ "However, the Spear is still considered equipped for "
->         ++ "the entire battle, even if you use the effect."
+>     cardGlossary =
+>         ["Spear: If you destroy (throw) the Spear, the Attack bonus "
+>          ++ "increases by an additional +3, for a total of +5.  "
+>          ++ "However, the Spear is still considered equipped for "
+>          ++ "the entire battle, even if you use the effect."]
 >     }
 
-> villageDetails TownGuard = CardDetails {
+> villageDetails TownGuard = initCardDetails {
 >     cardName = "Town Guard",
 >     cardSource = ThunderstoneBase,
 >     cardType = TownGuard,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassVillager],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 3
->         },
+>     cardPrice = Just 3,
 >     cardText = ["VILLAGE: Draw two cards.",
 >                 "VILLAGE: Destroy this card to draw three additional "
 >                 ++ "cards."],
->     cardClarification =
->         "Town Guard: Destroying this card allows you to draw a total "
->         ++ "of five extra cards."
+>     cardGlossary =
+>         ["Town Guard: Destroying this card allows you to draw a total "
+>          ++ "of five extra cards."]
 >     }
 
-> villageDetails Trainer = CardDetails {
+> villageDetails Trainer = initCardDetails {
 >     cardName = "Trainer",
 >     cardSource = ThunderstoneBase,
 >     cardType = Trainer,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassVillager],
->     cardGold = 0,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 0,
->         villagePrice = 4
->         },
+>     cardPrice = Just 4,
 >     cardText = ["VILLAGE: Destroy one Militia to gain 2 XP.",
 >                 "VILLAGE: Destroy this card to gain 2 Gold."],
->     cardClarification =
->         "Trainer: Each Trainer in your hand may only destroy one "
->         ++ "Militia each turn."
+>     cardGlossary =
+>         ["Trainer: Each Trainer in your hand may only destroy one "
+>          ++ "Militia each turn."]
 >     }
 
-> villageDetails Warhammer = CardDetails {
+> villageDetails Warhammer = initCardDetails {
 >     cardName = "Warhammer",
 >     cardSource = ThunderstoneBase,
 >     cardType = Warhammer,
 >     cardIcon = CardIconVillage,
 >     cardCount = 8,
 >     cardClasses = [ClassWeapon,ClassBlunt],
->     cardGold = 2,
->     cardLight = 0,
->     cardVictoryPoints = 0,
->     cardStats = VillageStats {
->         villageWeight = 5,
->         villagePrice = 4
->         },
+>     cardGold = Just 2,
+>     cardWeight = Just 5,
+>     cardPrice = Just 4,
 >     cardText = ["ATTACK +3",
 >                 "Clerics gain an additional ATTACK +3 against "
 >                 ++ "Doomknights and Undead."],
->     cardClarification =
->         "Warhammer: A Cleric attacking a Doomknight or Undead gains "
->         ++ "a total Attack bonus of +6."
+>     cardGlossary =
+>         ["Warhammer: A Cleric attacking a Doomknight or Undead gains "
+>          ++ "a total Attack bonus of +6."]
 >     }
 
 > villageDetails Ambrosia =
@@ -3481,20 +2978,22 @@ not collect the Thunderstone.
 > villageDetails Trader =
 >     undefinedCardDetails Trader Dragonspire
 
-> data DungeonFeatureStats = DungeonFeatureStats
 
-> dungeonFeatureDetails :: DungeonFeatureCard
->         -> CardDetails DungeonFeatureType DungeonFeatureStats
+
+
+
+> dungeonFeatureDetails :: DungeonFeatureCard -> CardDetails DungeonFeatureType
 > dungeonFeatureDetails = undefined
 
-> data GuardianStats = GuardianStats
 
-> guardianDetails :: GuardianCard
->         -> CardDetails DungeonFeatureType GuardianStats
+
+
+
+> guardianDetails :: GuardianCard -> CardDetails DungeonFeatureType
 > guardianDetails = undefined
 
 > cardsOfType :: (Bounded card, Enum card, Eq cardType) => 
->                (card -> CardDetails cardType cardStats) -> cardType
+>                (card -> CardDetails cardType) -> cardType
 >             -> [card]
 > cardsOfType details ofType = concatMap countOff cards
 >   where
@@ -3505,38 +3004,15 @@ not collect the Thunderstone.
 
 
 
+TEMPORARY CODE:
 
-
-
-Temporary code:
-
-> undefinedCardDetails :: cardType -> Source
->                         -> CardDetails cardType stats
-> undefinedCardDetails cardType source = CardDetails {
->     cardName = undefined,
+> undefinedHeroDetails cardType source level = initCardDetails {
 >     cardSource = source,
 >     cardType = cardType,
->     cardIcon = undefined,
->     cardCount = undefined,
->     cardClasses = undefined,
->     cardGold = undefined,
->     cardLight = undefined,
->     cardVictoryPoints = undefined,
->     cardStats = undefined,
->     cardText = undefined,
->     cardClarification = undefined
+>     cardIcon = CardIconHero level
 >     }
 
-> undefinedHeroDetails :: HeroType -> Source -> Int
->                         -> CardDetails HeroType HeroStats
-> undefinedHeroDetails cardType source level =
->     (undefinedCardDetails cardType source) {
->         cardStats = HeroStats {
->             heroStrength = undefined,
->             heroLevel = level,
->             heroPrice = undefined,
->             heroUpgrade = undefined,
->             heroAttack = undefined,
->             heroMagicAttack = undefined
->             }
->         }
+> undefinedCardDetails cardType source = initCardDetails {
+>     cardSource = source,
+>     cardType = cardType
+>     }
