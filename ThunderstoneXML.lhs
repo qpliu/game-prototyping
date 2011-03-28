@@ -1,4 +1,5 @@
 > import ThunderstoneCards
+> import ThunderstoneCardDetails
 
 > xmlQuote :: String -> String
 > xmlQuote = concatMap xmlQuoteChar
@@ -55,7 +56,7 @@
 >                        String -> (card -> CardDetails cardType) -> card
 >                     -> String
 > thunderstoneCardXML kind cardDetails card =
->     "<card id=\"" ++ show card ++ "\" type=\"" ++ kind ++ "\">"
+>     "<" ++ kind ++ " id=\"" ++ show card ++ "\">"
 >     ++ xmlString "name" (cardName details)
 >     ++ xmlItem "source" (cardSource details)
 >     ++ xmlItem "group" (cardType details)
@@ -73,48 +74,45 @@
 >     ++ xmlOption "levelup" (cardLevelUp details)
 >     ++ xmlList "text" (map xmlQuote (cardText details))
 >     ++ xmlList "glossary" (cardGlossary details)
->     ++ "</card>"
+>     ++ "</" ++ kind ++ ">"
 >   where
 >     details = cardDetails card
 
 > instance ThunderstoneXML ThunderstoneCard where
 >     thunderstoneXML card =
->         thunderstoneCardXML "Thunderstone" thunderstoneDetails card
+>         thunderstoneCardXML "thunderstone" thunderstoneDetails card
 
 > instance ThunderstoneXML GuardianCard where
->     thunderstoneXML card = undefined
+>     thunderstoneXML card =
+>         thunderstoneCardXML "guardian" guardianDetails card
 
 > instance ThunderstoneXML HeroCard where
->     thunderstoneXML card = thunderstoneCardXML "Hero" heroDetails card
+>     thunderstoneXML card = thunderstoneCardXML "hero" heroDetails card
 
 > instance ThunderstoneXML VillageCard where
->     thunderstoneXML card = thunderstoneCardXML "Village" villageDetails card
+>     thunderstoneXML card = thunderstoneCardXML "village" villageDetails card
 
 > instance ThunderstoneXML MonsterCard where
->     thunderstoneXML card = thunderstoneCardXML "Monster" monsterDetails card
+>     thunderstoneXML card = thunderstoneCardXML "monster" monsterDetails card
 
 > instance ThunderstoneXML DiseaseCard where
 >     thunderstoneXML card =
->         "<card id=\"Disease\" type=\"Disease\">"
->         ++ xmlString "name" "Disease"
->         ++ xmlItem "source" ThunderstoneBase
->         ++ xmlString "group" "Disease"
->         ++ xmlString "icon" (drop 8 $ show $ CardIconBasic)
->         ++ xmlItem "count" 15
->         ++ xmlList "class" [drop 5 $ show ClassDisease]
->         ++ xmlList "text" ["* ATTACK -1"]
->         ++ xmlList "glossary"
->                    ["Disease: Any time a Disease card is revealed, it "
->                     ++ "must be played.  It has no effect in the Village."]
->         ++ "</card>"
+>         thunderstoneCardXML "disease" diseaseDetails card
+
+> instance ThunderstoneXML DungeonFeatureCard where
+>     thunderstoneXML card =
+>         thunderstoneCardXML "dungeonfeature" dungeonFeatureDetails card
 
 > cardsFrom :: [Source] -> String
 > cardsFrom source =
 >     xmlString "cards"
->         (cardsXML heroDetails
+>         (cardsXML thunderstoneDetails
+>          ++ cardsXML heroDetails
 >          ++ cardsXML villageDetails
 >          ++ cardsXML monsterDetails
->          ++ thunderstoneXML Disease)
+>          ++ cardsXML diseaseDetails
+>          ++ cardsXML dungeonFeatureDetails
+>          ++ cardsXML guardianDetails)
 >   where
 >     cardsXML cardDetails =
 >         concat [thunderstoneXML card
@@ -122,4 +120,16 @@
 >                   cardSource (cardDetails card) `elem` source]
 
 > main :: IO ()
-> main = putStrLn $ cardsFrom [ThunderstoneBase]
+> main =
+>     putStrLn $ xmlString "cards"
+>         (cardsXML (cards :: [ThunderstoneCard])
+>          ++ cardsXML (cards :: [HeroCard])
+>          ++ cardsXML (cards :: [VillageCard])
+>          ++ cardsXML (cards :: [MonsterCard])
+>          ++ cardsXML (cards :: [DiseaseCard])
+>          ++ cardsXML (cards :: [DungeonFeatureCard])
+>          ++ cardsXML (cards :: [GuardianCard]))
+>   where
+>     cards :: (Bounded card, Enum card, ThunderstoneXML card) => [card]
+>     cards = [minBound..maxBound]
+>     cardsXML cards = concatMap thunderstoneXML cards
