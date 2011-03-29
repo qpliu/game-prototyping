@@ -20,10 +20,12 @@
 >      thunderstonePublicState,thunderstonePlayerState,
 >      thunderstoneTakeAction)
 > import ThunderstoneCards
->     (ThunderstoneCard(..),HeroCard(..),MonsterCard(..),VillageCard(..))
+>     (ThunderstoneCard(..),HeroCard(..),MonsterCard(..),VillageCard(..),
+>      DiseaseCard(..))
 > import ThunderstoneCardDetails
 >     (CardDetails(..),
->      heroDetails,villageDetails)
+>      heroDetails,villageDetails,monsterDetails,thunderstoneDetails,
+>      diseaseDetails)
 
 > thunderstoneApp :: IO App
 > thunderstoneApp =
@@ -292,7 +294,34 @@
 >           | otherwise =
 >                 ["Matching cards:"]
 >                 ++ [" " ++ show card | card <- matchingElements arg cards]
->     inspectCard card = ["Details of " ++ show card ++ " to be filled in."]
+>     inspectCard (HeroCard card) = showDetails (heroDetails card)
+>     inspectCard (VillageCard card) = showDetails (villageDetails card)
+>     inspectCard (MonsterCard card) = showDetails (monsterDetails card)
+>     inspectCard (ThunderstoneCard card) =
+>         showDetails (thunderstoneDetails card)
+>     inspectCard DiseaseCard = showDetails (diseaseDetails Disease)
+>     showDetails :: Show cardType => CardDetails cardType -> [String]
+>     showDetails details =
+>         ["Card: " ++ cardName details,
+>          "Type: " ++ show (cardType details),
+>          "Classes: " ++ unwords (map show $ cardClasses details)]
+>         ++ optional "Gold" cardGold
+>         ++ optional "Light" cardLight
+>         ++ optional "VP" cardVictoryPoints
+>         ++ optional "Strength" cardStrength
+>         ++ optional "Price" cardPrice
+>         ++ optional "XP" cardXP
+>         ++ optional "Health" cardHealth
+>         ++ optional "Weight" cardWeight
+>         ++ optional "Level up" cardLevelUp
+>         ++ list "Text" cardText
+>         ++ list "Glossary" cardGlossary
+>       where
+>         optional label value =
+>             maybe [] ((:[]) . ((label ++ ": ") ++) . show) (value details)
+>         list label items =
+>             if null (items details)
+>               then [] else [label ++ ":"] ++ items details
 
 > matchingElements :: Show e => String -> [e] -> [e]
 > matchingElements str elts
