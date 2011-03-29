@@ -1316,6 +1316,17 @@ Village Effect:
 >                     villageEffectsNumberOfBuys playerState + 1
 >                 }
 >             return (Just [PlayerUseEffect playerId card text]))]
+>   | text == "VILLAGE: Destroy one Militia to gain 2 XP." =
+>         [(text, \ playerId playerState cardIndex -> do
+>             hand <- getHand playerId
+>             case filter ((== (HeroCard Militia)) . snd) (zip [0..] hand) of
+>               (militiaIndex,_):_ -> do
+>                 destroyIndex playerId militiaIndex
+>                 xp <- getXP playerId
+>                 setXP playerId (xp + 2)
+>                 return (Just [PlayerUseEffect playerId card text])
+>               _ -> -- no Militia: using up this Village Effect is okay
+>                 return (Just []))]
 >   | text == "VILLAGE: Destroy this card to gain 2 Gold." =
 >         [(text, \ playerId playerState cardIndex -> do
 >             destroyIndex playerId cardIndex
