@@ -17,12 +17,19 @@
 > xmlOption item value = maybe "" (xmlItem item) value
 
 > xmlString :: String -> String -> String
-> xmlString item value = "<" ++ item ++ ">" ++ value ++ "</" ++ item ++ ">"
+> xmlString item value =
+>     "    <" ++ item ++ ">" ++ value ++ "</" ++ item ++ ">\n"
 
 > xmlList :: String -> [String] -> String
-> xmlList item values =
->     concat ["<" ++ item ++ ">" ++ value ++ "</" ++ item ++ ">"
->             | value <- values]
+> xmlList item values
+>   | null values = ""
+>   | otherwise = xmlContainer "    " item ""
+>                     (concatMap (("  " ++) . xmlString "item") values)
+
+> xmlContainer :: String -> String -> String -> String -> String
+> xmlContainer indent element attrs contents =
+>     indent ++ "<" ++ element ++ attrs ++ ">\n" ++ contents ++ indent
+>            ++ "</" ++ element ++ ">\n"
 
 <card id="">
   <!-- for all cards -->
@@ -56,11 +63,11 @@
 >                        String -> (card -> CardDetails cardType) -> card
 >                     -> String
 > thunderstoneCardXML kind cardDetails card =
->     "<" ++ kind ++ " id=\"" ++ show card ++ "\">"
->     ++ xmlString "name" (cardName details)
+>     xmlContainer "  " kind (" id=\"" ++ show card ++ "\"") $
+>        xmlString "name" (cardName details)
 >     ++ xmlItem "source" (cardSource details)
 >     ++ xmlItem "group" (cardType details)
->     ++ xmlString "icon" (drop 8 $ show $ cardIcon details)
+>     ++ xmlItem "icon" (cardIcon details)
 >     ++ xmlItem "count" (cardCount details)
 >     ++ xmlList "class" (map (drop 5 . show) (cardClasses details))
 >     ++ xmlOption "gold" (cardGold details)
@@ -72,11 +79,11 @@
 >     ++ xmlOption "health" (cardHealth details)
 >     ++ xmlOption "weight" (cardWeight details)
 >     ++ xmlOption "levelup" (cardLevelUp details)
->     ++ xmlList "text" (map xmlQuote (cardText details))
+>     ++ xmlList "effects" (map textItem (cardText details))
 >     ++ xmlList "glossary" (cardGlossary details)
->     ++ "</" ++ kind ++ ">"
 >   where
 >     details = cardDetails card
+>     textItem text = "\n        <text>" ++ xmlQuote text ++ "</text>\n      "
 
 > instance ThunderstoneXML ThunderstoneCard where
 >     thunderstoneXML card =
@@ -121,14 +128,14 @@
 
 > main :: IO ()
 > main =
->     putStrLn $ xmlString "cards"
->         (cardsXML (cards :: [ThunderstoneCard])
->          ++ cardsXML (cards :: [HeroCard])
->          ++ cardsXML (cards :: [VillageCard])
->          ++ cardsXML (cards :: [MonsterCard])
->          ++ cardsXML (cards :: [DiseaseCard])
->          ++ cardsXML (cards :: [DungeonFeatureCard])
->          ++ cardsXML (cards :: [GuardianCard]))
+>     putStr $ xmlContainer "" "cards" ""
+>            $ cardsXML (cards :: [ThunderstoneCard])
+>              ++ cardsXML (cards :: [HeroCard])
+>              ++ cardsXML (cards :: [VillageCard])
+>              ++ cardsXML (cards :: [MonsterCard])
+>              ++ cardsXML (cards :: [DiseaseCard])
+>              ++ cardsXML (cards :: [DungeonFeatureCard])
+>              ++ cardsXML (cards :: [GuardianCard])
 >   where
 >     cards :: (Bounded card, Enum card, ThunderstoneXML card) => [card]
 >     cards = [minBound..maxBound]

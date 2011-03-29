@@ -20,8 +20,9 @@
 >      thunderstonePublicState,thunderstonePlayerState,
 >      thunderstoneTakeAction)
 > import ThunderstoneCards
->     (ThunderstoneCard(..),HeroCard(..),MonsterCard(..),VillageCard(..),
->      CardDetails(..),HeroStats(..),VillageStats(..),
+>     (ThunderstoneCard(..),HeroCard(..),MonsterCard(..),VillageCard(..))
+> import ThunderstoneCardDetails
+>     (CardDetails(..),
 >      heroDetails,villageDetails)
 
 > thunderstoneApp :: IO App
@@ -198,11 +199,11 @@
 >                 ++ (if null cards
 >                       then ""
 >                       else ": " ++ show (HeroCard (head cards)) ++ " $"
->                                 ++ show (heroPrice $ cardStats $ heroDetails
->                                                    $ head cards))
+>                                 ++ showJust (cardPrice $ heroDetails
+>                                                        $ head cards))
 >                 | (heroType,cards) <- publicStateHeroes state]
 >             ++ [show (VillageCard card) ++ " (" ++ show count ++ ") $"
->                 ++ show (villagePrice $ cardStats $ villageDetails card)
+>                 ++ showJust (cardPrice $ villageDetails card)
 >                 | (card,count) <- publicStateVillage state]
 >             ++ ["Players to take actions:"
 >                 ++ (unwords $ map getPlayerName
@@ -222,6 +223,7 @@
 >     showInfo (PlayerStateLight light) = "Light: " ++ show light
 >     showInfo (PlayerStateOption playerOption) =
 >         "Choosing: " ++ show playerOption
+>     showJust (Just a) = show a
 
 > doCmd :: UserId -> [String] -> Game ThunderstoneGame ()
 > doCmd uid args = do

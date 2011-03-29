@@ -10,7 +10,7 @@ Doomgate Legion expansion, and Dragonspire, plus some promotional cards.
 >   | DoomgateLegion
 >   | Dragonspire
 >   | Promotional
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 
 Card types
@@ -73,7 +73,7 @@ Promotional:
 >   | HeroClan
 >   | HeroHarruli
 
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 > data MonsterType =
 
@@ -117,7 +117,7 @@ Dragonspire (8):
 
 Promotional:
 
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 > data DungeonFeatureType =
 
@@ -142,7 +142,7 @@ Dragonspire:
 
 Promotional:
 
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 
 
@@ -168,7 +168,7 @@ Dragonspire (2):
 >   | StoneOfTerror
 >   | StoneOfScorn
 
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 > data GuardianCard =
 
@@ -189,7 +189,7 @@ Promotional:
 
 >   | DeathSentinel
 
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 > data HeroCard =
 >     Militia
@@ -323,7 +323,7 @@ Promotional:
 >   | HarruliSpellsword
 >   | HarruliAvatar
 
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 > data VillageCard =
 >     Dagger
@@ -406,7 +406,7 @@ Dragonspire (18):
 >   | TorynGauntlet
 >   | Trader
 
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 > data MonsterCard =
 
@@ -585,7 +585,7 @@ Promotional:
 >   | TheVision
 >   | Mammoth
 
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 > data DungeonFeatureCard =
 
@@ -624,7 +624,7 @@ Promotional:
 
 >   | BladeTrap
 
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 > data DiseaseCard =
 
@@ -640,7 +640,7 @@ Doomgate Legion:
 >   | Malaise
 >   | ThundersCurse
 
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 > data SettingCard =
 >     SettingBarrowsdale
@@ -650,7 +650,7 @@ Doomgate Legion:
 >   | SettingFeaynSwamp
 >   | SettingGrimhold
 >   | SettingRegianCove
->   deriving (Bounded,Enum,Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
 
 > data CardClass =
 >     ClassAbyssal
@@ -717,4 +717,4 @@ Doomgate Legion:
 >   | ClassWeapon
 >   | ClassWhite
 >   | ClassWizard
->   deriving (Eq,Show)
+>   deriving (Bounded,Enum,Eq,Read,Show)
