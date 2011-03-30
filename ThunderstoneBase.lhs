@@ -794,9 +794,9 @@ Choose an effect to activate from the current card:
 >             playerState <- getPlayerState playerId
 >             setPlayerState playerId playerState {
 >                 villageEffectsEffects =
->                     setIndex (villageEffectsCardIndex playerState)
+>                     setIndex index
 >                         (villageEffectsEffects playerState)
->                         (fst (villageEffectsEffects playerState !!cardIndex),
+>                         (fst (villageEffectsEffects playerState !! index),
 >                          True)
 >                 }
 >         markCardUsed = do
