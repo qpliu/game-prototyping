@@ -12,31 +12,6 @@ Java syntax would be
     <A, M<A> extends Monad<A>> M<A> returnMonad(A a);
 or something like that.)
 
-
-I'm pretty happy with the game setup code.  I like the functions
-firstGame, randomizedGame and specifiedGame.
-
-I'm pretty happy with Card and HeroCard, MonsterCard, VillageCard,
-and ThunderstoneCard data structures, which are exported.  I'm not
-so happy with the CardDetails and the CardProperties data structures,
-which are not exported.
-
-I'm somewhat satisfied with the exported interface, though I am
-not so happy with ThunderstonePlayerState or PlayerOption.
-
-I like the model of PlayerActions transforming the ThunderstoneState
-and yielding ThunderstoneEvents, as well as having
-ThunderstonePlayerState contain all the valid PlayerActions, but
-I'm not satisfied with PlayerActions, which still remains mostly
-undefined.
-
-The internal PlayerState is messy and mostly undefined.  The same is
-true of the internal CardProperties.  The inchoate vision of how
-the dungeon will work is to have the cardBattleResult of the
-CardProperties of the MonsterCard contain the code that resolves
-the battle.  It's hard to see how to avoid lots of special casing.
-
-
 > module ThunderstoneBase
 
 The interface:
@@ -322,7 +297,14 @@ Game state:
 >     StartingTurn
 
 >   | UsingVillageEffects {
->         villageEffects :: [(Card,[VillageEffect])],
+>         villageEffectsUsed :: [Bool],
+>         villageEffectsNumberOfBuys :: Int,
+>         villageEffectsGold :: Int
+>         }
+>   | UsingVillageEffectsCard {
+>         villageEffectsCardIndex :: Int,
+>         villageEffectsEffects :: [(VillageEffect,Bool)],
+>         villageEffectsUsed :: [Bool],
 >         villageEffectsNumberOfBuys :: Int,
 >         villageEffectsGold :: Int
 >         }
@@ -364,8 +346,9 @@ Game state:
 >     WhichCardToDestroy
 >   | WhichCardToDiscard
 >   | WhichCardToBuy
+>   | WhichCardToUse
+>   | WhichEffectToUse
 >   | WhichHeroToLevelUp
->   | WhichEffectToActivate
 >   deriving Show
 
 > data PlayerStateInfo =
@@ -375,6 +358,8 @@ Game state:
 >   | PlayerStateMagicAttack Int
 >   | PlayerStateLight Int
 >   | PlayerStateOption PlayerOption
+>   | PlayerStateEffectsUsed [Bool]
+>   | PlayerStateCard Card
 >   deriving Show
 
 Nonactive players may need to take actions due to card effects.
@@ -408,7 +393,7 @@ Rest
 
 > data PlayerAction =
 >     VisitVillage
->   | UseVillageEffect
+>   | FinishUsingCard
 >   | FinishUsingVillageEffects
 >   | PurchaseCard
 >   | FinishPurchasingCards
@@ -430,7 +415,7 @@ Rest
 
 > data ThunderstoneEvent =
 >     PlayerEvent PlayerId PlayerAction
->   | PlayerHand PlayerId [Card]
+>   | PlayerRevealCards PlayerId [Card]
 >   | PlayerPurchase PlayerId Card
 >   | PlayerUpgrade PlayerId HeroCard HeroCard
 >   | PlayerDiscard PlayerId Card
@@ -493,11 +478,23 @@ Game mechanics
 >         }
 >   where
 >     getStateInfo hand UsingVillageEffects {
+>             villageEffectsUsed = effectsUsed,
 >             villageEffectsNumberOfBuys = buys,
 >             villageEffectsGold = gold
 >             } =
 >         [PlayerStatePurchases (buys + 1),
->          PlayerStateGold (gold + sum (map cardVillageGold hand))]
+>          PlayerStateGold (gold + sum (map cardVillageGold hand)),
+>          PlayerStateEffectsUsed effectsUsed]
+>     getStateInfo hand UsingVillageEffectsCard {
+>             villageEffectsCardIndex = cardIndex,
+>             villageEffectsUsed = effectsUsed,
+>             villageEffectsNumberOfBuys = buys,
+>             villageEffectsGold = gold
+>             } =
+>         [PlayerStatePurchases (buys + 1),
+>          PlayerStateGold (gold + sum (map cardVillageGold hand)),
+>          PlayerStateEffectsUsed effectsUsed,
+>          PlayerStateCard (hand !! cardIndex)]
 >     getStateInfo _ PurchasingCards {
 >             purchasingNumberOfBuys = buys,
 >             purchasingGold = gold
@@ -553,14 +550,21 @@ Stone of Scorn override the generic scoring.
 >         return [VisitVillage, EnterDungeon, Rest]
 
 >     optionsWhen UsingVillageEffects {
->             villageEffects = villageHand
+>             villageEffectsUsed = cardUsed
 >             } = do
->         if villageEffectAvailable
->           then return [UseVillageEffect,FinishUsingVillageEffects,EndTurn]
->           else return [FinishUsingVillageEffects,EndTurn]
->       where
->         villageEffectAvailable =
->             not $ null $ concatMap snd villageHand
+>         hand <- getHand playerId
+>         return ([FinishUsingVillageEffects,EndTurn]
+>                 ++ [ChooseOption (index,show card)
+>                     | (index,(card,used)) <- zip [0..] (zip hand cardUsed),
+>                       not used, not (null $ cardVillageEffects card)])
+
+>     optionsWhen UsingVillageEffectsCard {
+>             villageEffectsEffects = effects
+>             } = do
+>         return ([FinishUsingCard,FinishUsingVillageEffects,EndTurn]
+>                 ++ [ChooseOption (index,effectText)
+>                     | (index,((effectText,_),used)) <- zip [0..] effects,
+>                       not used])
 
 >     optionsWhen PurchasingCards {
 >             purchasingNumberOfBuys = numberOfBuys,
@@ -703,20 +707,18 @@ and draw six new cards to form a new hand.
 >         hand <- getHand playerId
 >         setPlayerState playerId
 >             UsingVillageEffects {
->                 villageEffects = map addVillageEffects hand,
+>                 villageEffectsUsed = replicate (length hand) False,
 >                 villageEffectsNumberOfBuys = 0,
 >                 villageEffectsGold = 0
 >                 }
 >         return (Just [PlayerEvent playerId VisitVillage,
->                       PlayerHand playerId hand])
->       where
->         addVillageEffects card = (card,cardVillageEffects card)
+>                       PlayerRevealCards playerId hand])
 
 >     performAction StartingTurn EnterDungeon = do
 >         hand <- getHand playerId
 >         setPlayerState playerId Waiting -- temporary code while real code is still undefined
 >         return (Just [PlayerEvent playerId EnterDungeon,
->                       PlayerHand playerId hand])
+>                       PlayerRevealCards playerId hand])
 
 >     performAction StartingTurn Rest = do
 >         setPlayerState playerId Resting
@@ -726,47 +728,30 @@ and draw six new cards to form a new hand.
 
 Village:
 
-Village: Using Village Effects:
+Choose a card from which to use effect:
 
->     performAction playerState@UsingVillageEffects {
->             villageEffects = villageHand
->             } UseVillageEffect = do
->         setPlayerState playerId
->                        (ChoosingOption WhichEffectToActivate options backout)
->         return (Just [])
->       where
->         enumCards = zip [0..] villageHand
->         enumEffects = zip [1..] (concatMap mergeEffects enumCards)
->         mergeEffects (cardIndex,(card,villageEffects)) =
->             map (mergeEffect cardIndex card) villageEffects
->         mergeEffect cardIndex card villageEffect =
->             (cardIndex,card,villageEffect)
->         options = map makeOption enumEffects
->         backout = Just (setPlayerState playerId playerState)
->         makeOption
->             (index,(cardIndex,card,(effectName,effectAction))) =
->             ((index,show card ++ ": " ++ effectName),
->              performEffectAction cardIndex effectName effectAction)
->         performEffectAction cardIndex effectName effectAction = do
->             setPlayerState playerId playerState
->             result <- effectAction playerId playerState {
->                           villageEffects =
->                               removeEffect villageHand cardIndex effectName
->                           }
->                         cardIndex
->             case result of
->               Nothing -> do
->                 setPlayerState playerId playerState
->                 return []
->               Just events -> return events
->         removeEffect villageHand cardIndex effectName =
->             map (removeCardEffect cardIndex effectName)
->                 (zip [0..] villageHand)
->         removeCardEffect cardIndex effectName (index,(card,cardEffects))
->           | cardIndex == index =
->                 (card,filter (notNamed effectName) cardEffects)
->           | otherwise = (card,cardEffects)
->         notNamed effectName (name,_) = effectName /= name
+>     performAction
+>             UsingVillageEffects {
+>                 villageEffectsUsed = used,
+>                 villageEffectsNumberOfBuys = buys,
+>                 villageEffectsGold = gold
+>                 }
+>             (ChooseOption (index,description)) = do
+>         hand <- getHand playerId
+>         if index < 0 || index >= length used || index >= length hand
+>                      || (used !! index)
+>                      || description /= show (hand !! index)
+>           then return Nothing
+>           else do
+>             setPlayerState playerId UsingVillageEffectsCard {
+>                 villageEffectsCardIndex = index,
+>                 villageEffectsEffects =
+>                     zip (cardVillageEffects (hand !! index)) (repeat False),
+>                 villageEffectsUsed = used,
+>                 villageEffectsNumberOfBuys = buys,
+>                 villageEffectsGold = gold
+>                 }
+>             return (Just [])
 
 >     performAction
 >             UsingVillageEffects {
@@ -775,11 +760,10 @@ Village: Using Village Effects:
 >                 }
 >             FinishUsingVillageEffects = do
 >         hand <- getHand playerId
->         let producedGold = sum (map cardVillageGold hand)
 >         setPlayerState playerId
 >             PurchasingCards {
 >                 purchasingNumberOfBuys = numberOfBuys + 1,
->                 purchasingGold = gold + producedGold
+>                 purchasingGold = gold + sum (map cardVillageGold hand)
 >                 }
 >         return (Just [])
 
@@ -788,6 +772,75 @@ Village: Using Village Effects:
 >         return (Just [])
 
 >     performAction UsingVillageEffects {} _ = return Nothing
+
+Choose an effect to activate from the current card:
+
+>     performAction
+>             UsingVillageEffectsCard {
+>                 villageEffectsCardIndex = cardIndex,
+>                 villageEffectsEffects = effects,
+>                 villageEffectsUsed = used
+>                 }
+>             (ChooseOption (index,description))
+>       | index < 0 || index >= length effects
+>                   || effectUsed
+>                   || description /= effectText =
+>             return Nothing
+>       | otherwise =
+>             effect playerId cardIndex markEffectUsed markCardUsed
+>       where
+>         ((effectText,effect),effectUsed) = effects !! index
+>         markEffectUsed = do
+>             playerState <- getPlayerState playerId
+>             setPlayerState playerId playerState {
+>                 villageEffectsEffects =
+>                     setIndex (villageEffectsCardIndex playerState)
+>                         (villageEffectsEffects playerState)
+>                         (fst (villageEffectsEffects playerState !!cardIndex),
+>                          True)
+>                 }
+>         markCardUsed = do
+>             playerState <- getPlayerState playerId
+>             setPlayerState playerId playerState {
+>                 villageEffectsUsed =
+>                     setIndex (villageEffectsCardIndex playerState)
+>                              (villageEffectsUsed playerState) True
+>                 }
+
+>     performAction
+>             UsingVillageEffectsCard {
+>                 villageEffectsUsed = used,
+>                 villageEffectsNumberOfBuys = numberOfBuys,
+>                 villageEffectsGold = gold
+>                 }
+>             FinishUsingCard = do
+>         setPlayerState playerId UsingVillageEffects {
+>             villageEffectsUsed = used,
+>             villageEffectsNumberOfBuys = numberOfBuys,
+>             villageEffectsGold = gold
+>             }
+>         return (Just [])
+
+>     performAction
+>             UsingVillageEffectsCard {
+>                 villageEffectsUsed = used,
+>                 villageEffectsNumberOfBuys = numberOfBuys,
+>                 villageEffectsGold = gold
+>                 }
+>             FinishUsingVillageEffects = do
+>         hand <- getHand playerId
+>         setPlayerState playerId
+>             PurchasingCards {
+>                 purchasingNumberOfBuys = numberOfBuys + 1,
+>                 purchasingGold = gold + sum (map cardVillageGold hand)
+>                 }
+>         return (Just [])
+
+>     performAction UsingVillageEffectsCard {} EndTurn = do
+>         endTurn []
+>         return (Just [])
+
+>     performAction UsingVillageEffectsCard {} _ = return Nothing
 
 Village: Purchasing cards:
 
@@ -1245,9 +1298,30 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 >     setPlayerState playerId (destroyIndexInState playerState)
 >   where
 >     destroyIndexInState playerState@UsingVillageEffects {
->             villageEffects = hand
+>             villageEffectsUsed = used
 >             } =
->         playerState { villageEffects = removeIndex index hand }
+>         playerState { villageEffectsUsed = removeIndex index used }
+>     destroyIndexInState playerState@UsingVillageEffectsCard {
+>             villageEffectsCardIndex = cardIndex,
+>             villageEffectsUsed = used,
+>             villageEffectsNumberOfBuys = numberOfBuys,
+>             villageEffectsGold = gold
+>             }
+>       | index < cardIndex =
+>         playerState {
+>             villageEffectsCardIndex = cardIndex - 1,
+>             villageEffectsUsed = removeIndex index used
+>             }
+>       | index == cardIndex =
+>         UsingVillageEffects {
+>             villageEffectsUsed = removeIndex index used,
+>             villageEffectsNumberOfBuys = numberOfBuys,
+>             villageEffectsGold = gold
+>             }
+>       | otherwise =
+>         playerState {
+>             villageEffectsUsed = removeIndex index used
+>             }
 >     destroyIndexInState playerState@UsingDungeonEffects {} =
 >         error "destroyIndex UsingDungeonEffects" -- undefined
 >     destroyIndexInState playerState = playerState
@@ -1262,6 +1336,9 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 > remove1 item items = before ++ drop 1 after
 >   where
 >     (before,after) = span (/= item) items
+
+> setIndex :: Int -> [a] -> a -> [a]
+> setIndex index list item = take index list ++ item : drop (index+1) list
 
 > thunderstoneGetState :: ThunderstoneState -> Thunderstone a -> a
 > thunderstoneGetState state getThunderstoneState =
@@ -1302,83 +1379,110 @@ Village Effect:
  hand.  REPEAT effects will not set the player state.)
 
 > type VillageEffect =
->     (String,PlayerId -> PlayerState -> Int
+>     (String,PlayerId -> Int                   -- cardIndex
+>                      -> Thunderstone ()       -- markEffectUsed
+>                      -> Thunderstone ()       -- markCardUsed
 >                      -> Thunderstone (Maybe [ThunderstoneEvent]))
 > type BattleResult = (String,PlayerId -> Thunderstone Bool)
 > type BreachEffect = Maybe (String,Thunderstone ())
 
 > getVillageEffect :: Card -> String -> [VillageEffect]
 > getVillageEffect card text
+
 >   | text == "VILLAGE: You may purchase one additional card this turn." =
->         [(text, \ playerId playerState cardIndex -> do
+>         [(text, \ playerId cardIndex markEffectUsed markCardUsed -> do
+>             markEffectUsed
+>             markCardUsed
+>             playerState <- getPlayerState playerId
 >             setPlayerState playerId playerState {
 >                 villageEffectsNumberOfBuys =
 >                     villageEffectsNumberOfBuys playerState + 1
 >                 }
 >             return (Just [PlayerUseEffect playerId card text]))]
+
 >   | text == "VILLAGE: Destroy one Militia to gain 2 XP." =
->         [(text, \ playerId playerState cardIndex -> do
+>         [(text, \ playerId cardIndex markEffectUsed markCardUsed -> do
 >             hand <- getHand playerId
 >             case filter ((== (HeroCard Militia)) . snd) (zip [0..] hand) of
 >               (militiaIndex,_):_ -> do
+>                 markEffectUsed
+>                 markCardUsed
 >                 destroyIndex playerId militiaIndex
 >                 xp <- getXP playerId
 >                 setXP playerId (xp + 2)
 >                 return (Just [PlayerUseEffect playerId card text])
->               _ -> -- no Militia: using up this Village Effect is okay
->                 return (Just []))]
+>               _ -> -- no Militia
+>                 return Nothing)]
+
 >   | text == "VILLAGE: Destroy this card to gain 2 Gold." =
->         [(text, \ playerId playerState cardIndex -> do
+>         [(text, \ playerId cardIndex markEffectUsed markCardUsed -> do
+>             markEffectUsed
+>             markCardUsed
 >             destroyIndex playerId cardIndex
+>             playerState <- getPlayerState playerId
 >             setPlayerState playerId playerState {
 >                 villageEffectsGold = villageEffectsGold playerState + 2
 >                 }
 >             return (Just [PlayerUseEffect playerId card text]))]
+
 >   | text == "VILLAGE: Destroy any card with a gold value to gain its gold value plus 3 Gold." =
->         [(text, \ playerId playerState cardIndex ->
->             let hasGoldValue (_,chosenCard) =
->                     cardGoldValue chosenCard /= Nothing
->                 chooseCard (cardIndex,chosenCard) =
->                     ((cardIndex,show chosenCard),do
->                          setPlayerState playerId playerState {
+>         [(text, \ playerId cardIndex markEffectUsed markCardUsed -> do
+>             playerState <- getPlayerState playerId
+>             hand <- getHand playerId
+>             let backout = setPlayerState playerId playerState
+>             let used = villageEffectsUsed playerState
+>             let eligible ((index,_),_) =
+>                     cardGoldValue (hand !! index) /= Nothing
+>                         && not (used !! index)
+>             let chooseCard index chosenCard =
+>                     ((index,show chosenCard),do
+>                         setPlayerState playerId playerState {
 >                              villageEffectsGold =
 >                                      villageEffectsGold playerState
 >                                          + cardVillageGold chosenCard + 3
 >                              }
->                          return [PlayerUseEffect playerId card text,
->                              PlayerDestroyCard playerId chosenCard])
->             in do
->                 backoutState <- getPlayerState playerId
->                 hand <- getHand playerId
->                 setPlayerState playerId
->                     (ChoosingOption WhichCardToDestroy
->                          (map chooseCard $ filter hasGoldValue $ zip [0..] hand)
->                          (Just (setPlayerState playerId backoutState)))
->                 return (Just []))]
+>                         markEffectUsed
+>                         markCardUsed
+>                         destroyIndex playerId index
+>                         return [PlayerUseEffect playerId card text,
+>                                 PlayerDestroyCard playerId chosenCard])
+>             setPlayerState playerId
+>                 (ChoosingOption WhichCardToDestroy
+>                          (filter eligible $ zipWith chooseCard [0..] hand)
+>                          (Just (setPlayerState playerId playerState)))
+>             return (Just []))]
+
 >   | text == "VILLAGE: Draw two cards." =
->         [(text, \ playerId playerState cardIndex -> do
+>         [(text, \ playerId cardIndex markEffectUsed markCardUsed -> do
+>             markEffectUsed
+>             markCardUsed
 >             cards <- multiple 2 $ drawCard playerId
 >             hand <- getHand playerId
->             setHand playerId (cards ++ hand)
+>             setHand playerId (hand ++ cards)
+>             playerState <- getPlayerState playerId
 >             setPlayerState playerId playerState {
->                 villageEffects =
->                     [(card,cardVillageEffects card) | card <- cards]
->                         ++ villageEffects playerState
+>                 villageEffectsUsed =
+>                     villageEffectsUsed playerState
+>                         ++ replicate (length cards) False
 >                 }
 >             return (Just [PlayerUseEffect playerId card text]))]
+
 >   | text == "VILLAGE: Destroy this card to draw three additional cards." =
->         [(text, \ playerId playerState cardIndex -> do
->             setPlayerState playerId playerState
+>         [(text, \ playerId cardIndex markEffectUsed markCardUsed -> do
+>             markEffectUsed
+>             markCardUsed
 >             destroyIndex playerId cardIndex
 >             cards <- multiple 3 $ drawCard playerId
 >             hand <- getHand playerId
->             setHand playerId (cards ++ hand)
+>             setHand playerId (hand ++ cards)
+>             playerState <- getPlayerState playerId
 >             setPlayerState playerId playerState {
->                 villageEffects =
->                     [(card,cardVillageEffects card) | card <- cards]
->                         ++ villageEffects playerState
+>                 villageEffectsUsed =
+>                     villageEffectsUsed playerState
+>                         ++ replicate (length cards) False
 >                 }
 >             return (Just [PlayerUseEffect playerId card text]))]
+
 >   | otherwise = []
 
 > isHero :: Card -> Bool
@@ -1386,4 +1490,13 @@ Village Effect:
 > isHero _ = False
 
 > hasClass :: Card -> CardClass -> Bool
-> hasClass card cardClass = error "undefined hasClass"
+> hasClass (HeroCard card) cardClass =
+>     cardClass `elem` (cardClasses $ heroDetails card)
+> hasClass (VillageCard card) cardClass =
+>     cardClass `elem` (cardClasses $ villageDetails card)
+> hasClass (MonsterCard card) cardClass =
+>     cardClass `elem` (cardClasses $ monsterDetails card)
+> hasClass (ThunderstoneCard card) cardClass =
+>     cardClass `elem` (cardClasses $ thunderstoneDetails card)
+> hasClass DiseaseCard cardClass =
+>     cardClass `elem` [ClassDisease,ClassSpecial]

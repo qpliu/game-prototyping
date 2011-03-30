@@ -215,17 +215,25 @@
 >          ++ " Discards: " ++ show (playerStateDiscards state)
 >          ++ " XP: " ++ show (playerStateXP state),
 >          "Hand:"]
->         ++ [" " ++ show card | card <- playerStateHand state]
->         ++ map showInfo (playerStateInfo state)
->     showInfo (PlayerStatePurchases buys) = "Purchases: " ++ show buys
->     showInfo (PlayerStateGold gold) = "Gold: " ++ show gold
->     showInfo (PlayerStateAttack attack) = "Attack: " ++ show attack
+>         ++ showHand (playerStateHand state)
+>             (concatMap getUsedCards $ playerStateInfo state)
+>         ++ concatMap showInfo (playerStateInfo state)
+>     showInfo (PlayerStatePurchases buys) = ["Purchases: " ++ show buys]
+>     showInfo (PlayerStateGold gold) = ["Gold: " ++ show gold]
+>     showInfo (PlayerStateAttack attack) = ["Attack: " ++ show attack]
 >     showInfo (PlayerStateMagicAttack attack) =
->         "Magic attack: " ++ show attack
->     showInfo (PlayerStateLight light) = "Light: " ++ show light
+>         ["Magic attack: " ++ show attack]
+>     showInfo (PlayerStateLight light) = ["Light: " ++ show light]
 >     showInfo (PlayerStateOption playerOption) =
->         "Choosing: " ++ show playerOption
+>         ["Choosing: " ++ show playerOption]
+>     showInfo (PlayerStateEffectsUsed _) = []
+>     showInfo (PlayerStateCard card) = ["Active card: " ++ show card]
 >     showJust (Just a) = show a
+>     getUsedCards (PlayerStateEffectsUsed used) = used
+>     getUsedCards _ = []
+>     showHand cards used = zipWith showHandCard cards (used ++ repeat False)
+>     showHandCard card True = " " ++ show card ++ " (used)"
+>     showHandCard card False = " " ++ show card
 
 > doCmd :: UserId -> [String] -> Game ThunderstoneGame ()
 > doCmd uid args = do
@@ -338,8 +346,8 @@
 >   where
 >     formatEvent getPlayerName (PlayerEvent playerId action) =
 >         [getPlayerName playerId ++ " takes action: " ++ show action]
->     formatEvent getPlayerName (PlayerHand playerId hand) =
->         [getPlayerName playerId ++ " shows hand: "
+>     formatEvent getPlayerName (PlayerRevealCards playerId hand) =
+>         [getPlayerName playerId ++ " reveals cards: "
 >                                 ++ unwords (map show hand)]
 >     formatEvent getPlayerName (PlayerPurchase playerId card) =
 >         [getPlayerName playerId ++ " purchases card: " ++ show card]

@@ -4604,7 +4604,7 @@ villageDetails Feast = initCardDetails {
     cardClasses = [ClassItem,ClassFood],
     cardGold = Just 3,
     cardPrice = Just 5,
-    cardText = ["DUNGEON: All Heroes gain Strength +1 and ATTACK +1."],
+    cardText = ["DUNGEON: All Heroes gain Strength +3 and ATTACK +1."],
     cardGlossary =
         ["Feast: Militia cards are Heroes, so they gain the Attack and "
          ++ "Strength bonuses from this card."]
