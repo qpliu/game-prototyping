@@ -21,7 +21,8 @@
 >      thunderstoneTakeAction)
 > import ThunderstoneCards
 >     (ThunderstoneCard(..),HeroCard(..),MonsterCard(..),VillageCard(..),
->      DiseaseCard(..))
+>      DiseaseCard(..),
+>      CardClass(..))
 > import ThunderstoneCardDetails
 >     (CardDetails(..),
 >      heroDetails,villageDetails,monsterDetails,thunderstoneDetails,
@@ -216,25 +217,68 @@
 >          ++ " Discards: " ++ show (playerStateDiscards state)
 >          ++ " XP: " ++ show (playerStateXP state),
 >          "Hand:"]
->         ++ showHand (playerStateHand state)
->             (concatMap getUsedCards $ playerStateInfo state)
+>         ++ showHand (playerStateHand state) (playerStateInfo state)
 >         ++ concatMap showInfo (playerStateInfo state)
 >     showInfo (PlayerStatePurchases buys) = ["Purchases: " ++ show buys]
 >     showInfo (PlayerStateGold gold) = ["Gold: " ++ show gold]
->     showInfo (PlayerStateAttack attack) = ["Attack: " ++ show attack]
+>     showInfo (PlayerStateAttack attack) = ["Attack: " ++ show (sum attack)]
 >     showInfo (PlayerStateMagicAttack attack) =
->         ["Magic attack: " ++ show attack]
->     showInfo (PlayerStateLight light) = ["Light: " ++ show light]
+>         ["Magic attack: " ++ show (sum attack)]
+>     showInfo (PlayerStateLight light) = ["Light: " ++ show (sum light)]
 >     showInfo (PlayerStateOption playerOption) =
 >         ["Choosing: " ++ show playerOption]
 >     showInfo (PlayerStateEffectsUsed _) = []
+>     showInfo (PlayerStateEquipped _) = []
+>     showInfo (PlayerStateStrength _) = []
+>     showInfo (PlayerStateWeight _) = []
 >     showInfo (PlayerStateCard card) = ["Active card: " ++ show card]
 >     showJust (Just a) = show a
 >     getUsedCards (PlayerStateEffectsUsed used) = used
 >     getUsedCards _ = []
->     showHand cards used = zipWith showHandCard cards (used ++ repeat False)
->     showHandCard card True = " " ++ show card ++ " (used)"
->     showHandCard card False = " " ++ show card
+>     showHand cards stateInfo =
+>         zipWith showHandCard [0..] cards
+>       where
+>         showHandCard index card =
+>             " " ++ show card
+>                 ++ maybe "" (\ i -> " (equipping " ++ show (cards !! i)
+>                                     ++ " [" ++ show i ++ "])")
+>                          (findProperty (equipping index))
+>                 ++ maybe "" (\ i -> " (equipped by " ++ show (cards !! i)
+>                                     ++ " [" ++ show i ++ "])")
+>                          (findProperty (equippedBy index))
+>                 ++ maybe "" ((" str:" ++) . show)
+>                             (findProperty (strength index card))
+>                 ++ maybe "" ((" wgt:" ++) . show)
+>                             (findProperty (weight index card))
+>                 ++ maybe "" ((" att:" ++) . show)
+>                             (findProperty (attack index))
+>                 ++ maybe "" ((" mag:" ++) . show)
+>                             (findProperty (magicAttack index))
+>                 ++ maybe "" ((" lgt:" ++) . show)
+>                             (findProperty (light index))
+>         findProperty :: (PlayerStateInfo -> Maybe b) -> Maybe b
+>         findProperty f = foldl (\ result item -> maybe (f item) Just result)
+>                                Nothing stateInfo
+>         equipping index (PlayerStateEquipped list) = lookup index list
+>         equipping index _ = Nothing
+>         equippedBy index (PlayerStateEquipped list) =
+>             lookup index $ map (\ (a,b) -> (b,a)) list
+>         equippedBy index _ = Nothing
+>         strength index (HeroCard _) (PlayerStateStrength list) =
+>             Just (list !! index)
+>         strength _ _ _ = Nothing
+>         weight index (VillageCard vcard) (PlayerStateWeight list)
+>           | ClassWeapon `elem` (cardClasses $ villageDetails vcard) =
+>                 Just (list !! index)
+>           | otherwise = Nothing
+>         weight _ _ _ = Nothing
+>         attack index (PlayerStateAttack list) = Just (list !! index)
+>         attack _ _ = Nothing
+>         magicAttack index (PlayerStateMagicAttack list) =
+>            Just (list !! index)
+>         magicAttack _ _ = Nothing
+>         light index (PlayerStateLight list) = Just (list !! index)
+>         light _ _ = Nothing
 
 > doCmd :: UserId -> [String] -> Game ThunderstoneGame ()
 > doCmd uid args = do

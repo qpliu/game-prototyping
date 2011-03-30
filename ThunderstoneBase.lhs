@@ -296,6 +296,9 @@ Game state:
 > data PlayerState =
 >     StartingTurn
 
+villageEffectsUsed is used to mark each card as having been used.  Used
+cards are not eligible to be destroyed to activate effects.
+
 >   | UsingVillageEffects {
 >         villageEffectsUsed :: [Bool],
 >         villageEffectsNumberOfBuys :: Int,
@@ -314,7 +317,13 @@ Game state:
 >         }
 >   | LevelingUpHeroes
 
->   | UsingDungeonEffects
+dungeonEffectsUsed is used to mark each card as having its Dungeon Effects
+been used.  Used cards are not eligible to be destroyed to activate effects.
+
+>   | UsingDungeonEffects {
+>         dungeonEffectsUsed :: [Bool],
+>         dungeonEffectsCardStats :: [DungeonEffectsCardStats]
+>         }
 >   | AttackingMonster
 >   | TakingSpoils
 
@@ -354,13 +363,26 @@ Game state:
 > data PlayerStateInfo =
 >     PlayerStatePurchases Int
 >   | PlayerStateGold Int
->   | PlayerStateAttack Int
->   | PlayerStateMagicAttack Int
->   | PlayerStateLight Int
+>   | PlayerStateAttack [Int]
+>   | PlayerStateMagicAttack [Int]
+>   | PlayerStateLight [Int]
 >   | PlayerStateOption PlayerOption
 >   | PlayerStateEffectsUsed [Bool]
+>   | PlayerStateEquipped [(Int,Int)]
+>   | PlayerStateStrength [Int]
+>   | PlayerStateWeight [Int]
 >   | PlayerStateCard Card
 >   deriving Show
+
+> data DungeonEffectsCardStats = DungeonEffectsCardStats {
+>         dungeonEffectsEquippedWith :: Maybe Int,
+>         dungeonEffectsBeingEquippedBy :: Maybe Int,
+>         dungeonEffectsStrength :: Int,
+>         dungeonEffectsAttack :: Int,
+>         dungeonEffectsMagicAttack :: Int,
+>         dungeonEffectsLight :: Int,
+>         dungeonEffectsWeight :: Int
+>     }
 
 Nonactive players may need to take actions due to card effects.
 
@@ -581,7 +603,7 @@ Stone of Scorn override the generic scoring.
 >           then return [EndTurn]
 >           else return [LevelUpHero,EndTurn]
 
->     optionsWhen UsingDungeonEffects = error "undefined optionsWhen UsingDungeonEffects"
+>     optionsWhen UsingDungeonEffects {} = error "undefined optionsWhen UsingDungeonEffects"
 
 >     optionsWhen AttackingMonster = error "undefined optionsWhen AttackingMonster"
 
@@ -1322,8 +1344,28 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 >         playerState {
 >             villageEffectsUsed = removeIndex index used
 >             }
->     destroyIndexInState playerState@UsingDungeonEffects {} =
->         error "destroyIndex UsingDungeonEffects" -- undefined
+>     destroyIndexInState playerState@UsingDungeonEffects {
+>             dungeonEffectsUsed = used,
+>             dungeonEffectsCardStats = stats
+>             } =
+>         playerState {
+>             dungeonEffectsUsed = removeIndex index used,
+>             dungeonEffectsCardStats =
+>                 removeIndex index (map reduceEquipIndex stats)
+>             }
+>       where
+>         reduceEquipIndex stats =
+>             stats {
+>                 dungeonEffectsEquippedWith =
+>                     reduceIndex (dungeonEffectsEquippedWith stats),
+>                 dungeonEffectsBeingEquippedBy =
+>                     reduceIndex (dungeonEffectsBeingEquippedBy stats)
+>                 }
+>         reduceIndex Nothing = Nothing
+>         reduceIndex (Just i)
+>           | i < index = Just i
+>           | i == index = Nothing
+>           | i > index = Just (i - 1)
 >     destroyIndexInState playerState = playerState
 
 > multiple :: (Functor m, Monad m) => Int -> m (Maybe a) -> m [a]
