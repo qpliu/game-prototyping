@@ -93,6 +93,7 @@
 >                        ("/d",doCmd),
 >                        ("/inspect",inspectCmd),
 >                        ("/i",inspectCmd)]
+>                       ++ [("/" ++ show i,doIndexCmd i) | i <- [1..10]]
 >     gameAppPollTime _ _ = Nothing
 >     gameAppPoll = return ()
 
@@ -266,6 +267,9 @@
 >                       $ thunderstonePlayerState (tsState state) playerId
 >         actionResult = thunderstoneTakeAction (tsState state) playerId option
 >         Just (newState,events) = actionResult
+
+> doIndexCmd :: Int -> UserId -> [String] -> Game ThunderstoneGame ()
+> doIndexCmd index uid _ = doCmd uid [show index]
 
 > inspectCmd :: UserId -> [String] -> Game ThunderstoneGame ()
 > inspectCmd uid args = do
