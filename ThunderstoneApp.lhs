@@ -392,27 +392,30 @@
 >     getPlayerName <- getPlayerNames
 >     gameMessageToAll (concatMap (formatEvent getPlayerName) events)
 >   where
->     formatEvent getPlayerName (PlayerEvent playerId action) =
+>     formatEvent getPlayerName
+>                 (ThunderstoneEventPlayerAction playerId action) =
 >         [getPlayerName playerId ++ " takes action: " ++ show action]
->     formatEvent getPlayerName (PlayerRevealCards playerId hand) =
+>     formatEvent getPlayerName (ThunderstoneEventRevealCards playerId hand) =
 >         [getPlayerName playerId ++ " reveals cards: "
 >                                 ++ unwords (map show hand)]
->     formatEvent getPlayerName (PlayerPurchase playerId card) =
+>     formatEvent getPlayerName (ThunderstoneEventPurchase playerId card) =
 >         [getPlayerName playerId ++ " purchases card: " ++ show card]
->     formatEvent getPlayerName (PlayerUpgrade playerId oldHero newHero) =
+>     formatEvent getPlayerName
+>                 (ThunderstoneEventUpgrade playerId oldHero newHero) =
 >         [getPlayerName playerId ++ " levels up Hero from: "
 >                                 ++ show (HeroCard oldHero) ++ " to: "
 >                                 ++ show (HeroCard newHero)]
->     formatEvent getPlayerName (PlayerDiscard playerId card) =
+>     formatEvent getPlayerName (ThunderstoneEventDiscard playerId card) =
 >         [getPlayerName playerId ++ " discards a card."]
->     formatEvent getPlayerName (PlayerDestroyCard playerId card) =
+>     formatEvent getPlayerName (ThunderstoneEventDestroyCard playerId card) =
 >         [getPlayerName playerId ++ " destroys a card."]
->     formatEvent getPlayerName (PlayerUseEffect playerId card text) =
+>     formatEvent getPlayerName
+>                 (ThunderstoneEventUseEffect playerId card text) =
 >         [getPlayerName playerId ++ " uses a card Effect: "
 >                                 ++ show card ++ " " ++ text]
->     formatEvent getPlayerName (PlayerStartsTurn playerId) =
+>     formatEvent getPlayerName (ThunderstoneEventPlayerStartsTurn playerId) =
 >         [getPlayerName playerId ++ " begins turn."]
->     formatEvent getPlayerName (GameOverEvent scores) =
+>     formatEvent getPlayerName (ThunderstoneEventGameOver scores) =
 >         ["Game over.  Scores:"]
 >         ++ [" " ++ getPlayerName playerId ++ ": " ++ show score
 >             | (playerId,score) <- scores]
