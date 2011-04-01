@@ -59,11 +59,13 @@ Game mechanics:
 >     (HeroType(..),MonsterType(..),
 >      ThunderstoneCard(..),HeroCard(..),MonsterCard(..),VillageCard(..),
 >      CardClass(..))
+> import qualified ThunderstoneCards
 > import ThunderstoneCardDetails(CardDetails(..),
 >      thunderstoneDetails,
 >      heroDetails,
 >      monsterDetails,
 >      villageDetails,
+>      diseaseDetails,
 >      cardsOfType,levelsUpTo)
 
 ==============================================================================
@@ -375,17 +377,19 @@ been used.  Used cards are not eligible to be destroyed to activate effects.
 >   | PlayerStateEquipped [(Int,Int)]
 >   | PlayerStateStrength [Int]
 >   | PlayerStateWeight [Int]
+>   | PlayerStateNotAttacking [Bool]
 >   | PlayerStateCard Card
 >   deriving Show
 
 > data DungeonPartyStats = DungeonPartyStats {
 >         dungeonPartyEquippedWith :: Maybe Int,
->         dungeonPartyBeingEquippedBy :: Maybe Int,
+>         dungeonPartyEquippedBy :: Maybe Int,
 >         dungeonPartyStrength :: Int,
 >         dungeonPartyAttack :: Int,
 >         dungeonPartyMagicAttack :: Int,
 >         dungeonPartyLight :: Int,
 >         dungeonPartyWeight :: Int,
+>         dungeonPartyNotAttacking :: Bool,
 >         dungeonPartyDestroyed :: Bool,
 >         dungeonPartyBorrowedFrom :: Maybe PlayerId
 >     }
@@ -450,6 +454,7 @@ Rest
 >   | ThunderstoneEventDestroyCard PlayerId Card
 >   | ThunderstoneEventUseEffect PlayerId Card String
 >   | ThunderstoneEventPlayerStartsTurn PlayerId
+>   | ThunderstoneEventEquip PlayerId Card Card
 >   | ThunderstoneEventGameOver [(PlayerId,Int)]
 
 Plus breach effects and other things that players should be notified of.
@@ -551,7 +556,8 @@ Game mechanics
 >          PlayerStateWeight (map dungeonPartyWeight stats),
 >          PlayerStateAttack (map dungeonPartyAttack stats),
 >          PlayerStateMagicAttack (map dungeonPartyMagicAttack stats),
->          PlayerStateLight (map dungeonPartyLight stats)]
+>          PlayerStateLight (map dungeonPartyLight stats),
+>          PlayerStateNotAttacking (map dungeonPartyNotAttacking stats)]
 >       where
 >         equipped index stat =
 >             maybe [] (\ i -> [(index,i)]) (dungeonPartyEquippedWith stat)
@@ -1011,11 +1017,56 @@ Village: Leveling Up Heroes:
 Dungeon:
 
 >     performAction
->             UsingDungeonEffects {
+>             playerState@UsingDungeonEffects {
 >                 dungeonEffectsStats = stats
 >                 }
 >             EquipHero = do
->         undefined
+>         hand <- getHand playerId
+>         if null (equippings hand)
+>           then
+>             return Nothing
+>           else do
+>             setPlayerState playerId
+>                 (ChoosingOption WhichHeroToEquip
+>                      (map (chooseHero hand)
+>                           (nub $ map fst $ equippings hand))
+>                      (Just backout))
+>             return (Just [])
+>       where
+>         backout = setPlayerState playerId playerState
+>         equippings hand = availableEquippings (zip hand stats)
+>         chooseHero hand heroIndex =
+>             ((heroIndex,show (hand !! heroIndex)),equipHero hand heroIndex)
+>         equipHero hand heroIndex = do
+>             setPlayerState playerId
+>                 (ChoosingOption WhichWeaponToEquip
+>                     (map (chooseWeapon hand heroIndex)
+>                          (map snd $ filter ((== heroIndex) . fst)
+>                                            (equippings hand)))
+>                     (Just backout))
+>             return []
+>         chooseWeapon hand heroIndex weaponIndex = do
+>             ((weaponIndex,show (hand !! weaponIndex)),
+>              equipWeapon hand heroIndex weaponIndex)
+>         equipWeapon hand heroIndex weaponIndex = do
+>             setPlayerState playerId playerState {
+>                 dungeonEffectsStats = doEquip stats heroIndex weaponIndex
+>                 }
+>             return [ThunderstoneEventEquip playerId
+>                                            (hand !! heroIndex)
+>                                            (hand !! weaponIndex)]
+>         doEquip stats heroIndex weaponIndex =
+>             updateIndex heroIndex
+>                         (\ stat -> stat {
+>                                 dungeonPartyEquippedWith = Just weaponIndex
+>                                 })
+>                 $ updateIndex weaponIndex
+>                         (\ stat -> stat {
+>                               dungeonPartyEquippedBy = Just heroIndex,
+>                               dungeonPartyNotAttacking =
+>                                   dungeonPartyNotAttacking
+>                                       (stats !! heroIndex)
+>                               }) stats
 
 >     performAction
 >             UsingDungeonEffects {
@@ -1175,7 +1226,9 @@ Generic choose option:
 
 >     attackMonster :: [(Card,DungeonPartyStats)]
 >                   -> Thunderstone (Maybe [ThunderstoneEvent])
->     attackMonster stats = undefined
+>     attackMonster stats = do
+>         setPlayerState playerId Waiting -- temporary code while real behavior is undefined
+>         return (Just [])
 
 Low level game mechanics
 
@@ -1288,10 +1341,28 @@ together.
 >     Just xpCost = cardLevelUp (heroDetails oldHero)
 
 > initDungeonPartyStats :: Card -> DungeonPartyStats
-> initDungeonPartyStats card = undefined
+> initDungeonPartyStats card = DungeonPartyStats {
+>     dungeonPartyEquippedWith = Nothing,
+>     dungeonPartyEquippedBy = Nothing,
+>     dungeonPartyStrength = cardHeroStrength card,
+>     dungeonPartyAttack = cardDungeonAttack card,
+>     dungeonPartyMagicAttack = cardDungeonMagicAttack card,
+>     dungeonPartyLight = cardDungeonLight card,
+>     dungeonPartyWeight = cardWeaponWeight card,
+>     dungeonPartyNotAttacking = not (card `hasClass` ClassWeapon),
+>     dungeonPartyDestroyed = False,
+>     dungeonPartyBorrowedFrom = Nothing
+>     }
 
 > availableEquippings :: [(Card,DungeonPartyStats)] -> [(Int,Int)]
-> availableEquippings party = undefined
+> availableEquippings party =
+>     [(index1,index2)
+>      | (index1,(card1,stats1)) <- zip [0..] party,
+>        (index2,(card2,stats2)) <- zip [0..] party,
+>        isNothing (dungeonPartyEquippedWith stats1),
+>        isNothing (dungeonPartyEquippedBy stats2),
+>        isHero card1, card2 `hasClass` ClassWeapon,
+>        dungeonPartyStrength stats1 >= dungeonPartyWeight stats2]
 
 Low level game state transformations.
 
@@ -1499,8 +1570,8 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 >         stats {
 >             dungeonPartyEquippedWith =
 >                 reduceIndex (dungeonPartyEquippedWith stats),
->             dungeonPartyBeingEquippedBy =
->                 reduceIndex (dungeonPartyBeingEquippedBy stats)
+>             dungeonPartyEquippedBy =
+>                 reduceIndex (dungeonPartyEquippedBy stats)
 >             }
 >       where
 >         reduceIndex Nothing = Nothing
@@ -1522,6 +1593,10 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 
 > setIndex :: Int -> [a] -> a -> [a]
 > setIndex index list item = take index list ++ item : drop (index+1) list
+
+> updateIndex :: Int -> (a -> a) -> [a] -> [a]
+> updateIndex index update list =
+>     take index list ++ update (list !! index) : drop (index+1) list
 
 > thunderstoneGetState :: ThunderstoneState -> Thunderstone a -> a
 > thunderstoneGetState state getThunderstoneState =
@@ -1546,18 +1621,68 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 > cardVillagePrice card = error ("cardVillagePrice: " ++ show card)
 
 > cardVillageEffects :: Card -> [VillageEffect]
-> cardVillageEffects card@(VillageCard villageCard) =
->     concatMap (getVillageEffect card) (cardText $ villageDetails villageCard)
-> cardVillageEffects _ = []
+> cardVillageEffects card =
+>     concatMap (getVillageEffect card) (cardCardText card)
 
 > cardDungeonEffects :: Card -> [DungeonEffect]
-> cardDungeonEffects card@(MonsterCard monsterCard) =
->     concatMap (getDungeonEffect card) (cardText $ monsterDetails monsterCard)
-> cardDungeonEffects card@(HeroCard heroCard) =
->     concatMap (getDungeonEffect card) (cardText $ heroDetails heroCard)
-> cardDungeonEffects card@(VillageCard villageCard) =
->     concatMap (getDungeonEffect card) (cardText $ villageDetails villageCard)
-> cardDungeonEffects _ = []
+> cardDungeonEffects card =
+>     concatMap (getDungeonEffect card) (cardCardText card)
+
+> cardCardText :: Card -> [String]
+> cardCardText (MonsterCard card) = cardText $ monsterDetails card
+> cardCardText (HeroCard card) = cardText $ heroDetails card
+> cardCardText (VillageCard card) = cardText $ villageDetails card
+> cardCardText DiseaseCard =
+>     cardText $ diseaseDetails ThunderstoneCards.Disease
+> cardCardText (ThunderstoneCard card) = cardText $ thunderstoneDetails card
+
+> cardHeroStrength :: Card -> Int
+> cardHeroStrength (HeroCard card) =
+>     maybe 0 id (cardStrength $ heroDetails card)
+> cardHeroStrength _ = 0
+
+> cardDungeonAttack :: Card -> Int
+> cardDungeonAttack card = sum $ map getAttack $ cardCardText card
+>   where
+>     getAttack "ATTACK +1" = 1
+>     getAttack "ATTACK +2" = 2
+>     getAttack "ATTACK +3" = 3
+>     getAttack "ATTACK +4" = 4
+>     getAttack "ATTACK +5" = 5
+>     getAttack "ATTACK +6" = 6
+>     getAttack "ATTACK +7" = 7
+>     getAttack "* ATTACK +1" = 1
+>     getAttack "* ATTACK +2" = 2
+>     getAttack "* ATTACK +3" = 3
+>     getAttack "* ATTACK -1" = -1
+>     getAttack "* ATTACK -2" = -2
+>     getAttack "* ATTACK -3" = -3
+>     getAttack _ = 0
+
+> cardDungeonMagicAttack :: Card -> Int
+> cardDungeonMagicAttack card = sum $ map getAttack $ cardCardText card
+>   where
+>     getAttack "MAGIC ATTACK +1" = 1
+>     getAttack "MAGIC ATTACK +2" = 2
+>     getAttack "MAGIC ATTACK +3" = 3
+>     getAttack "MAGIC ATTACK +4" = 4
+>     getAttack "* MAGIC ATTACK +1" = 1
+>     getAttack "* MAGIC ATTACK +2" = 2
+>     getAttack _ = 0
+
+> cardDungeonLight :: Card -> Int
+> cardDungeonLight (MonsterCard card) =
+>     maybe 0 id $ cardLight $ monsterDetails card
+> cardDungeonLight (HeroCard card) =
+>     maybe 0 id $ cardLight $ heroDetails card
+> cardDungeonLight (VillageCard card) =
+>     maybe 0 id $ cardLight $ villageDetails card
+> cardDungeonLight _ = 0
+
+> cardWeaponWeight :: Card -> Int
+> cardWeaponWeight (VillageCard card) =
+>     maybe 0 id $ cardWeight $ villageDetails card
+> cardWeaponWeight _ = 0
 
 Dungeon/Village Effect:
 

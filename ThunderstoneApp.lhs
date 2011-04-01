@@ -218,20 +218,29 @@
 >          ++ " XP: " ++ show (playerStateXP state),
 >          "Hand:"]
 >         ++ showHand (playerStateHand state) (playerStateInfo state)
->         ++ concatMap showInfo (playerStateInfo state)
->     showInfo (PlayerStatePurchases buys) = ["Purchases: " ++ show buys]
->     showInfo (PlayerStateGold gold) = ["Gold: " ++ show gold]
->     showInfo (PlayerStateAttack attack) = ["Attack: " ++ show (sum attack)]
->     showInfo (PlayerStateMagicAttack attack) =
->         ["Magic attack: " ++ show (sum attack)]
->     showInfo (PlayerStateLight light) = ["Light: " ++ show (sum light)]
->     showInfo (PlayerStateOption playerOption) =
+>         ++ concatMap (showInfo (playerStateInfo state))
+>                      (playerStateInfo state)
+>     showInfo _ (PlayerStatePurchases buys) = ["Purchases: " ++ show buys]
+>     showInfo _ (PlayerStateGold gold) = ["Gold: " ++ show gold]
+>     showInfo allInfo (PlayerStateAttack attack) =
+>         ["Attack: " ++ show (sum $ filterAttacking allInfo attack)]
+>     showInfo allInfo (PlayerStateMagicAttack attack) =
+>         ["Magic attack: " ++ show (sum $ filterAttacking allInfo attack)]
+>     showInfo allInfo (PlayerStateLight light) =
+>         ["Light: " ++ show (sum $ filterAttacking allInfo light)]
+>     showInfo _ (PlayerStateOption playerOption) =
 >         ["Choosing: " ++ show playerOption]
->     showInfo (PlayerStateEffectsUsed _) = []
->     showInfo (PlayerStateEquipped _) = []
->     showInfo (PlayerStateStrength _) = []
->     showInfo (PlayerStateWeight _) = []
->     showInfo (PlayerStateCard card) = ["Active card: " ++ show card]
+>     showInfo _ (PlayerStateEffectsUsed _) = []
+>     showInfo _ (PlayerStateEquipped _) = []
+>     showInfo _ (PlayerStateStrength _) = []
+>     showInfo _ (PlayerStateWeight _) = []
+>     showInfo _ (PlayerStateNotAttacking _) = []
+>     showInfo _ (PlayerStateCard card) = ["Active card: " ++ show card]
+>     filterAttacking allInfo list = foldl doFilter list allInfo
+>       where
+>         doFilter list (PlayerStateNotAttacking flags) =
+>             [if flag then 0 else item | (item,flag) <- zip list flags]
+>         doFilter list _ = list
 >     showJust (Just a) = show a
 >     getUsedCards (PlayerStateEffectsUsed used) = used
 >     getUsedCards _ = []
@@ -256,6 +265,8 @@
 >                             (findProperty (magicAttack index))
 >                 ++ maybe "" ((" lgt:" ++) . show)
 >                             (findProperty (light index))
+>                 ++ (if findProperty (used index) == Just True
+>                       then " (used)" else "")
 >         findProperty :: (PlayerStateInfo -> Maybe b) -> Maybe b
 >         findProperty f = foldl (\ result item -> maybe (f item) Just result)
 >                                Nothing stateInfo
@@ -279,6 +290,8 @@
 >         magicAttack _ _ = Nothing
 >         light index (PlayerStateLight list) = Just (list !! index)
 >         light _ _ = Nothing
+>         used index (PlayerStateEffectsUsed list) = Just (list !! index)
+>         used _ _ = Nothing
 
 > doCmd :: UserId -> [String] -> Game ThunderstoneGame ()
 > doCmd uid args = do
@@ -415,6 +428,9 @@
 >                                 ++ show card ++ " " ++ text]
 >     formatEvent getPlayerName (ThunderstoneEventPlayerStartsTurn playerId) =
 >         [getPlayerName playerId ++ " begins turn."]
+>     formatEvent getPlayerName (ThunderstoneEventEquip playerId hero weapon) =
+>         [getPlayerName playerId ++ " equips " ++ show hero
+>                                 ++ " with " ++ show weapon ++ "."]
 >     formatEvent getPlayerName (ThunderstoneEventGameOver scores) =
 >         ["Game over.  Scores:"]
 >         ++ [" " ++ getPlayerName playerId ++ ": " ++ show score
