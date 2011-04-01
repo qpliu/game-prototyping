@@ -1349,7 +1349,7 @@ together.
 >     dungeonPartyMagicAttack = cardDungeonMagicAttack card,
 >     dungeonPartyLight = cardDungeonLight card,
 >     dungeonPartyWeight = cardWeaponWeight card,
->     dungeonPartyNotAttacking = not (card `hasClass` ClassWeapon),
+>     dungeonPartyNotAttacking = card `hasClass` ClassWeapon,
 >     dungeonPartyDestroyed = False,
 >     dungeonPartyBorrowedFrom = Nothing
 >     }
