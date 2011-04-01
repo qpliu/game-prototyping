@@ -48,7 +48,7 @@ Game mechanics:
 > where
 
 > import Control.Monad(filterM,mapM,mapM_,replicateM,unless,when)
-> import Data.List(nub,partition,sortBy,(\\))
+> import Data.List(nub,partition,sortBy,zip4,(\\))
 > import Data.Maybe(catMaybes,isNothing,listToMaybe)
 > import System.Random(StdGen)
 
@@ -1895,7 +1895,20 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >         undefined
 
 >   | text == "DUNGEON: Destroy one Food for an additional ATTACK +3." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             let updateStrength stats = stats {
+>                     dungeonPartyAttack = dungeonPartyAttack stats + 3
+>                     }
+>             let choose foodIndex = do
+>                     markEffectUsed
+>                     dungeonEffectsUpdateStats
+>                         playerId cardIndex updateStrength
+>                     destroyIndex playerId foodIndex
+>                     return [ThunderstoneEventUseEffect playerId card text]
+>             let available (card,_,used) =
+>                     card `hasClass` ClassFood && isNothing used
+>             dungeonEffectsChooseCard
+>                 playerId available WhichCardToUse choose True)]
 
 >   | text == "DUNGEON: Gain +1 ATTACK for each Monster card revealed "
 >                 ++ "from your hand." =
@@ -1910,7 +1923,20 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "REPEAT DUNGEON: Destroy one Food for an additional ATTACK +3." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             let updateStrength stats = stats {
+>                     dungeonPartyAttack = dungeonPartyAttack stats + 3
+>                     }
+>             let choose foodIndex = do
+>                     markCardUsed
+>                     dungeonEffectsUpdateStats
+>                         playerId cardIndex updateStrength
+>                     destroyIndex playerId foodIndex
+>                     return [ThunderstoneEventUseEffect playerId card text]
+>             let available (card,_,used) =
+>                     card `hasClass` ClassFood && isNothing used
+>             dungeonEffectsChooseCard
+>                 playerId available WhichCardToUse choose True)]
 
 >   | text == "DUNGEON: ATTACK +2 for each Monster card revealed from "
 >                 ++ "your hand." =
@@ -1939,7 +1965,20 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >         undefined
 
 >   | text == "DUNGEON: Destroy one Food for additional ATTACK +2." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             let updateStrength stats = stats {
+>                     dungeonPartyAttack = dungeonPartyAttack stats + 2
+>                     }
+>             let choose foodIndex = do
+>                     markEffectUsed
+>                     dungeonEffectsUpdateStats
+>                         playerId cardIndex updateStrength
+>                     destroyIndex playerId foodIndex
+>                     return [ThunderstoneEventUseEffect playerId card text]
+>             let available (card,_,used) =
+>                     card `hasClass` ClassFood && isNothing used
+>             dungeonEffectsChooseCard
+>                 playerId available WhichCardToUse choose True)]
 
 >   | text == "DUNGEON: Destroy one Food to place one Monster from "
 >                 ++ "the hall worth 1 or 2 VP into your discard pile.  "
@@ -1947,11 +1986,39 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >         undefined
 
 >   | text == "DUNGEON: One Hero gains Strength +2." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             let updateStrength stats = stats {
+>                     dungeonPartyStrength = dungeonPartyStrength stats + 2
+>                     }
+>             let choose heroIndex = do
+>                     markEffectUsed
+>                     dungeonEffectsUpdateStats
+>                         playerId heroIndex updateStrength
+>                     return [ThunderstoneEventUseEffect playerId card text]
+>             dungeonEffectsChooseCard
+>                 playerId (\ (card,_,_) -> isHero card)
+>                 WhichCardToUse choose True)]
 
 >   | text == "DUNGEON: All ATTACKS from Heroes with Weapons "
 >                 ++ "equipped become MAGIC ATTACKS.  Draw one card." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             let updateAttacks stats = stats {
+>                     dungeonPartyAttack = 0,
+>                     dungeonPartyMagicAttack = dungeonPartyAttack stats
+>                                             + dungeonPartyMagicAttack stats
+>                     }
+>             hand <- getHand playerId
+>             partyStats <- fmap dungeonEffectsStats $ getPlayerState playerId
+>             sequence_
+>                 [dungeonEffectsUpdateStats playerId index updateAttacks
+>                  | (index,card,stats) <- zip3 [0..] hand partyStats,
+>                    (isHero card
+>                     && not (isNothing $ dungeonPartyEquippedWith stats))
+>                    || (card `hasClass` ClassWeapon
+>                        && not (isNothing $ dungeonPartyEquippedBy stats))]
+>             dungeonEffectsDrawCards playerId 1
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: Return one Monster to the bottom of the "
 >                 ++ "deck and refill the hall, or rearrange the hall.  "
@@ -1983,7 +2050,37 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 
 >   | text == "DUNGEON: One Hero gains Strength +3 and ATTACK "
 >                 ++ "becomes MAGIC ATTACK for that Hero." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             let updateAttack stats = stats {
+>                     dungeonPartyAttack = 0,
+>                     dungeonPartyMagicAttack = dungeonPartyAttack stats
+>                                             + dungeonPartyMagicAttack stats
+>                     }
+>             let updateStrength stats = stats {
+>                     dungeonPartyStrength = dungeonPartyStrength stats + 3
+>                     }
+>             let updateWeapon weaponIndex =
+>                     case weaponIndex of
+>                       Just index ->
+>                         dungeonEffectsUpdateStats playerId index updateAttack
+>                       _ ->
+>                         return ()
+>             let updateWeaponStats heroIndex = do
+>                     playerState <- getPlayerState playerId
+>                     updateWeapon (dungeonPartyEquippedWith
+>                                       ((dungeonEffectsStats playerState)
+>                                        !! heroIndex))
+>             let choose heroIndex = do
+>                     markEffectUsed
+>                     dungeonEffectsUpdateStats
+>                         playerId heroIndex updateStrength
+>                     dungeonEffectsUpdateStats
+>                         playerId heroIndex updateAttack
+>                     updateWeaponStats heroIndex
+>                     return [ThunderstoneEventUseEffect playerId card text]
+>             dungeonEffectsChooseCard
+>                 playerId (\ (card,_,_) -> isHero card)
+>                 WhichCardToUse choose True)]
 
 >   | text == "DUNGEON: All Weapons become Weight 0.  Draw one card." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
@@ -2053,3 +2150,33 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >         dungeonEffectsStats = updateIndex cardIndex update
 >                                           (dungeonEffectsStats playerState)
 >         }
+
+> dungeonEffectsChooseCard :: PlayerId
+>                          -> ((Card,DungeonPartyStats,Maybe [Bool]) -> Bool)
+>                          -> PlayerOption
+>                          -> (Int -> Thunderstone [ThunderstoneEvent])
+>                          -> Bool
+>                          -> Thunderstone (Maybe [ThunderstoneEvent])
+> dungeonEffectsChooseCard playerId cardFilter playerOption
+>                          choiceMade backout = do
+>     playerState <- getPlayerState playerId
+>     let stats = dungeonEffectsStats playerState
+>     let used = dungeonEffectsUsed playerState
+>     hand <- getHand playerId
+>     if null (filter cardFilter $ zip3 hand stats used)
+>       then return Nothing
+>       else do
+>         setPlayerState playerId
+>             (ChoosingOption playerOption
+>                 [((index,show card),choose index playerState)
+>                  | (index,card,cardStats,cardUsed) <-
+>                         zip4 [0..] hand stats used,
+>                    cardFilter (card,cardStats,cardUsed)]
+>                 (if backout
+>                    then Just (setPlayerState playerId playerState)
+>                    else Nothing))
+>         return (Just [])
+>   where
+>     choose index playerState = do
+>         setPlayerState playerId playerState
+>         choiceMade index
