@@ -315,7 +315,7 @@ heroDetails DwarfJanissary = initCardDetails {
         ["Dwarf Janissary: If revealed during a Dungeon action, you "
          ++ "may purchase one Weapon card from the Village after a "
          ++ "victorious battle, using the gold in your hand.  His "
-         ++ "total Attack Vlaue if an Edged Weapon is equipped is +6."]
+         ++ "total Attack Value if an Edged Weapon is equipped is +6."]
     }
 
 heroDetails DwarfSentinel = initCardDetails {
