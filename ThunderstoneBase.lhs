@@ -1861,13 +1861,35 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 > getDungeonEffect card text
 
 >   | text == "REPEAT DUNGEON: Destroy one Disease to draw one card." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             hand <- getHand playerId
+>             case filter ((== DiseaseCard) . snd) (zip [0..] hand) of
+>               (diseaseIndex,_):_ -> do
+>                 markCardUsed
+>                 destroyIndex playerId diseaseIndex
+>                 dungeonEffectsDrawCards playerId 1
+>                 return (Just [ThunderstoneEventUseEffect playerId card text])
+>               _ -> -- no Disease
+>                 return Nothing)]
 
 >   | text == "DUNGEON: ATTACK +1 for each Item that produces Light." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             hand <- getHand playerId
+>             let isLightItem card =
+>                     card `hasClass` ClassItem && card `hasClass` ClassLight
+>             let addAttack stats = stats {
+>                     dungeonPartyAttack = dungeonPartyAttack stats
+>                         + (length $ filter isLightItem hand)
+>                     }
+>             dungeonEffectsUpdateStats playerId cardIndex addAttack
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: Draw one card." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             dungeonEffectsDrawCards playerId 1
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: All other players discard one card." =
 >         undefined
@@ -1877,20 +1899,39 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 
 >   | text == "DUNGEON: Gain +1 ATTACK for each Monster card revealed "
 >                 ++ "from your hand." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             hand <- getHand playerId
+>             let addAttack stats = stats {
+>                     dungeonPartyAttack = dungeonPartyAttack stats
+>                         + (length $ filter isMonster hand)
+>                     }
+>             dungeonEffectsUpdateStats playerId cardIndex addAttack
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "REPEAT DUNGEON: Destroy one Food for an additional ATTACK +3." =
 >         undefined
 
 >   | text == "DUNGEON: ATTACK +2 for each Monster card revealed from "
 >                 ++ "your hand." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             hand <- getHand playerId
+>             let addAttack stats = stats {
+>                     dungeonPartyAttack = dungeonPartyAttack stats
+>                         + 2*(length $ filter isMonster hand)
+>                     }
+>             dungeonEffectsUpdateStats playerId cardIndex addAttack
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: All other players discard one Hero or two cards." =
 >         undefined
 
 >   | text == "DUNGEON: Draw two cards." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             dungeonEffectsDrawCards playerId 2
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: Each player discards one Hero or shows they "
 >                 ++ "have none.  You may borrow one of those discarded "
@@ -1918,27 +1959,65 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >         undefined
 
 >   | text == "DUNGEON: All Heroes gain ATTACK +1." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             let addAttack stats = stats {
+>                     dungeonPartyAttack = dungeonPartyAttack stats + 1
+>                     }
+>             hand <- getHand playerId
+>             sequence_ [dungeonEffectsUpdateStats playerId index addAttack
+>                        | (index,card) <- zip [0..] hand, isHero card]
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: All Heroes gain Strength +3 and ATTACK +1." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             let addGains stats = stats {
+>                     dungeonPartyAttack = dungeonPartyAttack stats + 3,
+>                     dungeonPartyStrength = dungeonPartyStrength stats + 1
+>                     }
+>             hand <- getHand playerId
+>             sequence_ [dungeonEffectsUpdateStats playerId index addGains
+>                        | (index,card) <- zip [0..] hand, isHero card]
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: One Hero gains Strength +3 and ATTACK "
 >                 ++ "becomes MAGIC ATTACK for that Hero." =
 >         undefined
 
 >   | text == "DUNGEON: All Weapons become Weight 0.  Draw one card." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             let removeWeight stats = stats {
+>                     dungeonPartyWeight = 0
+>                     }
+>             hand <- getHand playerId
+>             sequence_ [dungeonEffectsUpdateStats playerId index removeWeight
+>                        | (index,card) <- zip [0..] hand,
+>                          card `hasClass` ClassWeapon]
+>             dungeonEffectsDrawCards playerId 1
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: You may Destroy this Spear for an "
 >                 ++ "additional ATTACK +3." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             let addAttack stats = stats {
+>                     dungeonPartyAttack = dungeonPartyAttack stats + 3,
+>                     dungeonPartyDestroyed = True
+>                     }
+>             dungeonEffectsUpdateStats playerId cardIndex addAttack
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | otherwise = []
 
 > isHero :: Card -> Bool
 > isHero (HeroCard _) = True
 > isHero _ = False
+
+> isMonster :: Card -> Bool
+> isMonster (MonsterCard _) = True
+> isMonster _ = False
 
 > hasClass :: Card -> CardClass -> Bool
 > hasClass (HeroCard card) cardClass =
@@ -1951,3 +2030,26 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >     cardClass `elem` (cardClasses $ thunderstoneDetails card)
 > hasClass DiseaseCard cardClass =
 >     cardClass `elem` [ClassDisease,ClassSpecial]
+
+> dungeonEffectsDrawCards :: PlayerId -> Int -> Thunderstone ()
+> dungeonEffectsDrawCards playerId numberOfCards = do
+>     cards <- multiple 1 $ drawCard playerId
+>     hand <- getHand playerId
+>     setHand playerId (hand ++ cards)
+>     playerState <- getPlayerState playerId
+>     setPlayerState playerId playerState {
+>         dungeonEffectsUsed = dungeonEffectsUsed playerState
+>                              ++ replicate (length cards) Nothing,
+>         dungeonEffectsStats = dungeonEffectsStats playerState
+>                               ++ map initDungeonPartyStats cards
+>                     }
+
+> dungeonEffectsUpdateStats :: PlayerId -> Int
+>                           -> (DungeonPartyStats -> DungeonPartyStats)
+>                           -> Thunderstone ()
+> dungeonEffectsUpdateStats playerId cardIndex update = do
+>     playerState <- getPlayerState playerId
+>     setPlayerState playerId playerState {
+>         dungeonEffectsStats = updateIndex cardIndex update
+>                                           (dungeonEffectsStats playerState)
+>         }
