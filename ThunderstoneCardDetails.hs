@@ -4779,7 +4779,9 @@ villageDetails Spear = initCardDetails {
     cardGold = Just 2,
     cardWeight = Just 4,
     cardPrice = Just 4,
-    cardText = ["ATTACK +2"],
+    cardText = ["ATTACK +2",
+                "DUNGEON: You may Destroy this Spear for an "
+                ++ "additional ATTACK +3."],
     cardGlossary =
         ["Spear: If you destroy (throw) the Spear, the Attack bonus "
          ++ "increases by an additional +3, for a total of +5.  "

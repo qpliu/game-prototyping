@@ -1070,10 +1070,21 @@ Dungeon:
 
 >     performAction
 >             UsingDungeonEffects {
+>                 dungeonEffectsUsed = used,
 >                 dungeonEffectsStats = stats
 >                 }
 >             (ChooseOption (index,description)) = do
->         undefined
+>         hand <- getHand playerId
+>         if index < 0 || index >= length hand
+>                      || description /= show (hand !! index)
+>           then return Nothing
+>           else do
+>             setPlayerState playerId UsingDungeonEffectsCard {
+>                 dungeonEffectsCardIndex = index,
+>                 dungeonEffectsUsed = used,
+>                 dungeonEffectsStats = stats
+>                 }
+>             return (Just [])
 
 >     performAction
 >             UsingDungeonEffects {
@@ -1087,11 +1098,52 @@ Dungeon:
 
 >     performAction
 >             UsingDungeonEffectsCard {
+>                 dungeonEffectsCardIndex = cardIndex,
 >                 dungeonEffectsUsed = used,
 >                 dungeonEffectsStats = stats
 >                 }
 >             (ChooseOption (index,description)) = do
->         undefined
+>         hand <- getHand playerId
+>         if index < 0 || index >= length (effects hand) || effectUsed
+>           then
+>             return Nothing
+>           else
+>             effect hand playerId cardIndex markCardUsed markEffectUsed
+>       where
+>         effects hand = cardDungeonEffects (hand !! cardIndex)
+>         effectText hand = fst (effects hand !! index)
+>         effect hand = snd (effects hand !! index)
+>         effectUsed = maybe False (!! index) (used !! cardIndex)
+>         markCardUsed = do
+>             playerState <- getPlayerState playerId
+>             hand <- getHand playerId
+>             let cardIndex = dungeonEffectsCardIndex playerState
+>             let effects = cardDungeonEffects (hand !! cardIndex)
+>             maybe (setPlayerState playerId playerState {
+>                        dungeonEffectsUsed =
+>                            setIndex cardIndex
+>                                     (dungeonEffectsUsed playerState)
+>                                     (Just $ replicate (length effects) False)
+>                     })
+>                   (const (return ()))
+>                   (dungeonEffectsUsed playerState !! cardIndex)
+>         markEffectUsed = do
+>             playerState <- getPlayerState playerId
+>             hand <- getHand playerId
+>             let cardIndex = dungeonEffectsCardIndex playerState
+>             let effects = cardDungeonEffects (hand !! cardIndex)
+>             setPlayerState playerId playerState {
+>                 dungeonEffectsUsed =
+>                     setIndex cardIndex
+>                              (dungeonEffectsUsed playerState)
+>                              (markUsed (length effects)
+>                                   (dungeonEffectsUsed playerState
+>                                    !! cardIndex))
+>                 }
+>           where
+>             markUsed numberOfEffects Nothing =
+>                 Just $ setIndex index (replicate numberOfEffects False) True
+>             markUsed _ (Just flags) = Just $ setIndex index flags True
 
 >     performAction
 >             UsingDungeonEffectsCard {
@@ -1807,6 +1859,80 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 
 > getDungeonEffect :: Card -> String -> [DungeonEffect]
 > getDungeonEffect card text
+
+>   | text == "REPEAT DUNGEON: Destroy one Disease to draw one card." =
+>         undefined
+
+>   | text == "DUNGEON: ATTACK +1 for each Item that produces Light." =
+>         undefined
+
+>   | text == "DUNGEON: Draw one card." =
+>         undefined
+
+>   | text == "DUNGEON: All other players discard one card." =
+>         undefined
+
+>   | text == "DUNGEON: Destroy one Food for an additional ATTACK +3." =
+>         undefined
+
+>   | text == "DUNGEON: Gain +1 ATTACK for each Monster card revealed "
+>                 ++ "from your hand." =
+>         undefined
+
+>   | text == "REPEAT DUNGEON: Destroy one Food for an additional ATTACK +3." =
+>         undefined
+
+>   | text == "DUNGEON: ATTACK +2 for each Monster card revealed from "
+>                 ++ "your hand." =
+>         undefined
+
+>   | text == "DUNGEON: All other players discard one Hero or two cards." =
+>         undefined
+
+>   | text == "DUNGEON: Draw two cards." =
+>         undefined
+
+>   | text == "DUNGEON: Each player discards one Hero or shows they "
+>                 ++ "have none.  You may borrow one of those discarded "
+>                 ++ "Heroes for the battle, returning it at the end." =
+>         undefined
+
+>   | text == "DUNGEON: Destroy one Food for additional ATTACK +2." =
+>         undefined
+
+>   | text == "DUNGEON: Destroy one Food to place one Monster from "
+>                 ++ "the hall worth 1 or 2 VP into your discard pile.  "
+>                 ++ "Refill the hall." =
+>         undefined
+
+>   | text == "DUNGEON: One Hero gains Strength +2." =
+>         undefined
+
+>   | text == "DUNGEON: All ATTACKS from Heroes with Weapons "
+>                 ++ "equipped become MAGIC ATTACKS.  Draw one card." =
+>         undefined
+
+>   | text == "DUNGEON: Return one Monster to the bottom of the "
+>                 ++ "deck and refill the hall, or rearrange the hall.  "
+>                 ++ "Destroy one card from your hand.  Draw one card." =
+>         undefined
+
+>   | text == "DUNGEON: All Heroes gain ATTACK +1." =
+>         undefined
+
+>   | text == "DUNGEON: All Heroes gain Strength +3 and ATTACK +1." =
+>         undefined
+
+>   | text == "DUNGEON: One Hero gains Strength +3 and ATTACK "
+>                 ++ "becomes MAGIC ATTACK for that Hero." =
+>         undefined
+
+>   | text == "DUNGEON: All Weapons become Weight 0.  Draw one card." =
+>         undefined
+
+>   | text == "DUNGEON: You may Destroy this Spear for an "
+>                 ++ "additional ATTACK +3." =
+>         undefined
 
 >   | otherwise = []
 
