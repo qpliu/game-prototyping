@@ -453,6 +453,7 @@ Rest
 >   | ThunderstoneEventDiscard PlayerId Card
 >   | ThunderstoneEventDestroyCard PlayerId Card
 >   | ThunderstoneEventUseEffect PlayerId Card String
+>   | ThunderstoneEventBorrowCard PlayerId Card PlayerId
 >   | ThunderstoneEventPlayerStartsTurn PlayerId
 >   | ThunderstoneEventEquip PlayerId Card Card
 >   | ThunderstoneEventGameOver [(PlayerId,Int)]
@@ -1892,7 +1893,23 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: All other players discard one card." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             playerState <- getPlayerState playerId
+>             setPlayerState playerId WaitingForDiscards {
+>                 waitingForDiscards = [],
+>                 waitingForDiscardsDone =
+>                     const (setPlayerState playerId playerState)
+>                 }
+>             playerIds <- getPlayerIds
+>             mapM_ (\ otherPlayerId ->
+>                           setPlayerState otherPlayerId DiscardingCards {
+>                               discardingCards = [],
+>                               discardingCardCount = 1,
+>                               discardingCardsDone = const (return ())
+>                               })
+>                   (filter (/= playerId) playerIds)
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: Destroy one Food for an additional ATTACK +3." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
@@ -1951,7 +1968,22 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: All other players discard one Hero or two cards." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             markEffectUsed
+>             playerState <- getPlayerState playerId
+>             setPlayerState playerId WaitingForDiscards {
+>                 waitingForDiscards = [],
+>                 waitingForDiscardsDone =
+>                     const (setPlayerState playerId playerState)
+>                 }
+>             playerIds <- getPlayerIds
+>             mapM_ (\ otherPlayerId ->
+>                           setPlayerState otherPlayerId
+>                               DiscardingTwoCardsOrOneHero {
+>                                   discardingCardsDone = const (return ())
+>                                   })
+>                   (filter (/= playerId) playerIds)
+>             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
 >   | text == "DUNGEON: Draw two cards." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
@@ -1962,7 +1994,28 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >   | text == "DUNGEON: Each player discards one Hero or shows they "
 >                 ++ "have none.  You may borrow one of those discarded "
 >                 ++ "Heroes for the battle, returning it at the end." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             playerState <- getPlayerState playerId
+>             -- player chooses hero to discard
+>             -- if player has a hero, but the hero is used, disallow
+>             -- if player has no hero, continue
+>             -- when selection is made:
+>             --     markEffectUsed
+>             --     set state to WaitingForDiscards associating discarded hero
+>             --         with playerId in waitingForDiscards alist
+>             --     set other player state to DiscardingHero, where
+>             --         discardingCardsDone removes the hero from other
+>             --         player's hand and associates the hero with
+>             --         the other player's playerId in waitingForDiscards
+>             --         alist
+>             --     
+>             --     return ThunderstoneEventUseEffect, plus
+>             --         ThunderstoneEventRevealCards for other players that
+>             --         have no heroes
+>             -- waitingForDiscardsDone: player chooses hero to borrow
+>             -- when selection is made:
+>             --     return ThunderstoneEventBorrowCard
+>             undefined)]
 
 >   | text == "DUNGEON: Destroy one Food for additional ATTACK +2." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
@@ -1983,7 +2036,18 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >   | text == "DUNGEON: Destroy one Food to place one Monster from "
 >                 ++ "the hall worth 1 or 2 VP into your discard pile.  "
 >                 ++ "Refill the hall." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             -- if no monster worth 1 or 2 VP, invalid
+>             -- if no unused Food, invalid
+>             -- choose Food to destroy
+>             -- when selection is made:
+>             --     markEffectUsed
+>             --     choose Monster from hall
+>             --     return ThunderstoneEventUseEffect,
+>             --            ThunderstoneEventDestroyCard
+>             --     when selection is made:
+>             --         resolve breach effects
+>             undefined)]
 
 >   | text == "DUNGEON: One Hero gains Strength +2." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
@@ -2023,7 +2087,18 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >   | text == "DUNGEON: Return one Monster to the bottom of the "
 >                 ++ "deck and refill the hall, or rearrange the hall.  "
 >                 ++ "Destroy one card from your hand.  Draw one card." =
->         undefined
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             -- choose return monster or rearrange hall
+>             -- when selection is made:
+>             --     markEffectUsed
+>             --     resolve breach effects
+>             --     return ThunderstoneEventUseEffect
+>             --     when breach effects resolved:
+>             --         choose card to destroy
+>             --         return ThunderstoneEventDestroyCard
+>             --         when selection is made:
+>             --             draw card
+>             undefined)]
 
 >   | text == "DUNGEON: All Heroes gain ATTACK +1." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do

@@ -426,6 +426,10 @@
 >                 (ThunderstoneEventUseEffect playerId card text) =
 >         [getPlayerName playerId ++ " uses a card Effect: "
 >                                 ++ show card ++ " " ++ text]
+>     formatEvent getPlayerName
+>                 (ThunderstoneEventBorrowCard playerId card otherPlayerId) =
+>         [getPlayerName playerId ++ " borrows " ++ show card
+>                                 ++ " from " ++ getPlayerName otherPlayerId]
 >     formatEvent getPlayerName (ThunderstoneEventPlayerStartsTurn playerId) =
 >         [getPlayerName playerId ++ " begins turn."]
 >     formatEvent getPlayerName (ThunderstoneEventEquip playerId hero weapon) =
