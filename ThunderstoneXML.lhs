@@ -1,3 +1,5 @@
+> import Data.Char(isUpper)
+
 > import ThunderstoneCards
 > import ThunderstoneCardDetails
 
@@ -69,7 +71,7 @@
 >     ++ xmlItem "group" (cardType details)
 >     ++ xmlItem "icon" (cardIcon details)
 >     ++ xmlItem "count" (cardCount details)
->     ++ xmlList "class" (map (drop 5 . show) (cardClasses details))
+>     ++ xmlList "class" (map showCardClass (cardClasses details))
 >     ++ xmlOption "gold" (cardGold details)
 >     ++ xmlOption "light" (cardLight details)
 >     ++ xmlOption "vp" (cardVictoryPoints details)
@@ -81,9 +83,17 @@
 >     ++ xmlOption "levelup" (cardLevelUp details)
 >     ++ xmlList "effects" (map textItem (cardText details))
 >     ++ xmlList "glossary" (cardGlossary details)
+>     ++ xmlString "layout" "low"
 >   where
 >     details = cardDetails card
 >     textItem text = "\n        <text>" ++ xmlQuote text ++ "</text>\n      "
+
+> showCardClass :: CardClass -> String
+> showCardClass ClassUlbricksTreasure = "Ulbrick's Treasure"
+> showCardClass cardClass =
+>     unwords $ drop 1 $ words $ concatMap splitCamelCase $ show cardClass
+>   where
+>     splitCamelCase char | isUpper char = [' ',char] | otherwise = [char]
 
 > instance ThunderstoneXML ThunderstoneCard where
 >     thunderstoneXML card =

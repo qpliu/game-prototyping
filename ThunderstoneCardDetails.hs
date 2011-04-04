@@ -5526,7 +5526,7 @@ villageDetails Trader = initCardDetails {
 diseaseDetails :: DiseaseCard -> CardDetails DiseaseCard
 diseaseDetails Disease = initCardDetails {
     cardName = "Disease",
-    cardSource = ThunderstoneBase,
+    cardSource = DoomgateLegion,
     cardType = Disease,
     cardIcon = CardIconBasic,
     cardCount = 10,
