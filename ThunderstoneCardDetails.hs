@@ -5699,7 +5699,7 @@ dungeonFeatureDetails UlbricksArmor = initCardDetails {
     cardType = DungeonFeatureUlbricksTreasures,
     cardIcon = CardIconNone,
     cardCount = 2,
-    cardClasses = [ClassUlbricksTreasure],
+    cardClasses = [ClassUlbrick'sTreasure],
     cardText = ["TREASURE",
                 "Destroy Ulbrick's Armor and all revealed non-Hero cards.  "
                 ++ "Draw two cards for each card destroyed."]
@@ -5711,7 +5711,7 @@ dungeonFeatureDetails UlbricksGauntlets = initCardDetails {
     cardType = DungeonFeatureUlbricksTreasures,
     cardIcon = CardIconNone,
     cardCount = 1,
-    cardClasses = [ClassUlbricksTreasure],
+    cardClasses = [ClassUlbrick'sTreasure],
     cardText = ["TREASURE",
                 "DUNGEON: If you defeat a monster worth less than 4 VP, "
                 ++ "you may Destroy Ulbrick's Gauntlets to take another "
@@ -5724,7 +5724,7 @@ dungeonFeatureDetails UlbricksHelmet = initCardDetails {
     cardType = DungeonFeatureUlbricksTreasures,
     cardIcon = CardIconNone,
     cardCount = 3,
-    cardClasses = [ClassUlbricksTreasure],
+    cardClasses = [ClassUlbrick'sTreasure],
     cardText = ["TREASURE",
                 "Destroy Ulbrick's Helmet and draw three cards."]
     }

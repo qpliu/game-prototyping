@@ -83,13 +83,12 @@
 >     ++ xmlOption "levelup" (cardLevelUp details)
 >     ++ xmlList "effects" (map textItem (cardText details))
 >     ++ xmlList "glossary" (cardGlossary details)
->     ++ xmlString "layout" "low"
+>     ++ xmlString "layout" "<border>low</border>"
 >   where
 >     details = cardDetails card
 >     textItem text = "\n        <text>" ++ xmlQuote text ++ "</text>\n      "
 
 > showCardClass :: CardClass -> String
-> showCardClass ClassUlbricksTreasure = "Ulbrick's Treasure"
 > showCardClass cardClass =
 >     unwords $ drop 1 $ words $ concatMap splitCamelCase $ show cardClass
 >   where

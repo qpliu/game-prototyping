@@ -711,7 +711,7 @@ Doomgate Legion:
 >   | ClassThunderstone
 >   | ClassTrap
 >   | ClassTreasure
->   | ClassUlbricksTreasure
+>   | ClassUlbrick'sTreasure
 >   | ClassUndead
 >   | ClassVillager
 >   | ClassWeapon
