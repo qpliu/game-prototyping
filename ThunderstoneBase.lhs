@@ -81,6 +81,7 @@ Initialize the state with the random number generator.
 >     thunderstoneDungeon = error "undefined thunderstoneDungeon",
 >     thunderstoneHeroes = error "undefined thunderstoneHeroes",
 >     thunderstoneVillage = error "undefined thunderstoneVillage",
+>     thunderstoneBreached = error "undefined thunderstoneBreached",
 >     thunderstoneGameOver = error "undefined thunderstoneGameOver"
 >     }
 
@@ -210,6 +211,7 @@ Game setup:
 >         thunderstoneHeroes = map heroStack (HeroMilitia:heroes),
 >         thunderstoneVillage =
 >             map villageStack ([Dagger, IronRations, Torch] ++ village),
+>         thunderstoneBreached = [],
 >         thunderstoneGameOver = False
 >         }
 >     playerIds <- getPlayerIds
@@ -284,6 +286,7 @@ Game state:
 >     thunderstoneDungeon :: [Card],
 >     thunderstoneHeroes :: [(HeroType,[HeroCard])],
 >     thunderstoneVillage :: [(VillageCard,Int)],
+>     thunderstoneBreached :: [Card],
 >     thunderstoneGameOver :: Bool
 >     }
 
@@ -456,6 +459,7 @@ Rest
 >   | ThunderstoneEventBorrowCard PlayerId Card PlayerId
 >   | ThunderstoneEventPlayerStartsTurn PlayerId
 >   | ThunderstoneEventEquip PlayerId Card Card
+>   | ThunderstoneEventBreach Card String
 >   | ThunderstoneEventGameOver [(PlayerId,Int)]
 
 Plus breach effects and other things that players should be notified of.

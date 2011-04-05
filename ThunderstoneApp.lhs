@@ -435,6 +435,8 @@
 >     formatEvent getPlayerName (ThunderstoneEventEquip playerId hero weapon) =
 >         [getPlayerName playerId ++ " equips " ++ show hero
 >                                 ++ " with " ++ show weapon ++ "."]
+>     formatEvent getPlayerName (ThunderstoneEventBreach card text) =
+>         [show card ++ ", " ++ text]
 >     formatEvent getPlayerName (ThunderstoneEventGameOver scores) =
 >         ["Game over.  Scores:"]
 >         ++ [" " ++ getPlayerName playerId ++ ": " ++ show score
