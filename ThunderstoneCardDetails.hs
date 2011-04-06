@@ -234,7 +234,7 @@ heroDetails ChaliceQuester = initCardDetails {
     cardText = ["ATTACK +2",
                 "REPEAT DUNGEON: Destroy one Disease to draw one card."],
     cardGlossary =
-        ["Chalice Quester and Defender: You man continue to destroy "
+        ["Chalice Quester and Defender: You may continue to destroy "
          ++ "Disease cards and draw new cards until you choose "
          ++ "which Monster to attack."]
     }
@@ -254,7 +254,7 @@ heroDetails ChaliceDefender = initCardDetails {
                 "DUNGEON: Draw one card.",
                 "REPEAT DUNGEON: Destroy one Disease to draw one card."],
     cardGlossary =
-        ["Chalice Quester and Defender: You man continue to destroy "
+        ["Chalice Quester and Defender: You may continue to destroy "
          ++ "Disease cards and draw new cards until you choose which "
          ++ "Monster to attack.",
          "Chalice Defender: Only Items (not Weapons) that provide a "
