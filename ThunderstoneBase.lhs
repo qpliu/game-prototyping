@@ -2138,7 +2138,64 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             --            ThunderstoneEventDestroyCard
 >             --     when selection is made:
 >             --         resolve breach effects
->             undefined)]
+>             state <- getState
+>             hand <- getHand playerId
+>             playerState <- getPlayerState playerId
+>             let monsterAvailable (_,MonsterCard monsterCard) =
+>                     (cardVictoryPoints $ monsterDetails monsterCard)
+>                         `elem` [Just 1,Just 2]
+>                 monsterVP _ = False
+>             let availableMonsters =
+>                     filter monsterAvailable $ zip [1..] $ take 3
+>                                             $ thunderstoneDungeon state
+>             let chooseMonster playerState foodIndex foodCard
+>                               (rank,monsterCard) =
+>                     ((rank,show card,Nothing),do
+>                         setPlayerState playerId playerState
+>                         state <- getState
+>                         setState state {
+>                             thunderstoneDungeon =
+>                                 removeIndex (rank - 1)
+>                                             (thunderstoneDungeon state)
+>                             }
+>                         discard playerId [monsterCard]
+>                         if rank /= 1
+>                           then return []
+>                           else triggerBreachEffects)
+>             let foodAvailable (_,card,used,stats) =
+>                     card `hasClass` ClassFood
+>                         && isNothing used
+>                         && not (dungeonPartyDestroyed stats)
+>             let availableFood =
+>                     filter foodAvailable
+>                         $ zip4 [0..] hand
+>                                (dungeonEffectsUsed playerState)
+>                                (dungeonEffectsStats playerState)
+>             let chooseFood playerState (foodIndex,foodCard,_,_) =
+>                     ((foodIndex,show foodCard,Nothing),do
+>                         setPlayerState playerId playerState
+>                         markEffectUsed
+>                         destroyIndex playerId foodIndex
+>                         playerState <- getPlayerState playerId
+>                         setPlayerState playerId
+>                             (ChoosingOption WhichCardToDiscard
+>                                  (map (chooseMonster playerState
+>                                                      foodIndex foodCard)
+>                                       availableMonsters)
+>                                  Nothing)
+>                         return [ThunderstoneEventUseEffect playerId
+>                                                            card text,
+>                                 ThunderstoneEventDestroyCard playerId
+>                                                              foodCard])
+>             if null availableMonsters || null availableFood
+>               then
+>                 return Nothing
+>               else do
+>                 setPlayerState playerId
+>                     (ChoosingOption WhichCardToDestroy
+>                         (map (chooseFood playerState) availableFood)
+>                         (Just (setPlayerState playerId playerState)))
+>                 return (Just []))]
 
 >   | text == "DUNGEON: One Hero gains Strength +2." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
@@ -2346,3 +2403,8 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >     choose index playerState = do
 >         setPlayerState playerId playerState
 >         choiceMade index
+
+> triggerBreachEffects :: Thunderstone [ThunderstoneEvent]
+> triggerBreachEffects = do
+>     -- undefined
+>     return []
