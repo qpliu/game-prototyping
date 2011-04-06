@@ -277,7 +277,7 @@ Game state:
 > type Thunderstone a = StateTransformer ThunderstoneState a
 
 > newtype PlayerId = PlayerId Int
->     deriving Eq
+>     deriving (Eq,Show)
 
 > data ThunderstoneState = ThunderstoneState {
 >     thunderstoneStdGen :: StdGen,
@@ -355,7 +355,7 @@ been used.  Used cards are not eligible to be destroyed to activate effects.
 >         }
 
 >   | ChoosingOption PlayerOption
->         [((Int,String),Thunderstone [ThunderstoneEvent])]
+>         [((Int,String,Maybe PlayerId),Thunderstone [ThunderstoneEvent])]
 >         (Maybe (Thunderstone ()))
 
 > data PlayerOption =
@@ -365,6 +365,7 @@ been used.  Used cards are not eligible to be destroyed to activate effects.
 >   | WhichCardToUse
 >   | WhichEffectToUse
 >   | WhichHeroToLevelUp
+>   | WhichHeroToBorrow
 >   | WhichHeroToEquip
 >   | WhichWeaponToEquip
 >   deriving Show
@@ -443,7 +444,7 @@ Rest
 
 >   | EndTurn
 
->   | ChooseOption (Int,String)
+>   | ChooseOption (Int,String,Maybe PlayerId)
 >   | Backout
 
 >   deriving (Eq,Show)
@@ -615,7 +616,7 @@ Stone of Scorn would override the generic scoring.
 >             } = do
 >         hand <- getHand playerId
 >         return ([FinishUsingVillageEffects,EndTurn]
->                 ++ [ChooseOption (index,show card)
+>                 ++ [ChooseOption (index,show card,Nothing)
 >                     | (index,(card,cardUsed)) <- zip [0..] (zip hand used),
 >                       maybe (not $ null $ cardVillageEffects card)
 >                             (not . and)
@@ -627,7 +628,7 @@ Stone of Scorn would override the generic scoring.
 >             } = do
 >         hand <- getHand playerId
 >         return ([FinishUsingCard,FinishUsingVillageEffects,EndTurn]
->                 ++ [ChooseOption (index,effectText)
+>                 ++ [ChooseOption (index,effectText,Nothing)
 >                     | (index,(effectText,_)) <-
 >                           zip [0..] (cardVillageEffects (hand !! cardIndex)),
 >                       maybe True (not . (!! index)) (used !! cardIndex)])
@@ -655,7 +656,7 @@ Stone of Scorn would override the generic scoring.
 >         return ([AttackMonster]
 >                 ++ (if null (availableEquippings (zip hand stats))
 >                       then [] else [EquipHero])
->                 ++ [ChooseOption (index,show card)
+>                 ++ [ChooseOption (index,show card,Nothing)
 >                     | (index,(card,cardUsed)) <- zip [0..] (zip hand used),
 >                       maybe (not $ null $ cardDungeonEffects card)
 >                             (not . and)
@@ -668,7 +669,7 @@ Stone of Scorn would override the generic scoring.
 >             } = do
 >         hand <- getHand playerId
 >         return ([FinishUsingCard,AttackMonster]
->                 ++ [ChooseOption (index,effectText)
+>                 ++ [ChooseOption (index,effectText,Nothing)
 >                     | (index,(effectText,_)) <-
 >                           zip [0..] (cardDungeonEffects (hand !! cardIndex)),
 >                       maybe True (not . (!! index)) (used !! cardIndex)])
@@ -684,19 +685,22 @@ Stone of Scorn would override the generic scoring.
 >         hand <- getHand playerId
 >         if null hand || length cards >= count
 >           then return [Backout]
->           else return $ map ChooseOption $ zip [0..] (map show hand)
+>           else return $ map ChooseOption
+>                       $ zip3 [0..] (map show hand) (repeat Nothing)
 
 >     optionsWhen DiscardingHero {} = do
 >         heroes <- fmap (filter isHero) (getHand playerId)
 >         if null heroes
 >           then return [Backout]
->           else return $ map ChooseOption $ zip [0..] (map show heroes)
+>           else return $ map ChooseOption
+>                       $ zip3 [0..] (map show heroes) (repeat Nothing)
 
 >     optionsWhen DiscardingTwoCardsOrOneHero {} = do
 >         hand <- getHand playerId
 >         if null hand
 >           then return [Backout]
->           else return $ map ChooseOption $ zip [0..] (map show hand)
+>           else return $ map ChooseOption
+>                       $ zip3 [0..] (map show hand) (repeat Nothing)
 
 >     optionsWhen WaitingForDiscards {} = return []
 
@@ -825,7 +829,7 @@ Choose a card from which to use effect:
 >                 villageEffectsNumberOfBuys = buys,
 >                 villageEffectsGold = gold
 >                 }
->             (ChooseOption (index,description)) = do
+>             (ChooseOption (index,description,_)) = do
 >         hand <- getHand playerId
 >         if index < 0 || index >= length hand
 >                      || description /= show (hand !! index)
@@ -866,7 +870,7 @@ Choose an effect to activate from the current card:
 >                 villageEffectsCardIndex = cardIndex,
 >                 villageEffectsUsed = used
 >                 }
->             (ChooseOption (index,description)) = do
+>             (ChooseOption (index,description,_)) = do
 >         hand <- getHand playerId
 >         if index < 0 || index >= length (effects hand) || effectUsed
 >           then
@@ -962,7 +966,8 @@ Village: Purchasing cards:
 >                      (Just backout))
 >             return (Just [])
 >       where
->         purchaseOption index (card,_) = ((index,show card),doPurchase card)
+>         purchaseOption index (card,_) =
+>             ((index,show card,Nothing),doPurchase card)
 >         doPurchase card = do
 >             setPlayerState playerId playerState
 >             result <- purchaseCard playerId card
@@ -997,7 +1002,7 @@ Village: Leveling Up Heroes:
 >       where
 >         canUpgrade xp (_,(price,_)) = xp >= price
 >         upgradeOption index (oldHero,(price,newHero)) =
->             ((index,showUpgrade oldHero newHero price),
+>             ((index,showUpgrade oldHero newHero price,Nothing),
 >              doUpgrade oldHero newHero)
 >         showUpgrade oldHero newHero price =
 >             show (HeroCard oldHero) ++ " -> " ++ show (HeroCard newHero)
@@ -1039,7 +1044,8 @@ Dungeon:
 >         backout = setPlayerState playerId playerState
 >         equippings hand = availableEquippings (zip hand stats)
 >         chooseHero hand heroIndex =
->             ((heroIndex,show (hand !! heroIndex)),equipHero hand heroIndex)
+>             ((heroIndex,show (hand !! heroIndex),Nothing),
+>              equipHero hand heroIndex)
 >         equipHero hand heroIndex = do
 >             setPlayerState playerId
 >                 (ChoosingOption WhichWeaponToEquip
@@ -1049,7 +1055,7 @@ Dungeon:
 >                     (Just backout))
 >             return []
 >         chooseWeapon hand heroIndex weaponIndex = do
->             ((weaponIndex,show (hand !! weaponIndex)),
+>             ((weaponIndex,show (hand !! weaponIndex),Nothing),
 >              equipWeapon hand heroIndex weaponIndex)
 >         equipWeapon hand heroIndex weaponIndex = do
 >             setPlayerState playerId playerState {
@@ -1076,7 +1082,7 @@ Dungeon:
 >                 dungeonEffectsUsed = used,
 >                 dungeonEffectsStats = stats
 >                 }
->             (ChooseOption (index,description)) = do
+>             (ChooseOption (index,description,_)) = do
 >         hand <- getHand playerId
 >         if index < 0 || index >= length hand
 >                      || description /= show (hand !! index)
@@ -1105,7 +1111,7 @@ Dungeon:
 >                 dungeonEffectsUsed = used,
 >                 dungeonEffectsStats = stats
 >                 }
->             (ChooseOption (index,description)) = do
+>             (ChooseOption (index,description,_)) = do
 >         hand <- getHand playerId
 >         if index < 0 || index >= length (effects hand) || effectUsed
 >           then
@@ -1185,7 +1191,7 @@ Rest:
 >             return (Just [])
 >       where
 >         chooseCard optionNumber card =
->             ((optionNumber,show card),destroyCard card)
+>             ((optionNumber,show card,Nothing),destroyCard card)
 >         destroyCard card = do
 >             hand <- getHand playerId
 >             setHand playerId (remove1 card hand)
@@ -1205,7 +1211,7 @@ Discarding as nonactive player:
 >                     discardingCards = cards,
 >                     discardingCardCount = count,
 >                     discardingCardsDone = discardingDone
->                     } (ChooseOption (index,description)) = do
+>                     } (ChooseOption (index,description,_)) = do
 >         hand <- getHand playerId
 >         let (discards,holds) = partition chosen (zip [0..] hand)
 >             chosen (i,card) = i == index && show card == description
@@ -1231,7 +1237,7 @@ Discarding as nonactive player:
 
 >     performAction playerState@DiscardingHero {
 >                     discardingCardsDone = discardingDone
->                     } (ChooseOption (index,description)) = do
+>                     } (ChooseOption (index,description,_)) = do
 >         hand <- getHand playerId
 >         let (discards,holds) = partition chosen (zip [0..] hand)
 >             chosen (i,card) = i == index && show card == description
@@ -1246,7 +1252,7 @@ Discarding as nonactive player:
 
 >     performAction playerState@DiscardingTwoCardsOrOneHero {
 >                     discardingCardsDone = discardingDone
->                     } (ChooseOption (index,description)) = do
+>                     } (ChooseOption (index,description,_)) = do
 >         hand <- getHand playerId
 >         let (discards,holds) = partition chosen (zip [0..] hand)
 >             chosen (i,card) = i == index && show card == description
@@ -1807,11 +1813,11 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             hand <- getHand playerId
 >             let backout = setPlayerState playerId playerState
 >             let used = villageEffectsUsed playerState
->             let eligible ((index,_),_) =
+>             let eligible ((index,_,_),_) =
 >                     cardGoldValue (hand !! index) /= Nothing
 >                         && isNothing (used !! index)
 >             let chooseCard index chosenCard =
->                     ((index,show chosenCard),do
+>                     ((index,show chosenCard,Nothing),do
 >                         setPlayerState playerId playerState {
 >                              villageEffectsGold =
 >                                      villageEffectsGold playerState
@@ -2019,8 +2025,39 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             --     add all unselected heroes to their player's discard
 >             --         piles
 >             --     return ThunderstoneEventBorrowCard
+>             let returnDiscard (otherPlayerId,discards) =
+>                     discard otherPlayerId discards
+>             let doBorrowCard playerState discards otherCard otherPlayerId =
+>                   do
+>                     hand <- getHand playerId
+>                     setHand playerId (hand ++ [otherCard])
+>                     setPlayerState playerId playerState {
+>                         dungeonEffectsUsed =
+>                             dungeonEffectsUsed playerState ++ [Nothing],
+>                         dungeonEffectsStats =
+>                             dungeonEffectsStats playerState
+>                                 ++ [(initDungeonPartyStats otherCard) {
+>                                         dungeonPartyBorrowedFrom =
+>                                             Just otherPlayerId
+>                                         }]
+>                         }
+>                     mapM_ returnDiscard
+>                           (filter ((/= otherPlayerId) . fst) discards)
+>                     return [ThunderstoneEventBorrowCard
+>                                 playerId otherCard otherPlayerId]
 >             let chooseDiscardToBorrow playerState discards = do
->                     undefined
+>                     setPlayerState playerId
+>                         (ChoosingOption WhichHeroToBorrow
+>                             ([((0,"Not borrowing any heroes.",Nothing),do
+>                                setPlayerState playerId playerState
+>                                mapM_ returnDiscard discards
+>                                return [])]
+>                              ++ [((index,show otherCard,Just otherPlayerId),
+>                                   doBorrowCard playerState discards
+>                                                otherCard otherPlayerId)
+>                                  | (index,(otherPlayerId,otherCard:_)) <-
+>                                        zip [1..] discards])
+>                             Nothing)
 >             let makeOtherPlayerDiscard otherPlayerId = do
 >                     otherHand <- getHand otherPlayerId
 >                     if any isHero otherHand
@@ -2050,7 +2087,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                     revealedHands <- mapM makeOtherPlayerDiscard otherPlayers
 >                     return (Just (catMaybes revealedHands))
 >             let makeDiscardHeroOption (heroIndex,heroCard) =
->                     ((heroIndex,show heroCard),do
+>                     ((heroIndex,show heroCard,Nothing),do
 >                         setPlayerState playerId playerState
 >                         markEffectUsed
 >                         destroyIndex playerId heroIndex
@@ -2297,7 +2334,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >       else do
 >         setPlayerState playerId
 >             (ChoosingOption playerOption
->                 [((index,show card),choose index playerState)
+>                 [((index,show card,Nothing),choose index playerState)
 >                  | (index,card,cardStats,cardUsed) <-
 >                         zip4 [0..] hand stats used,
 >                    cardFilter (card,cardStats,cardUsed)]
