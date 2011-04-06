@@ -2525,6 +2525,7 @@ monsterDetails DeadboneTroll = initCardDetails {
     cardVictoryPoints = Just 5,
     cardHealth = Just 7,
     cardXP = Just 2,
+    cardText = ["BATTLE: Gain one Disease."],
     cardGlossary =
         ["Deadbone Troll: Disease cards gained in battle go directly "
          ++ "to your discard pile."]
@@ -2556,6 +2557,7 @@ monsterDetails GrayskinLizard = initCardDetails {
     cardVictoryPoints = Just 3,
     cardHealth = Just 6,
     cardXP = Just 1,
+    cardText = ["BATTLE: Heroes with Weapons equipped gain ATTACK +1."],
     cardGlossary =
         ["Grayskin Lizard: This Battle Effect makes the vulnerable "
          ++ "to Weapons.  They lack thick skin."]
