@@ -462,8 +462,6 @@ Rest
 >   | ThunderstoneEventBreach Card String
 >   | ThunderstoneEventGameOver [(PlayerId,Int)]
 
-Plus breach effects and other things that players should be notified of.
-
 
 Game mechanics
 
@@ -2000,8 +1998,8 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                 ++ "Heroes for the battle, returning it at the end." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             playerState <- getPlayerState playerId
+>             hand <- getHand playerId
 >             -- player chooses hero to discard
->             -- if player has a hero, but the hero is used, disallow
 >             -- if player has no hero, continue
 >             -- when selection is made:
 >             --     markEffectUsed
@@ -2018,8 +2016,60 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             --         have no heroes
 >             -- waitingForDiscardsDone: player chooses hero to borrow
 >             -- when selection is made:
+>             --     add all unselected heroes to their player's discard
+>             --         piles
 >             --     return ThunderstoneEventBorrowCard
->             undefined)]
+>             let chooseDiscardToBorrow playerState discards = do
+>                     undefined
+>             let makeOtherPlayerDiscard otherPlayerId = do
+>                     otherHand <- getHand otherPlayerId
+>                     if any isHero otherHand
+>                       then do
+>                         setPlayerState otherPlayerId DiscardingHero {
+>                             discardingCardsDone = \ otherDiscards -> do
+>                                 activePlayerState <- getPlayerState playerId
+>                                 setPlayerState playerId activePlayerState {
+>                                     waitingForDiscards =
+>                                         otherDiscards
+>                                             : waitingForDiscards
+>                                                             activePlayerState
+>                                     }
+>                             }
+>                         return Nothing
+>                       else
+>                         return (Just (ThunderstoneEventRevealCards
+>                                           otherPlayerId otherHand))
+>             let makeOthersDiscard playerDiscard = do
+>                     playerState <- getPlayerState playerId
+>                     otherPlayers <- fmap (filter (/= playerId)) getPlayerIds
+>                     setPlayerState playerId WaitingForDiscards {
+>                         waitingForDiscards = playerDiscard,
+>                         waitingForDiscardsDone =
+>                             chooseDiscardToBorrow playerState
+>                         }
+>                     revealedHands <- mapM makeOtherPlayerDiscard otherPlayers
+>                     return (Just (catMaybes revealedHands))
+>             let makeDiscardHeroOption (heroIndex,heroCard) =
+>                     ((heroIndex,show heroCard),do
+>                         setPlayerState playerId playerState
+>                         markEffectUsed
+>                         destroyIndex playerId heroIndex
+>                         makeOthersDiscard [(playerId,[heroCard])]
+>                         return
+>                             [ThunderstoneEventUseEffect playerId card text,
+>                              ThunderstoneEventDiscard playerId heroCard])
+>             if not (any isHero hand)
+>               then do
+>                 markEffectUsed
+>                 makeOthersDiscard []
+>                 return (Just [ThunderstoneEventUseEffect playerId card text])
+>               else do
+>                 setPlayerState playerId
+>                     (ChoosingOption WhichCardToDiscard
+>                         (map makeDiscardHeroOption $ filter (isHero . snd)
+>                                                    $ zip [0..] hand)
+>                         (Just (setPlayerState playerId playerState)))
+>                 return (Just []))]
 
 >   | text == "DUNGEON: Destroy one Food for additional ATTACK +2." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
