@@ -48,7 +48,7 @@ Game mechanics:
 > where
 
 > import Control.Monad(filterM,mapM,mapM_,replicateM,unless,when)
-> import Data.List(nub,partition,sortBy,zip4,(\\))
+> import Data.List(nub,partition,permutations,sortBy,zip4,(\\))
 > import Data.Maybe(catMaybes,isNothing,listToMaybe)
 > import System.Random(StdGen)
 
@@ -367,6 +367,7 @@ been used.  Used cards are not eligible to be destroyed to activate effects.
 >   | WhichHeroToLevelUp
 >   | WhichHeroToBorrow
 >   | WhichHeroToEquip
+>   | WhichMonster
 >   | WhichWeaponToEquip
 >   deriving Show
 
@@ -460,6 +461,7 @@ Rest
 >   | ThunderstoneEventBorrowCard PlayerId Card PlayerId
 >   | ThunderstoneEventPlayerStartsTurn PlayerId
 >   | ThunderstoneEventEquip PlayerId Card Card
+>   | ThunderstoneEventReturnMonster Int Card
 >   | ThunderstoneEventBreach Card String
 >   | ThunderstoneEventGameOver [(PlayerId,Int)]
 
@@ -1487,6 +1489,14 @@ Low level game state transformations.
 >      player <- getPlayer playerId
 >      setPlayer playerId player { playerState = state }
 
+> getDungeon :: Thunderstone [Card]
+> getDungeon = fmap thunderstoneDungeon getState
+
+> setDungeon :: [Card] -> Thunderstone ()
+> setDungeon dungeon = do
+>     state <- getState
+>     setState state { thunderstoneDungeon = dungeon }
+
 > getVillage :: Thunderstone [(VillageCard,Int)]
 > getVillage = fmap thunderstoneVillage getState
 
@@ -1774,6 +1784,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 > getVillageEffect :: Card -> String -> [VillageEffect]
 > getVillageEffect card text
 
+> -- Barkeep
 >   | text == "VILLAGE: You may purchase one additional card this turn." =
 >         [(text, \ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
@@ -1784,6 +1795,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                 }
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Trainer
 >   | text == "VILLAGE: Destroy one Militia to gain 2 XP." =
 >         [(text, \ playerId cardIndex markCardUsed markEffectUsed -> do
 >             hand <- getHand playerId
@@ -1797,6 +1809,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >               _ -> -- no Militia
 >                 return Nothing)]
 
+> -- Trainer
 >   | text == "VILLAGE: Destroy this card to gain 2 Gold." =
 >         [(text, \ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
@@ -1807,7 +1820,9 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                 }
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
->   | text == "VILLAGE: Destroy any card with a gold value to gain its gold value plus 3 Gold." =
+> -- Pawnbroker
+>   | text == "VILLAGE: Destroy any card with a gold value to gain its "
+>                 ++ "gold value plus 3 Gold." =
 >         [(text, \ playerId cardIndex markCardUsed markEffectUsed -> do
 >             playerState <- getPlayerState playerId
 >             hand <- getHand playerId
@@ -1835,6 +1850,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                          (Just (setPlayerState playerId playerState)))
 >             return (Just []))]
 
+> -- Town Guard
 >   | text == "VILLAGE: Draw two cards." =
 >         [(text, \ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
@@ -1849,6 +1865,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                 }
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Town Guard
 >   | text == "VILLAGE: Destroy this card to draw three additional cards." =
 >         [(text, \ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
@@ -1869,6 +1886,8 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 > getDungeonEffect :: Card -> String -> [DungeonEffect]
 > getDungeonEffect card text
 
+> -- Chalice Quester, Chalice Defender, Regian Cleric, Regian Priest,
+> -- Regian Bishop
 >   | text == "REPEAT DUNGEON: Destroy one Disease to draw one card." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             hand <- getHand playerId
@@ -1881,6 +1900,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >               _ -> -- no Disease
 >                 return Nothing)]
 
+> -- Chalice Defender
 >   | text == "DUNGEON: ATTACK +1 for each Item that produces Light." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
@@ -1894,12 +1914,48 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             dungeonEffectsUpdateStats playerId cardIndex addAttack
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Chalice Defender, Chalice Paladin, Regian Priest
 >   | text == "DUNGEON: Draw one card." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
 >             dungeonEffectsDrawCards playerId 1
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Elf Archmage
+>   | text == "DUNGEON: You may return one Monster to the bottom of "
+>               ++ "the deck and refill the hall before the beginning of "
+>               ++ "a battle." =
+>         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
+>             playerState <- getPlayerState playerId
+>             dungeon <- getDungeon
+>             let showOption index = "Rank " ++ show (index + 1)
+>                                            ++ ": " ++ show (dungeon !! index)
+>             let chooseMonster (index,monsterCard) =
+>                     ((index,showOption index,Nothing),do
+>                          setPlayerState playerId playerState
+>                          markEffectUsed
+>                          setDungeon (removeIndex index dungeon
+>                                      ++ [monsterCard])
+>                          breachEvents <- if index == 0
+>                             then triggerBreachEffects
+>                             else return []
+>                          return ([ThunderstoneEventUseEffect
+>                                       playerId card text,
+>                                   ThunderstoneEventReturnMonster
+>                                       (index + 1) monsterCard]
+>                                  ++ breachEvents))
+>             -- With expansions, Guardians would also be returnable, but
+>             -- Thunderstones, Traps, and Treasures would not.
+>             let returnable (_,MonsterCard _) = True
+>                 returnable _ = False
+>             setPlayerState playerId
+>                 (ChoosingOption WhichMonster
+>                     (map chooseMonster $ filter returnable
+>                                        $ zip [0..2] dungeon)
+>                     (Just (setPlayerState playerId playerState)))
+>             return (Just []))]
+
+> -- Lorigg Rogue, Lorigg Outlaw, Redblade Poisoner
 >   | text == "DUNGEON: All other players discard one card." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
@@ -1919,6 +1975,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                   (filter (/= playerId) playerIds)
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Outlands Warrior
 >   | text == "DUNGEON: Destroy one Food for an additional ATTACK +3." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             let updateStrength stats = stats {
@@ -1935,6 +1992,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             dungeonEffectsChooseCard
 >                 playerId available WhichCardToUse choose True)]
 
+> -- Outlands Slayer
 >   | text == "DUNGEON: Gain +1 ATTACK for each Monster card revealed "
 >                 ++ "from your hand." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
@@ -1947,6 +2005,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             dungeonEffectsUpdateStats playerId cardIndex addAttack
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Outlands Slayer
 >   | text == "REPEAT DUNGEON: Destroy one Food for an additional ATTACK +3." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             let updateStrength stats = stats {
@@ -1963,6 +2022,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             dungeonEffectsChooseCard
 >                 playerId available WhichCardToUse choose True)]
 
+> -- Outlands Khan
 >   | text == "DUNGEON: ATTACK +2 for each Monster card revealed from "
 >                 ++ "your hand." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
@@ -1975,6 +2035,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             dungeonEffectsUpdateStats playerId cardIndex addAttack
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Redblade Assassin
 >   | text == "DUNGEON: All other players discard one Hero or two cards." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
@@ -1993,12 +2054,14 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                   (filter (/= playerId) playerIds)
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Regian Bishop
 >   | text == "DUNGEON: Draw two cards." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
 >             dungeonEffectsDrawCards playerId 2
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Selurin Theurge
 >   | text == "DUNGEON: Each player discards one Hero or shows they "
 >                 ++ "have none.  You may borrow one of those discarded "
 >                 ++ "Heroes for the battle, returning it at the end." =
@@ -2108,6 +2171,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                         (Just (setPlayerState playerId playerState)))
 >                 return (Just []))]
 
+> -- Thyrian Squire, Thyrian Knight
 >   | text == "DUNGEON: Destroy one Food for additional ATTACK +2." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             let updateStrength stats = stats {
@@ -2124,6 +2188,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             dungeonEffectsChooseCard
 >                 playerId available WhichCardToUse choose True)]
 
+> -- Thyrian Lord
 >   | text == "DUNGEON: Destroy one Food to place one Monster from "
 >                 ++ "the hall worth 1 or 2 VP into your discard pile.  "
 >                 ++ "Refill the hall." =
@@ -2138,26 +2203,20 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             --            ThunderstoneEventDestroyCard
 >             --     when selection is made:
 >             --         resolve breach effects
->             state <- getState
 >             hand <- getHand playerId
 >             playerState <- getPlayerState playerId
+>             dungeon <- getDungeon
 >             let monsterAvailable (_,MonsterCard monsterCard) =
 >                     (cardVictoryPoints $ monsterDetails monsterCard)
 >                         `elem` [Just 1,Just 2]
 >                 monsterVP _ = False
 >             let availableMonsters =
->                     filter monsterAvailable $ zip [1..] $ take 3
->                                             $ thunderstoneDungeon state
+>                     filter monsterAvailable $ zip [1..] $ take 3 dungeon
 >             let chooseMonster playerState foodIndex foodCard
 >                               (rank,monsterCard) =
 >                     ((rank,show card,Nothing),do
 >                         setPlayerState playerId playerState
->                         state <- getState
->                         setState state {
->                             thunderstoneDungeon =
->                                 removeIndex (rank - 1)
->                                             (thunderstoneDungeon state)
->                             }
+>                         setDungeon (removeIndex (rank - 1) dungeon)
 >                         discard playerId [monsterCard]
 >                         if rank /= 1
 >                           then return []
@@ -2197,6 +2256,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                         (Just (setPlayerState playerId playerState)))
 >                 return (Just []))]
 
+> -- Iron Rations
 >   | text == "DUNGEON: One Hero gains Strength +2." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             let updateStrength stats = stats {
@@ -2211,6 +2271,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                 playerId (\ (card,_,_) -> isHero card)
 >                 WhichCardToUse choose True)]
 
+> -- Arcane Energies
 >   | text == "DUNGEON: All ATTACKS from Heroes with Weapons "
 >                 ++ "equipped become MAGIC ATTACKS.  Draw one card." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
@@ -2232,6 +2293,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             dungeonEffectsDrawCards playerId 1
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Banish
 >   | text == "DUNGEON: Return one Monster to the bottom of the "
 >                 ++ "deck and refill the hall, or rearrange the hall.  "
 >                 ++ "Destroy one card from your hand.  Draw one card." =
@@ -2246,8 +2308,15 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             --         return ThunderstoneEventDestroyCard
 >             --         when selection is made:
 >             --             draw card
+>             playerState <- getPlayerState playerId
+>             dungeon <- getDungeon
+>             let chooseReturnMonster rank =
+>                     undefined
+>             let chooseRearrange reordering =
+>                     undefined
 >             undefined)]
 
+> -- Battle Fury
 >   | text == "DUNGEON: All Heroes gain ATTACK +1." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
@@ -2259,6 +2328,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                        | (index,card) <- zip [0..] hand, isHero card]
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Feast
 >   | text == "DUNGEON: All Heroes gain Strength +3 and ATTACK +1." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
@@ -2271,6 +2341,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                        | (index,card) <- zip [0..] hand, isHero card]
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Goodberries
 >   | text == "DUNGEON: One Hero gains Strength +3 and ATTACK "
 >                 ++ "becomes MAGIC ATTACK for that Hero." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
@@ -2305,6 +2376,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                 playerId (\ (card,_,_) -> isHero card)
 >                 WhichCardToUse choose True)]
 
+> -- Magical Aura
 >   | text == "DUNGEON: All Weapons become Weight 0.  Draw one card." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
@@ -2318,6 +2390,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             dungeonEffectsDrawCards playerId 1
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
 
+> -- Spear
 >   | text == "DUNGEON: You may Destroy this Spear for an "
 >                 ++ "additional ATTACK +3." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
