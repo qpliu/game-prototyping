@@ -384,7 +384,7 @@ heroDetails ElfArchmage = initCardDetails {
     cardStrength = Just 4,
     cardPrice = Just 10,
     cardText = ["MAGIC ATTACK +4",
-                "DUNGEON You may return one Monster to the bottom of "
+                "DUNGEON: You may return one Monster to the bottom of "
                 ++ "the deck and refill the hall before the beginning of "
                 ++ "a battle."],
     cardGlossary =
@@ -4584,7 +4584,7 @@ villageDetails Barkeep = initCardDetails {
     }
 
 villageDetails BattleFury = initCardDetails {
-    cardName = "BattleFury",
+    cardName = "Battle Fury",
     cardSource = ThunderstoneBase,
     cardType = BattleFury,
     cardIcon = CardIconVillage,
