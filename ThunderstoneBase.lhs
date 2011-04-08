@@ -48,7 +48,7 @@ Game mechanics:
 > where
 
 > import Control.Monad(filterM,mapM,mapM_,replicateM,unless,when)
-> import Data.List(nub,partition,permutations,sortBy,zip4,(\\))
+> import Data.List(intersperse,nub,partition,permutations,sortBy,zip4,(\\))
 > import Data.Maybe(catMaybes,isNothing,listToMaybe)
 > import System.Random(StdGen)
 
@@ -76,13 +76,13 @@ Initialize the state with the random number generator.
 > thunderstoneInit :: StdGen -> ThunderstoneState
 > thunderstoneInit stdGen = ThunderstoneState {
 >     thunderstoneStdGen = stdGen,
->     thunderstoneCurrentPlayer = error "undefined thunderstoneCurrentPlayer",
+>     thunderstoneCurrentPlayer = error "thunderstoneCurrentPlayer",
 >     thunderstonePlayers = [],
->     thunderstoneDungeon = error "undefined thunderstoneDungeon",
->     thunderstoneHeroes = error "undefined thunderstoneHeroes",
->     thunderstoneVillage = error "undefined thunderstoneVillage",
->     thunderstoneBreached = error "undefined thunderstoneBreached",
->     thunderstoneGameOver = error "undefined thunderstoneGameOver"
+>     thunderstoneDungeon = error "thunderstoneDungeon",
+>     thunderstoneHeroes = error "thunderstoneHeroes",
+>     thunderstoneVillage = error "thunderstoneVillage",
+>     thunderstoneBreached = error "thunderstoneBreached",
+>     thunderstoneGameOver = error "thunderstoneGameOver"
 >     }
 
 Start a game, specifying the number of players and choosing which
@@ -461,7 +461,9 @@ Rest
 >   | ThunderstoneEventBorrowCard PlayerId Card PlayerId
 >   | ThunderstoneEventPlayerStartsTurn PlayerId
 >   | ThunderstoneEventEquip PlayerId Card Card
+>   | ThunderstoneEventGainDungeonCard PlayerId Int Card
 >   | ThunderstoneEventReturnMonster Int Card
+>   | ThunderstoneEventDungeonHallChanged
 >   | ThunderstoneEventBreach Card String
 >   | ThunderstoneEventGameOver [(PlayerId,Int)]
 
@@ -770,8 +772,9 @@ Stone of Scorn would override the generic scoring.
 >               WaitingForDiscards {
 >                       waitingForDiscards = discards,
 >                       waitingForDiscardsDone = doneWaiting
->                       } ->
+>                       } -> do
 >                 doneWaiting discards
+>                 checkIfDoneWaitingForDiscards
 >               _ -> return ()
 >       where
 >         isDiscarding DiscardingCards {} = True
@@ -1942,7 +1945,8 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                          return ([ThunderstoneEventUseEffect
 >                                       playerId card text,
 >                                   ThunderstoneEventReturnMonster
->                                       (index + 1) monsterCard]
+>                                       (index + 1) monsterCard,
+>                                   ThunderstoneEventDungeonHallChanged]
 >                                  ++ breachEvents))
 >             -- With expansions, Guardians would also be returnable, but
 >             -- Thunderstones, Traps, and Treasures would not.
@@ -2218,9 +2222,13 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                         setPlayerState playerId playerState
 >                         setDungeon (removeIndex (rank - 1) dungeon)
 >                         discard playerId [monsterCard]
->                         if rank /= 1
+>                         breachEvents <- if rank /= 1
 >                           then return []
->                           else triggerBreachEffects)
+>                           else triggerBreachEffects
+>                         return ([ThunderstoneEventDungeonHallChanged,
+>                                  ThunderstoneEventGainDungeonCard
+>                                     playerId rank monsterCard]
+>                                 ++ breachEvents))
 >             let foodAvailable (_,card,used,stats) =
 >                     card `hasClass` ClassFood
 >                         && isNothing used
@@ -2308,13 +2316,78 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             --         return ThunderstoneEventDestroyCard
 >             --         when selection is made:
 >             --             draw card
+>             -- ISSUE: If there are no unused cards, then a used card
+>             -- will have to be destroyed.  Can't really check before
+>             -- activating the effect, because a breach effect can
+>             -- destroy cards.
+>             let selectCardToDestroy playerState = do
+>                     undefined
 >             playerState <- getPlayerState playerId
 >             dungeon <- getDungeon
->             let chooseReturnMonster rank =
->                     undefined
->             let chooseRearrange reordering =
->                     undefined
->             undefined)]
+>             let chooseReturnMonster (index,monsterCard) =
+>                     ((index,show monsterCard,Nothing),do
+>                         setPlayerState playerId playerState
+>                         markEffectUsed
+>                         playerState <- getPlayerState playerId
+>                         setDungeon (removeIndex index dungeon
+>                                     ++ [monsterCard])
+>                         -- Not really waiting for discards,
+>                         -- this is for saving the player's state through
+>                         -- any breach effect so that resuming after the
+>                         -- breach effect is resolved will result in
+>                         -- selecting the card to destroy
+>                         setPlayerState playerId WaitingForDiscards {
+>                             waitingForDiscards = [],
+>                             waitingForDiscardsDone =
+>                                 const (selectCardToDestroy playerState)
+>                             }
+>                         breachEvents <- if index == 0
+>                             then triggerBreachEffects
+>                             else return []
+>                         return ([ThunderstoneEventUseEffect
+>                                      playerId card text,
+>                                  ThunderstoneEventReturnMonster
+>                                      (index + 1) monsterCard,
+>                                  ThunderstoneEventDungeonHallChanged]
+>                                 ++ breachEvents))
+>             let showReordering reordering =
+>                     concat $ intersperse ","
+>                            $ map (show . (dungeon !!)) reordering
+>             let chooseRearrange (index,reordering) =
+>                     ((index,showReordering reordering,Nothing),do
+>                         setPlayerState playerId playerState
+>                         markEffectUsed
+>                         playerState <- getPlayerState playerId
+>                         setDungeon (map (dungeon !!) reordering
+>                                     ++ drop (length reordering) dungeon)
+>                         -- Not really waiting for discards,
+>                         -- this is for saving the player's state through
+>                         -- any breach effect so that resuming after the
+>                         -- breach effect is resolved will result in
+>                         -- selecting the card to destroy
+>                         setPlayerState playerId WaitingForDiscards {
+>                             waitingForDiscards = [],
+>                             waitingForDiscardsDone =
+>                                 const (selectCardToDestroy playerState)
+>                             }
+>                         breachEvents <- if head reordering /= 0
+>                             then triggerBreachEffects
+>                             else return []
+>                         return (ThunderstoneEventDungeonHallChanged
+>                                 : breachEvents))
+>             -- With expansions, Guardians would also be returnable, but
+>             -- Thunderstones, Traps, and Treasures would not.
+>             let returnable (_,MonsterCard _) = True
+>                 returnable _ = False
+>             setPlayerState playerId
+>                 (ChoosingOption WhichMonster
+>                      (map chooseReturnMonster
+>                           (filter returnable $ zip [0..2] dungeon)
+>                       ++ map chooseRearrange
+>                              (zip [3..] $ filter (/= [0..2])
+>                                         $ permutations [0..2]))
+>                      (Just (setPlayerState playerId playerState)))
+>             return (Just []))]
 
 > -- Battle Fury
 >   | text == "DUNGEON: All Heroes gain ATTACK +1." =

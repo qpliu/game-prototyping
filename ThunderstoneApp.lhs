@@ -435,11 +435,17 @@
 >     formatEvent getPlayerName (ThunderstoneEventEquip playerId hero weapon) =
 >         [getPlayerName playerId ++ " equips " ++ show hero
 >                                 ++ " with " ++ show weapon ++ "."]
+>     formatEvent getPlayerName
+>                 (ThunderstoneEventGainDungeonCard playerId rank card) =
+>         [getPlayerName playerId ++ " gains from Rank " ++ show rank
+>                                 ++ ": " ++ show card]
 >     formatEvent getPlayerName (ThunderstoneEventReturnMonster rank card) =
 >         ["Returned from Rank " ++ show rank ++ " to bottom of Dungeon Deck: "
 >                                ++ show card]
 >     formatEvent getPlayerName (ThunderstoneEventBreach card text) =
 >         [show card ++ ", " ++ text]
+>     formatEvent getPlayerName ThunderstoneEventDungeonHallChanged =
+>         ["The Dungeon Hall has changed."]
 >     formatEvent getPlayerName (ThunderstoneEventGameOver scores) =
 >         ["Game over.  Scores:"]
 >         ++ [" " ++ getPlayerName playerId ++ ": " ++ show score
