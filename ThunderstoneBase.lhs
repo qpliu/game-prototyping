@@ -1431,6 +1431,38 @@ together.
 >        isHero card1, card2 `hasClass` ClassWeapon,
 >        dungeonPartyStrength stats1 >= dungeonPartyWeight stats2]
 
+> disbandDungeonParty :: PlayerId -> Thunderstone ()
+> disbandDungeonParty playerId = do
+>     hand <- getHand playerId
+>     stats <- fmap dungeonEffectsStats (getPlayerState playerId)
+>     setHand playerId $ map fst $ filter stillInHand $ zip hand stats
+>     setPlayerState playerId Waiting
+>     mapM_ returnBorrowedCards $ zip hand stats
+>   where
+>     stillInHand (_,stats) =
+>         not (dungeonPartyDestroyed stats)
+>             && isNothing (dungeonPartyBorrowedFrom stats)
+>     returnBorrowedCards (card,stats) =
+>         maybe (return ())
+>               (flip discard [card])
+>               (dungeonPartyBorrowedFrom stats)
+
+> triggerBreachEffects :: Thunderstone [ThunderstoneEvent]
+>                      -> Thunderstone [ThunderstoneEvent]
+> triggerBreachEffects breachResolved = do
+>     card:_ <- getDungeon
+>     state <- getState
+>     if card `elem` thunderstoneBreached state
+>       then breachResolved
+>       else do
+>         setState state {
+>             thunderstoneBreached = card : thunderstoneBreached state
+>             }
+>         let breachEffects = cardBreachEffects card breachResolved
+>         if null breachEffects
+>           then breachResolved
+>           else fmap concat $ sequence breachEffects
+
 Low level game state transformations.
 
 > shuffle :: [a] -> Thunderstone [a]
@@ -1945,7 +1977,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                          setDungeon (removeIndex index dungeon
 >                                      ++ [monsterCard])
 >                          breachEvents <- if index == 0
->                             then triggerBreachEffects
+>                             then triggerBreachEffects (return [])
 >                             else return []
 >                          return ([ThunderstoneEventUseEffect
 >                                       playerId card text,
@@ -2230,7 +2262,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                         discard playerId [monsterCard]
 >                         breachEvents <- if rank /= 1
 >                           then return []
->                           else triggerBreachEffects
+>                           else triggerBreachEffects (return [])
 >                         return ([ThunderstoneEventDungeonHallChanged,
 >                                  ThunderstoneEventGainDungeonCard
 >                                     playerId rank monsterCard]
@@ -2346,13 +2378,15 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                                     playerId cardToDestroy,
 >                                 ThunderstoneEventDrawCards
 >                                     playerId drawnCard])
->             let selectCardToDestroy playerState = do
+>             let selectCardToDestroy = do
 >                     hand <- getHand playerId
+>                     playerState <- getPlayerState playerId
 >                     setPlayerState playerId
 >                         (ChoosingOption WhichCardToDestroy
 >                              (map (chooseCardToDestroy playerState)
 >                                   (cardsAvailableToDestroy hand playerState))
 >                              Nothing)
+>                     return []
 >             playerState <- getPlayerState playerId
 >             dungeon <- getDungeon
 >             let chooseReturnMonster (index,monsterCard) =
@@ -2362,19 +2396,9 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                         playerState <- getPlayerState playerId
 >                         setDungeon (removeIndex index dungeon
 >                                     ++ [monsterCard])
->                         -- Not really waiting for discards,
->                         -- this is for saving the player's state through
->                         -- any breach effect so that resuming after the
->                         -- breach effect is resolved will result in
->                         -- selecting the card to destroy
->                         setPlayerState playerId WaitingForDiscards {
->                             waitingForDiscards = [],
->                             waitingForDiscardsDone =
->                                 const (selectCardToDestroy playerState)
->                             }
 >                         breachEvents <- if index == 0
->                             then triggerBreachEffects
->                             else return []
+>                             then triggerBreachEffects selectCardToDestroy
+>                             else selectCardToDestroy
 >                         return ([ThunderstoneEventUseEffect
 >                                      playerId card text,
 >                                  ThunderstoneEventReturnMonster
@@ -2391,19 +2415,9 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                         playerState <- getPlayerState playerId
 >                         setDungeon (map (dungeon !!) reordering
 >                                     ++ drop (length reordering) dungeon)
->                         -- Not really waiting for discards,
->                         -- this is for saving the player's state through
->                         -- any breach effect so that resuming after the
->                         -- breach effect is resolved will result in
->                         -- selecting the card to destroy
->                         setPlayerState playerId WaitingForDiscards {
->                             waitingForDiscards = [],
->                             waitingForDiscardsDone =
->                                 const (selectCardToDestroy playerState)
->                             }
 >                         breachEvents <- if head reordering /= 0
->                             then triggerBreachEffects
->                             else return []
+>                             then triggerBreachEffects selectCardToDestroy
+>                             else selectCardToDestroy
 >                         return (ThunderstoneEventDungeonHallChanged
 >                                 : breachEvents))
 >             -- With expansions, Guardians would also be returnable, but
@@ -2517,6 +2531,10 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 > isMonster (MonsterCard _) = True
 > isMonster _ = False
 
+> isThunderstone :: Card -> Bool
+> isThunderstone (ThunderstoneCard _) = True
+> isThunderstone _ = False
+
 > hasClass :: Card -> CardClass -> Bool
 > hasClass (HeroCard card) cardClass =
 >     cardClass `elem` (cardClasses $ heroDetails card)
@@ -2583,7 +2601,33 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >         setPlayerState playerId playerState
 >         choiceMade index
 
-> triggerBreachEffects :: Thunderstone [ThunderstoneEvent]
-> triggerBreachEffects = do
->     -- undefined
->     return []
+> cardBreachEffects :: Card -> Thunderstone [ThunderstoneEvent]
+>                   -> [Thunderstone [ThunderstoneEvent]]
+> cardBreachEffects card breachResolved =
+>     catMaybes $ map (getBreachEffect card breachResolved) (cardCardText card)
+>     
+> getBreachEffect :: Card -> Thunderstone [ThunderstoneEvent] -> String
+>                 -> Maybe (Thunderstone [ThunderstoneEvent])
+> getBreachEffect card breachResolved text
+
+>   | isThunderstone card = Just $ do
+>         state <- getState
+>         setState state { thunderstoneGameOver = True }
+>         return [ThunderstoneEventBreach card text]
+
+> -- Archduke of Pain
+>   | text == "BREACH: Destroy the top two cards from each Hero deck "
+>                 ++ "in the Village." = Just $ do
+>         let destroyTopTwo (heroType,heroCards) = (heroType,drop 2 heroCards)
+>         state <- getState
+>         setState state {
+>             thunderstoneHeroes = map destroyTopTwo (thunderstoneHeroes state)
+>             }
+>         return [ThunderstoneEventBreach card text]
+
+> -- Tyxr the Old
+>   | text == "BREACH: Each player must discard two cards." = Just $ do
+>         undefined
+>         return [ThunderstoneEventBreach card text]
+
+>   | otherwise = Nothing
