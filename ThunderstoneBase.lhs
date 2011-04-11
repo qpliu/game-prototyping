@@ -151,7 +151,7 @@ The cards for the first game.
 >                MagicalAura, ShortSword, Spear, TownGuard]
 
 Use the Randomizer cards to choose three random monsters, four
-random heros, and eight village cards. 
+random heros, and eight village cards.
 
 For a longer game, try four or more monsters.
 
@@ -339,14 +339,17 @@ been used.  Used cards are not eligible to be destroyed to activate effects.
 >   | Waiting
 
 >   | DiscardingCards {
+>         discardingCardsSavedState :: PlayerState,
 >         discardingCards :: [Card],
 >         discardingCardCount :: Int,
 >         discardingCardsDone :: (PlayerId,[Card]) -> Thunderstone ()
 >         }
 >   | DiscardingHero {
+>         discardingCardsSavedState :: PlayerState,
 >         discardingCardsDone :: (PlayerId,[Card]) -> Thunderstone ()
 >         }
 >   | DiscardingTwoCardsOrOneHero {
+>         discardingCardsSavedState :: PlayerState,
 >         discardingCardsDone :: (PlayerId,[Card]) -> Thunderstone ()
 >         }
 >   | WaitingForDiscards {
@@ -1214,71 +1217,75 @@ Rest:
 Discarding as nonactive player:
 
 >     performAction playerState@DiscardingCards {
+>                     discardingCardsSavedState = savedState,
 >                     discardingCards = cards,
 >                     discardingCardCount = count,
 >                     discardingCardsDone = discardingDone
 >                     } (ChooseOption (index,description,_)) = do
 >         hand <- getHand playerId
->         let (discards,holds) = partition chosen (zip [0..] hand)
->             chosen (i,card) = i == index && show card == description
->         if null discards
+>         let card = hand !! index
+>         if index < 0 || index >= length hand
+>                      || description /= show card
 >           then return Nothing
 >           else do
->             let (_,card) = head discards
->             let newHand = map snd holds
+>             setPlayerState playerId savedState
+>             destroyIndex playerId index
+>             newHand <- getHand playerId
 >             if null newHand || length cards + 1 >= count
 >               then do
->                 setPlayerState playerId Waiting
->                 setHand playerId newHand
 >                 discardingDone (playerId,card:cards)
 >                 return (Just [ThunderstoneEventDiscard playerId card])
 >               else do
+>                 newSavedState <- getPlayerState playerId
 >                 setPlayerState playerId playerState {
+>                     discardingCardsSavedState = newSavedState,
 >                     discardingCards = card:cards
 >                     }
->                 setHand playerId newHand
 >                 return (Just [ThunderstoneEventDiscard playerId card])
 
 >     performAction DiscardingCards {} _ = return Nothing
 
 >     performAction playerState@DiscardingHero {
+>                     discardingCardsSavedState = savedState,
 >                     discardingCardsDone = discardingDone
 >                     } (ChooseOption (index,description,_)) = do
 >         hand <- getHand playerId
->         let (discards,holds) = partition chosen (zip [0..] hand)
->             chosen (i,card) = i == index && show card == description
->         if null discards || not (isHero $ snd $ head discards)
+>         let card = hand !! index
+>         if index < 0 || index >= length hand
+>                      || description /= show card
+>                      || not (isHero card)
 >           then return Nothing
 >           else do
->             let (_,card) = head discards
->             setPlayerState playerId Waiting
->             setHand playerId (map snd holds)
+>             setPlayerState playerId savedState
+>             destroyIndex playerId index
 >             discardingDone (playerId,[card])
 >             return (Just [ThunderstoneEventDiscard playerId card])
 
 >     performAction playerState@DiscardingTwoCardsOrOneHero {
+>                     discardingCardsSavedState = savedState,
 >                     discardingCardsDone = discardingDone
 >                     } (ChooseOption (index,description,_)) = do
 >         hand <- getHand playerId
->         let (discards,holds) = partition chosen (zip [0..] hand)
->             chosen (i,card) = i == index && show card == description
->         if null discards
+>         let card = hand !! index
+>         if index < 0 || index >= length hand
+>                      || description /= show card
+>                      || not (isHero card)
 >           then return Nothing
 >           else do
->             let (_,card) = head discards
->             setHand playerId (map snd holds)
+>             setPlayerState playerId savedState
+>             destroyIndex playerId index
 >             if isHero card
->               then do
->                 setPlayerState playerId Waiting
+>               then
 >                 discardingDone (playerId,[card])
->                 return (Just [ThunderstoneEventDiscard playerId card])
 >               else do
+>                 newSavedState <- getPlayerState playerId
 >                 setPlayerState playerId DiscardingCards {
+>                     discardingCardsSavedState = newSavedState,
 >                     discardingCards = [card],
 >                     discardingCardCount = 2,
 >                     discardingCardsDone = discardingDone
 >                     }
->                 return (Just [ThunderstoneEventDiscard playerId card])
+>             return (Just [ThunderstoneEventDiscard playerId card])
 
 Generic choose option:
 
@@ -1607,12 +1614,6 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 >     updateHeroes heroes@(hero,stack)
 >       | hero == heroType = (hero,remove1 heroCard stack)
 >       | otherwise = heroes
-
-> discardIndex :: PlayerId -> Int -> Thunderstone ()
-> discardIndex playerId index = do
->     hand <- getHand playerId
->     discard playerId [hand !! index]
->     destroyIndex playerId index
 
 > destroyIndex :: PlayerId -> Int -> Thunderstone ()
 > destroyIndex playerId index = do
@@ -2007,11 +2008,13 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                     const (setPlayerState playerId playerState)
 >                 }
 >             playerIds <- getPlayerIds
->             mapM_ (\ otherPlayerId ->
+>             mapM_ (\ otherPlayerId -> do
+>                           savedState <- getPlayerState otherPlayerId
 >                           setPlayerState otherPlayerId DiscardingCards {
+>                               discardingCardsSavedState = savedState,
 >                               discardingCards = [],
 >                               discardingCardCount = 1,
->                               discardingCardsDone = const (return ())
+>                               discardingCardsDone = uncurry discard
 >                               })
 >                   (filter (/= playerId) playerIds)
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
@@ -2087,10 +2090,12 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                     const (setPlayerState playerId playerState)
 >                 }
 >             playerIds <- getPlayerIds
->             mapM_ (\ otherPlayerId ->
+>             mapM_ (\ otherPlayerId -> do
+>                           savedState <- getPlayerState otherPlayerId
 >                           setPlayerState otherPlayerId
 >                               DiscardingTwoCardsOrOneHero {
->                                   discardingCardsDone = const (return ())
+>                                   discardingCardsSavedState = savedState,
+>                                   discardingCardsDone = uncurry discard
 >                                   })
 >                   (filter (/= playerId) playerIds)
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
@@ -2121,7 +2126,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             --         player's hand and associates the hero with
 >             --         the other player's playerId in waitingForDiscards
 >             --         alist
->             --     
+>             --
 >             --     return ThunderstoneEventUseEffect, plus
 >             --         ThunderstoneEventRevealCards for other players that
 >             --         have no heroes
@@ -2167,7 +2172,9 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                     otherHand <- getHand otherPlayerId
 >                     if any isHero otherHand
 >                       then do
+>                         savedState <- getPlayerState otherPlayerId
 >                         setPlayerState otherPlayerId DiscardingHero {
+>                             discardingCardsSavedState = savedState,
 >                             discardingCardsDone = \ otherDiscards -> do
 >                                 activePlayerState <- getPlayerState playerId
 >                                 setPlayerState playerId activePlayerState {
@@ -2605,7 +2612,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                   -> [Thunderstone [ThunderstoneEvent]]
 > cardBreachEffects card breachResolved =
 >     catMaybes $ map (getBreachEffect card breachResolved) (cardCardText card)
->     
+
 > getBreachEffect :: Card -> Thunderstone [ThunderstoneEvent] -> String
 >                 -> Maybe (Thunderstone [ThunderstoneEvent])
 > getBreachEffect card breachResolved text
@@ -2627,7 +2634,16 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 
 > -- Tyxr the Old
 >   | text == "BREACH: Each player must discard two cards." = Just $ do
->         undefined
+>         playerIds <- getPlayerIds
+>         mapM_ (\ playerId -> do
+>                     savedState <- getPlayerState playerId
+>                     setPlayerState playerId DiscardingCards {
+>                         discardingCardsSavedState = savedState,
+>                         discardingCards = [],
+>                         discardingCardCount = 2,
+>                         discardingCardsDone = uncurry discard
+>                         })
+>               playerIds
 >         return [ThunderstoneEventBreach card text]
 
 >   | otherwise = Nothing
