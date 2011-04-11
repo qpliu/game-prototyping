@@ -82,6 +82,7 @@ Initialize the state with the random number generator.
 >     thunderstoneHeroes = error "thunderstoneHeroes",
 >     thunderstoneVillage = error "thunderstoneVillage",
 >     thunderstoneBreached = error "thunderstoneBreached",
+>     thunderstoneBreachState = error "thunderstoneBreachState",
 >     thunderstoneGameOver = error "thunderstoneGameOver"
 >     }
 
@@ -212,6 +213,7 @@ Game setup:
 >         thunderstoneVillage =
 >             map villageStack ([Dagger, IronRations, Torch] ++ village),
 >         thunderstoneBreached = [],
+>         thunderstoneBreachState = [],
 >         thunderstoneGameOver = False
 >         }
 >     playerIds <- getPlayerIds
@@ -287,6 +289,7 @@ Game state:
 >     thunderstoneHeroes :: [(HeroType,[HeroCard])],
 >     thunderstoneVillage :: [(VillageCard,Int)],
 >     thunderstoneBreached :: [Card],
+>     thunderstoneBreachState :: [PlayerId],
 >     thunderstoneGameOver :: Bool
 >     }
 
@@ -342,19 +345,23 @@ been used.  Used cards are not eligible to be destroyed to activate effects.
 >         discardingCardsSavedState :: PlayerState,
 >         discardingCards :: [Card],
 >         discardingCardCount :: Int,
->         discardingCardsDone :: (PlayerId,[Card]) -> Thunderstone ()
+>         discardingCardsDone :: (PlayerId,[Card])
+>                             -> Thunderstone [ThunderstoneEvent]
 >         }
 >   | DiscardingHero {
 >         discardingCardsSavedState :: PlayerState,
->         discardingCardsDone :: (PlayerId,[Card]) -> Thunderstone ()
+>         discardingCardsDone :: (PlayerId,[Card])
+>                             -> Thunderstone [ThunderstoneEvent]
 >         }
 >   | DiscardingTwoCardsOrOneHero {
 >         discardingCardsSavedState :: PlayerState,
->         discardingCardsDone :: (PlayerId,[Card]) -> Thunderstone ()
+>         discardingCardsDone :: (PlayerId,[Card])
+>                             -> Thunderstone [ThunderstoneEvent]
 >         }
 >   | WaitingForDiscards {
 >         waitingForDiscards :: [(PlayerId,[Card])],
->         waitingForDiscardsDone :: [(PlayerId,[Card])] -> Thunderstone ()
+>         waitingForDiscardsDone :: [(PlayerId,[Card])]
+>                                -> Thunderstone [ThunderstoneEvent]
 >         }
 
 >   | ChoosingOption PlayerOption
@@ -1233,8 +1240,9 @@ Discarding as nonactive player:
 >             newHand <- getHand playerId
 >             if null newHand || length cards + 1 >= count
 >               then do
->                 discardingDone (playerId,card:cards)
->                 return (Just [ThunderstoneEventDiscard playerId card])
+>                 discardEvents <- discardingDone (playerId,card:cards)
+>                 return (Just (ThunderstoneEventDiscard playerId card
+>                               : discardEvents))
 >               else do
 >                 newSavedState <- getPlayerState playerId
 >                 setPlayerState playerId playerState {
@@ -1258,8 +1266,9 @@ Discarding as nonactive player:
 >           else do
 >             setPlayerState playerId savedState
 >             destroyIndex playerId index
->             discardingDone (playerId,[card])
->             return (Just [ThunderstoneEventDiscard playerId card])
+>             discardEvents <- discardingDone (playerId,[card])
+>             return (Just (ThunderstoneEventDiscard playerId card
+>                           : discardEvents))
 
 >     performAction playerState@DiscardingTwoCardsOrOneHero {
 >                     discardingCardsSavedState = savedState,
@@ -1274,9 +1283,11 @@ Discarding as nonactive player:
 >           else do
 >             setPlayerState playerId savedState
 >             destroyIndex playerId index
->             if isHero card
->               then
->                 discardingDone (playerId,[card])
+>             if isHero card || length hand == 1
+>               then do
+>                 discardEvents <- discardingDone (playerId,[card])
+>                 return (Just (ThunderstoneEventDiscard playerId card
+>                               : discardEvents))
 >               else do
 >                 newSavedState <- getPlayerState playerId
 >                 setPlayerState playerId DiscardingCards {
@@ -1285,7 +1296,7 @@ Discarding as nonactive player:
 >                     discardingCardCount = 2,
 >                     discardingCardsDone = discardingDone
 >                     }
->             return (Just [ThunderstoneEventDiscard playerId card])
+>                 return (Just [ThunderstoneEventDiscard playerId card])
 
 Generic choose option:
 
@@ -2005,7 +2016,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             setPlayerState playerId WaitingForDiscards {
 >                 waitingForDiscards = [],
 >                 waitingForDiscardsDone =
->                     const (setPlayerState playerId playerState)
+>                     const (setPlayerState playerId playerState >> return [])
 >                 }
 >             playerIds <- getPlayerIds
 >             mapM_ (\ otherPlayerId -> do
@@ -2014,7 +2025,8 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                               discardingCardsSavedState = savedState,
 >                               discardingCards = [],
 >                               discardingCardCount = 1,
->                               discardingCardsDone = uncurry discard
+>                               discardingCardsDone = (\ (playerId,cards) ->
+>                                   discard playerId cards >> return [])
 >                               })
 >                   (filter (/= playerId) playerIds)
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
@@ -2087,7 +2099,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             setPlayerState playerId WaitingForDiscards {
 >                 waitingForDiscards = [],
 >                 waitingForDiscardsDone =
->                     const (setPlayerState playerId playerState)
+>                     const (setPlayerState playerId playerState >> return [])
 >                 }
 >             playerIds <- getPlayerIds
 >             mapM_ (\ otherPlayerId -> do
@@ -2095,7 +2107,8 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                           setPlayerState otherPlayerId
 >                               DiscardingTwoCardsOrOneHero {
 >                                   discardingCardsSavedState = savedState,
->                                   discardingCardsDone = uncurry discard
+>                                   discardingCardsDone = (\(playerId,cards) ->
+>                                       discard playerId cards >> return [])
 >                                   })
 >                   (filter (/= playerId) playerIds)
 >             return (Just [ThunderstoneEventUseEffect playerId card text]))]
@@ -2168,6 +2181,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                                  | (index,(otherPlayerId,otherCard:_)) <-
 >                                        zip [1..] discards])
 >                             Nothing)
+>                     return []
 >             let makeOtherPlayerDiscard otherPlayerId = do
 >                     otherHand <- getHand otherPlayerId
 >                     if any isHero otherHand
@@ -2183,6 +2197,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                                             : waitingForDiscards
 >                                                             activePlayerState
 >                                     }
+>                                 return []
 >                             }
 >                         return Nothing
 >                       else
@@ -2635,15 +2650,34 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 > -- Tyxr the Old
 >   | text == "BREACH: Each player must discard two cards." = Just $ do
 >         playerIds <- getPlayerIds
->         mapM_ (\ playerId -> do
->                     savedState <- getPlayerState playerId
->                     setPlayerState playerId DiscardingCards {
->                         discardingCardsSavedState = savedState,
->                         discardingCards = [],
->                         discardingCardCount = 2,
->                         discardingCardsDone = uncurry discard
->                         })
->               playerIds
+>         let doneDiscarding (playerId,cards) = do
+>                 discard playerId cards
+>                 state <- getState
+>                 let newState = state {
+>                     thunderstoneBreachState =
+>                         remove1 playerId (thunderstoneBreachState state)
+>                     }
+>                 setState newState
+>                 if null (thunderstoneBreachState newState)
+>                   then breachResolved
+>                   else return []
+>         unfinishedPlayerIds <- fmap catMaybes $ mapM
+>                 (\ playerId -> do
+>                     hand <- getHand playerId
+>                     if null hand
+>                       then return Nothing
+>                       else do
+>                         savedState <- getPlayerState playerId
+>                         setPlayerState playerId DiscardingCards {
+>                             discardingCardsSavedState = savedState,
+>                             discardingCards = [],
+>                             discardingCardCount = 2,
+>                             discardingCardsDone = doneDiscarding
+>                             }
+>                         return (Just playerId))
+>                 playerIds
+>         state <- getState
+>         setState state { thunderstoneBreachState = unfinishedPlayerIds }
 >         return [ThunderstoneEventBreach card text]
 
 >   | otherwise = Nothing
