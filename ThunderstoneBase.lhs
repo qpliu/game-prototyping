@@ -2508,8 +2508,8 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
 >             let addGains stats = stats {
->                     dungeonPartyAttack = dungeonPartyAttack stats + 3,
->                     dungeonPartyStrength = dungeonPartyStrength stats + 1
+>                     dungeonPartyAttack = dungeonPartyAttack stats + 1,
+>                     dungeonPartyStrength = dungeonPartyStrength stats + 3
 >                     }
 >             hand <- getHand playerId
 >             sequence_ [dungeonEffectsUpdateStats playerId index addGains
