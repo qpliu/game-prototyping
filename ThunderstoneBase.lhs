@@ -879,7 +879,6 @@ Choose a card from which to use effect:
 
 >     performAction UsingVillageEffects {} EndTurn = do
 >         endTurn []
->         return (Just [])
 
 >     performAction UsingVillageEffects {} _ = return Nothing
 
@@ -964,7 +963,6 @@ Choose an effect to activate from the current card:
 
 >     performAction UsingVillageEffectsCard {} EndTurn = do
 >         endTurn []
->         return (Just [])
 
 >     performAction UsingVillageEffectsCard {} _ = return Nothing
 
@@ -1001,7 +999,6 @@ Village: Purchasing cards:
 
 >     performAction PurchasingCards {} EndTurn = do
 >         endTurn []
->         return (Just [])
 
 >     performAction PurchasingCards {} _ = return Nothing
 
@@ -1038,7 +1035,6 @@ Village: Leveling Up Heroes:
 
 >     performAction LevelingUpHeroes EndTurn = do
 >         endTurn []
->         return (Just [])
 
 >     performAction LevelingUpHeroes _ = return Nothing
 
@@ -1215,8 +1211,9 @@ Rest:
 >         destroyCard card = do
 >             hand <- getHand playerId
 >             setHand playerId (remove1 card hand)
->             endTurn []
->             return [ThunderstoneEventPlayerAction playerId DestroyCard]
+>             events <- endTurn
+>                         [ThunderstoneEventPlayerAction playerId DestroyCard]
+>             maybe (return []) return events
 >         backout =
 >             setPlayerState playerId Resting
 
