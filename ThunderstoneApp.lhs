@@ -451,6 +451,9 @@
 >         [show card ++ ", " ++ text]
 >     formatEvent getPlayerName ThunderstoneEventDungeonHallChanged =
 >         ["The Dungeon Hall has changed."]
+>     formatEvent getPlayerName (ThunderstoneEventAttack playerId rank card) =
+>         [getPlayerName playerId ++ " attacks Rank " ++ show rank ++ ": "
+>                                 ++ show card]
 >     formatEvent getPlayerName (ThunderstoneEventGameOver scores) =
 >         ["Game over.  Scores:"]
 >         ++ [" " ++ getPlayerName playerId ++ ": " ++ show score

@@ -477,6 +477,7 @@ Rest
 >   | ThunderstoneEventReturnMonster Int Card
 >   | ThunderstoneEventDungeonHallChanged
 >   | ThunderstoneEventBreach Card String
+>   | ThunderstoneEventAttack PlayerId Int Card
 >   | ThunderstoneEventGameOver [(PlayerId,Int)]
 
 
@@ -1313,8 +1314,28 @@ Generic choose option:
 >     attackMonster :: [(Card,DungeonPartyStats)]
 >                   -> Thunderstone (Maybe [ThunderstoneEvent])
 >     attackMonster stats = do
->         setPlayerState playerId Waiting -- temporary code while real behavior is undefined
+>         dungeon <- getDungeon
+>         playerState <- getPlayerState playerId
+>         let monsterOptions = filter (canAttack stats) (zip [1..3] dungeon)
+>         if null monsterOptions
+>           then
+>             setPlayerState playerId Waiting
+>           else
+>             setPlayerState playerId
+>                 (ChoosingOption WhichMonster
+>                                 (map chooseOption monsterOptions)
+>                                 (Just (setPlayerState playerId playerState)))
 >         return (Just [])
+>       where
+>         chooseOption (rank,monster) =
+>             ((rank,show monster,Nothing),do
+>                 -- undefined: resolve battle effects
+>                 -- undefined: resolve battle
+>                 -- undefined: resolve spoils effects
+>                 -- undefined: resolve breach effects
+>                 -- undefined: temporary code follows
+>                 setPlayerState playerId Waiting
+>                 return [ThunderstoneEventAttack playerId rank monster])
 
 Low level game mechanics
 
@@ -2717,3 +2738,22 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >         return [ThunderstoneEventBreach card text]
 
 >   | otherwise = Nothing
+
+> canAttack :: [(Card,DungeonPartyStats)] -> (Int,Card) -> Bool
+> canAttack stats (rank,MonsterCard BlinkDog) =
+>     rank + 1 < sum [dungeonPartyLight stat
+>                     | (_,stat) <- partyBattleEffects stats rank,
+>                       not (dungeonPartyNotAttacking stat)]
+> canAttack _ (rank,card) = isMonster card
+
+> partyBattleEffects :: [(Card,DungeonPartyStats)] -> Int
+>                    -> [(Card,DungeonPartyStats)]
+> partyBattleEffects stats rank =
+>     -- undefined: stuff like Feayn cannot attack Rank 1.
+>     stats
+
+> battleMonster :: [(Card,DungeonPartyStats)] -> (Int,Card)
+>               -> (Bool -> Thunderstone [ThunderstoneEvent])
+>               -> Thunderstone [ThunderstoneEvent]
+> battleMonster party (rank,card) battleResolved = do
+>     undefined
