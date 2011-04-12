@@ -464,6 +464,7 @@ Rest
 >     ThunderstoneEventPlayerAction PlayerId PlayerAction
 >   | ThunderstoneEventRevealCards PlayerId [Card]
 >   | ThunderstoneEventDrawCards PlayerId [Card]
+>   | ThunderstoneEventReshuffle PlayerId
 >   | ThunderstoneEventPurchase PlayerId Card
 >   | ThunderstoneEventUpgrade PlayerId HeroCard HeroCard
 >   | ThunderstoneEventDiscard PlayerId Card
@@ -801,10 +802,13 @@ and draw six new cards to form a new hand.
 >     endTurn events = do
 >         hand <- getHand playerId
 >         discard playerId hand
+>         deckSize <- fmap (length . playerDeck) (getPlayer playerId)
 >         hand <- multiple 6 $ drawCard playerId
 >         setHand playerId hand
 >         setPlayerState playerId Waiting
->         return (Just events)
+>         return (Just (events ++ if deckSize < 6
+>                                   then [ThunderstoneEventReshuffle playerId]
+>                                   else []))
 
 >     performAction :: PlayerState -> PlayerAction
 >                   -> Thunderstone (Maybe [ThunderstoneEvent])
@@ -1902,6 +1906,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >   | text == "VILLAGE: Draw two cards." =
 >         [(text, \ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
+>             deckSize <- fmap (length . playerDeck) (getPlayer playerId)
 >             cards <- multiple 2 $ drawCard playerId
 >             hand <- getHand playerId
 >             setHand playerId (hand ++ cards)
@@ -1911,14 +1916,18 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                     villageEffectsUsed playerState
 >                         ++ replicate (length cards) Nothing
 >                 }
->             return (Just [ThunderstoneEventUseEffect playerId card text,
->                           ThunderstoneEventDrawCards playerId cards]))]
+>             return (Just ([ThunderstoneEventUseEffect playerId card text,
+>                            ThunderstoneEventDrawCards playerId cards]
+>                           ++ (if deckSize < 2
+>                                 then [ThunderstoneEventReshuffle playerId]
+>                                 else []))))]
 
 > -- Town Guard
 >   | text == "VILLAGE: Destroy this card to draw three additional cards." =
 >         [(text, \ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
 >             destroyIndex playerId cardIndex
+>             deckSize <- fmap (length . playerDeck) (getPlayer playerId)
 >             cards <- multiple 3 $ drawCard playerId
 >             hand <- getHand playerId
 >             setHand playerId (hand ++ cards)
@@ -1928,8 +1937,11 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                     villageEffectsUsed playerState
 >                         ++ replicate (length cards) Nothing
 >                 }
->             return (Just [ThunderstoneEventUseEffect playerId card text,
->                           ThunderstoneEventDrawCards playerId cards]))]
+>             return (Just ([ThunderstoneEventUseEffect playerId card text,
+>                            ThunderstoneEventDrawCards playerId cards]
+>                           ++ (if deckSize < 3
+>                                 then [ThunderstoneEventReshuffle playerId]
+>                                 else []))))]
 
 >   | otherwise = []
 
@@ -1945,9 +1957,14 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >               (diseaseIndex,_):_ -> do
 >                 markCardUsed
 >                 destroyIndex playerId diseaseIndex
+>                 deckSize <- fmap (length . playerDeck) (getPlayer playerId)
 >                 drawnCard <- dungeonEffectsDrawCards playerId 1
->                 return (Just [ThunderstoneEventUseEffect playerId card text,
->                               ThunderstoneEventDrawCards playerId drawnCard])
+>                 return (Just ([ThunderstoneEventUseEffect playerId card text,
+>                                ThunderstoneEventDrawCards playerId drawnCard]
+>                               ++ (if deckSize < 1
+>                                     then [ThunderstoneEventReshuffle
+>                                               playerId]
+>                                     else [])))
 >               _ -> -- no Disease
 >                 return Nothing)]
 
@@ -1969,9 +1986,13 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >   | text == "DUNGEON: Draw one card." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
+>             deckSize <- fmap (length . playerDeck) (getPlayer playerId)
 >             drawnCard <- dungeonEffectsDrawCards playerId 1
->             return (Just [ThunderstoneEventUseEffect playerId card text,
->                           ThunderstoneEventDrawCards playerId drawnCard]))]
+>             return (Just ([ThunderstoneEventUseEffect playerId card text,
+>                            ThunderstoneEventDrawCards playerId drawnCard]
+>                           ++ (if deckSize < 1
+>                                 then [ThunderstoneEventReshuffle playerId]
+>                                 else []))))]
 
 > -- Elf Archmage
 >   | text == "DUNGEON: You may return one Monster to the bottom of "
@@ -2117,9 +2138,13 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >   | text == "DUNGEON: Draw two cards." =
 >         [(text,\ playerId cardIndex markCardUsed markEffectUsed -> do
 >             markEffectUsed
+>             deckSize <- fmap (length . playerDeck) (getPlayer playerId)
 >             drawnCards <- dungeonEffectsDrawCards playerId 2
->             return (Just [ThunderstoneEventUseEffect playerId card text,
->                           ThunderstoneEventDrawCards playerId drawnCards]))]
+>             return (Just ([ThunderstoneEventUseEffect playerId card text,
+>                            ThunderstoneEventDrawCards playerId drawnCards]
+>                           ++ (if deckSize < 2
+>                                 then [ThunderstoneEventReshuffle playerId]
+>                                 else []))))]
 
 > -- Selurin Theurge
 >   | text == "DUNGEON: Each player discards one Hero or shows they "
@@ -2358,9 +2383,13 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                     && not (isNothing $ dungeonPartyEquippedWith stats))
 >                    || (card `hasClass` ClassWeapon
 >                        && not (isNothing $ dungeonPartyEquippedBy stats))]
+>             deckSize <- fmap (length . playerDeck) (getPlayer playerId)
 >             drawnCard <- dungeonEffectsDrawCards playerId 1
->             return (Just [ThunderstoneEventUseEffect playerId card text,
->                           ThunderstoneEventDrawCards playerId drawnCard]))]
+>             return (Just ([ThunderstoneEventUseEffect playerId card text,
+>                            ThunderstoneEventDrawCards playerId drawnCard]
+>                           ++ (if deckSize < 1
+>                                 then [ThunderstoneEventReshuffle playerId]
+>                                 else []))))]
 
 > -- Banish
 >   | text == "DUNGEON: Return one Monster to the bottom of the "
@@ -2395,11 +2424,17 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >                     ((index,show cardToDestroy,Nothing),do
 >                         setPlayerState playerId playerState
 >                         destroyIndex playerId index
+>                         deckSize <- fmap (length . playerDeck)
+>                                          (getPlayer playerId)
 >                         drawnCard <- dungeonEffectsDrawCards playerId 1
->                         return [ThunderstoneEventDestroyCard
->                                     playerId cardToDestroy,
->                                 ThunderstoneEventDrawCards
->                                     playerId drawnCard])
+>                         return ([ThunderstoneEventDestroyCard
+>                                      playerId cardToDestroy,
+>                                  ThunderstoneEventDrawCards
+>                                      playerId drawnCard]
+>                                 ++ (if deckSize < 1
+>                                       then [ThunderstoneEventReshuffle
+>                                                 playerId]
+>                                       else [])))
 >             let selectCardToDestroy = do
 >                     hand <- getHand playerId
 >                     playerState <- getPlayerState playerId
@@ -2527,9 +2562,13 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             sequence_ [dungeonEffectsUpdateStats playerId index removeWeight
 >                        | (index,card) <- zip [0..] hand,
 >                          card `hasClass` ClassWeapon]
+>             deckSize <- fmap (length . playerDeck) (getPlayer playerId)
 >             drawnCards <- dungeonEffectsDrawCards playerId 1
->             return (Just [ThunderstoneEventUseEffect playerId card text,
->                           ThunderstoneEventDrawCards playerId drawnCards]))]
+>             return (Just ([ThunderstoneEventUseEffect playerId card text,
+>                            ThunderstoneEventDrawCards playerId drawnCards]
+>                           ++ (if deckSize < 1
+>                                 then [ThunderstoneEventReshuffle playerId]
+>                                 else []))))]
 
 > -- Spear
 >   | text == "DUNGEON: You may Destroy this Spear for an "

@@ -414,6 +414,8 @@
 >     formatEvent getPlayerName (ThunderstoneEventDrawCards playerId cards) =
 >         [getPlayerName playerId ++ " draws cards: "
 >                                 ++ unwords (map show cards)]
+>     formatEvent getPlayerName (ThunderstoneEventReshuffle playerId) =
+>         [getPlayerName playerId ++ " reshuffles his or her discard pile."]
 >     formatEvent getPlayerName (ThunderstoneEventPurchase playerId card) =
 >         [getPlayerName playerId ++ " purchases card: " ++ show card]
 >     formatEvent getPlayerName
