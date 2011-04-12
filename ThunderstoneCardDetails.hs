@@ -2146,7 +2146,7 @@ monsterDetails ArchdukeOfPain = initCardDetails {
          ++ "choose to attack the Archduke, even without Magic Attack "
          ++ "present.  If there are no Cleric and/or Wizard cards in "
          ++ "the battle, there is no effect.  When the Archduke reaches "
-         ++ "Rank 1 of he Dungeon Hall, destroy the top two cards from "
+         ++ "Rank 1 of the Dungeon Hall, destroy the top two cards from "
          ++ "each Hero stack in the Village, including Militia."]
     }
 
