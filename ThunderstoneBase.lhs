@@ -478,6 +478,8 @@ Rest
 >   | ThunderstoneEventDungeonHallChanged
 >   | ThunderstoneEventBreach Card String
 >   | ThunderstoneEventAttack PlayerId Int Card
+>   | ThunderstoneEventLoseBattle PlayerId Int Card
+>   | ThunderstoneEventWinBattle PlayerId Int Card
 >   | ThunderstoneEventGameOver [(PlayerId,Int)]
 
 
@@ -1329,13 +1331,51 @@ Generic choose option:
 >       where
 >         chooseOption (rank,monster) =
 >             ((rank,show monster,Nothing),do
->                 -- undefined: resolve battle effects
->                 -- undefined: resolve battle
+>                 battleEvents <- battleMonster playerId (rank,monster)
+>                                               (battleResolved rank monster)
+>                 return (ThunderstoneEventAttack playerId rank monster
+>                         : battleEvents))
+>         battleResolved rank monster win
+>           | not win = do
+>                 dungeon <- getDungeon
+>                 setDungeon (removeIndex (rank - 1) dungeon ++ [monster])
+>                 resolveBattleBreachEffects
+>                     False rank
+>                     [ThunderstoneEventLoseBattle playerId rank monster,
+>                      ThunderstoneEventDungeonHallChanged]
+>           | otherwise = do
+>                 discard playerId [monster]
+>                 xp <- getXP playerId
+>                 setXP playerId (maybe xp (xp +) (cardXPValue monster))
+>                 dungeon <- getDungeon
+>                 setDungeon (removeIndex (rank - 1) dungeon)
+>                 let canTakeThunderstone =
+>                         rank == 1 && isThunderstone (dungeon !! 1)
 >                 -- undefined: resolve spoils effects
 >                 -- undefined: resolve breach effects
 >                 -- undefined: temporary code follows
->                 setPlayerState playerId Waiting
->                 return [ThunderstoneEventAttack playerId rank monster])
+>                 resolveBattleBreachEffects
+>                     canTakeThunderstone rank
+>                     [ThunderstoneEventWinBattle playerId rank monster,
+>                      ThunderstoneEventGainDungeonCard
+>                             playerId rank (dungeon !! (rank - 1)),
+>                      ThunderstoneEventDungeonHallChanged]
+>         resolveBattleBreachEffects canTakeThunderstone rank events = do
+>             breachEvents <- if rank == 1
+>               then triggerBreachEffects
+>                        (battleBreachResolved canTakeThunderstone)
+>               else battleBreachResolved canTakeThunderstone
+>             return (events ++ breachEvents)
+>         battleBreachResolved canTakeThunderstone = do
+>             disbandDungeonParty playerId
+>             if not canTakeThunderstone
+>               then return []
+>               else do
+>                 dungeon <- getDungeon
+>                 setDungeon (drop 1 dungeon)
+>                 return [ThunderstoneEventGainDungeonCard
+>                             playerId 1 (dungeon !! 0),
+>                         ThunderstoneEventDungeonHallChanged]
 
 Low level game mechanics
 
@@ -1824,6 +1864,13 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 > cardWeaponWeight (VillageCard card) =
 >     maybe 0 id $ cardWeight $ villageDetails card
 > cardWeaponWeight _ = 0
+
+> cardXPValue :: Card -> Maybe Int
+> cardXPValue (MonsterCard card) = cardXP $ monsterDetails card
+> cardXPValue (HeroCard card) = cardXP $ heroDetails card
+> cardXPValue (VillageCard card) = cardXP $ villageDetails card
+> cardXPValue DiseaseCard = Nothing
+> cardXPValue (ThunderstoneCard card) = cardXP $ thunderstoneDetails card
 
 Dungeon/Village Effect:
 
@@ -2739,21 +2786,70 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 
 >   | otherwise = Nothing
 
+Blink Dog: "Cannot be attacked if a Light Penalty persists."
+
 > canAttack :: [(Card,DungeonPartyStats)] -> (Int,Card) -> Bool
-> canAttack stats (rank,MonsterCard BlinkDog) =
+> canAttack stats dungeon@(rank,MonsterCard BlinkDog) =
 >     rank + 1 < sum [dungeonPartyLight stat
->                     | (_,stat) <- partyBattleEffects stats rank,
+>                     | (_,stat) <- fst (partyBattleEffects stats dungeon),
 >                       not (dungeonPartyNotAttacking stat)]
 > canAttack _ (rank,card) = isMonster card
 
-> partyBattleEffects :: [(Card,DungeonPartyStats)] -> Int
->                    -> [(Card,DungeonPartyStats)]
-> partyBattleEffects stats rank =
->     -- undefined: stuff like Feayn cannot attack Rank 1.
->     stats
+Amazon Archer: "Additional ATTACK +2 at Rank 2 or 3."
+Amazon Huntress: "Additional ATTACK +3 at Rank 2 or 3."
+Amazon Queen: "Additional ATTACK +4 at Rank 2 or 3."
+Dwarf Guardian: "Additional ATTACK +3 when equipped with an Edged Weapon."
+Dwarf Janissary: "Additional ATTACK +4 when equipped with an Edged Weapon."
+Dwarf Sentinel: "Additional ATTACK +5 when equipped with an Edged Weapon."
+Feayn Archer, Feayn Marksman, Feayn Sniper: "Cannot attack Rank 1."
+Selurin Warlock, Selurin Theurge: "Total MAGIC ATTACK x2* (apply last)"
+Thyrian Knight: "All Militia gain ATTACK +1."
+Thyrian Lord: "All Heroes other than Fighters gain ATTACK +2."
 
-> battleMonster :: [(Card,DungeonPartyStats)] -> (Int,Card)
+Polearm: "ATTACK +2, or ATTACK +6 when attached to a Hero "
+                ++ "with 8 or more Strength."
+Warhammer: "Clerics gain an additional ATTACK +3 against "
+                ++ "Doomknights and Undead."
+
+> partyBattleEffects :: [(Card,DungeonPartyStats)] -> (Int,Card)
+>                    -> ([(Card,DungeonPartyStats)],Int)
+> partyBattleEffects stats (rank,monster) =
+>     -- undefined: stuff like Feayn cannot attack Rank 1,
+>     -- also returns total attack multiplier
+>     (stats,1)
+
+Archduke of Pain, Revenant: "Magic Attack Required"
+Succubus: "HALF-ATTACK without MAGIC ATTACK present"
+Tormenter: "HALF-ATTACK without a Weapon present"
+Tormenter: "BATTLE: Destroy one Cleric."
+The Unchained, Deadbone Troll, Famine, Kingdom, Suffering: "BATTLE: Gain one Disease."
+Darkness: "Unequipped Heroes cannot attack"
+Darkness, Lord Mortis, Blink Dog: "Light -1"
+Judgement: "BATTLE: All Heroes suffer Strength -2 and ATTACK -1."
+Knightmare: "Light -2"
+Knightmare, The Prince: "BATTLE: Destroy one Fighter."
+The Prince, Suffering, Ghost: "BATTLE: All Heroes suffer Strength -2."
+Ebon Fume: "Immune to Magic Attack"
+Ebon Fume: "BATTLE: Destroy one Hero with the highest Strength."
+Mythlurian: "BATTLE: Destroy one Hero."
+Skaladak, Red Jelly: "BATTLE: Destroy one Weapon."
+Uyril Unending, Ghost: "HALF-ATTACK without MAGIC ATTACK present"
+Uyril Unending, Black Slime, Spirit, Wraith: "BATTLE: Destroy one Militia."
+Sphinx: "Magic Attack Only"
+Grayskin Lizard: "BATTLE: Heroes with Weapons equipped gain ATTACK +1."
+Gray Ooze: "BATTLE: Destroy one Hero unless at least one Weapon "
+                ++ "is attached to the Party."
+Green Blob: "BATTLE: Destroy one Food."
+Noxious Slag: "HALF-ATTACK from MAGIC ATTACK"
+Noxious Slag: "Immune to Edged Weapons"
+Harbinger: "BATTLE: Destroy one Spell."
+Lord of Death: "BATTLE: Gain two Diseases."
+Haunt: "BATTLE: One Hero cannot attack."
+Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
+                ++ "with Strength 0 or less are Destroyed."
+
+> battleMonster :: PlayerId -> (Int,Card)
 >               -> (Bool -> Thunderstone [ThunderstoneEvent])
 >               -> Thunderstone [ThunderstoneEvent]
-> battleMonster party (rank,card) battleResolved = do
+> battleMonster playerId (rank,card) battleResolved = do
 >     undefined
