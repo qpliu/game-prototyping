@@ -1373,6 +1373,7 @@ Generic choose option:
 >               else do
 >                 dungeon <- getDungeon
 >                 setDungeon (drop 1 dungeon)
+>                 discard playerId [dungeon !! 0]
 >                 return [ThunderstoneEventGainDungeonCard
 >                             playerId 1 (dungeon !! 0),
 >                         ThunderstoneEventDungeonHallChanged]
@@ -1821,6 +1822,11 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 > cardHeroStrength (HeroCard card) =
 >     maybe 0 id (cardStrength $ heroDetails card)
 > cardHeroStrength _ = 0
+
+> cardMonsterHealth :: Card -> Int
+> cardMonsterHealth (MonsterCard card) =
+>     maybe 0 id (cardHealth $ monsterDetails card)
+> cardMonsterHealth _ = 0
 
 > cardDungeonAttack :: Card -> Int
 > cardDungeonAttack card = sum $ map getAttack $ cardCardText card
@@ -2791,7 +2797,8 @@ Blink Dog: "Cannot be attacked if a Light Penalty persists."
 > canAttack :: [(Card,DungeonPartyStats)] -> (Int,Card) -> Bool
 > canAttack stats dungeon@(rank,MonsterCard BlinkDog) =
 >     rank + 1 < sum [dungeonPartyLight stat
->                     | (_,stat) <- fst (partyBattleEffects stats dungeon),
+>                     | (_,stat) <- fst (applyPartyBattleEffects
+>                                            stats dungeon),
 >                       not (dungeonPartyNotAttacking stat)]
 > canAttack _ (rank,card) = isMonster card
 
@@ -2811,12 +2818,30 @@ Polearm: "ATTACK +2, or ATTACK +6 when attached to a Hero "
 Warhammer: "Clerics gain an additional ATTACK +3 against "
                 ++ "Doomknights and Undead."
 
-> partyBattleEffects :: [(Card,DungeonPartyStats)] -> (Int,Card)
+> applyPartyBattleEffects :: [(Card,DungeonPartyStats)] -> (Int,Card)
 >                    -> ([(Card,DungeonPartyStats)],Int)
-> partyBattleEffects stats (rank,monster) =
->     -- undefined: stuff like Feayn cannot attack Rank 1,
->     -- also returns total attack multiplier
->     (stats,1)
+> applyPartyBattleEffects stats (rank,monster) =
+>     foldl applyBattleEffect (stats,1) (zip [0..] stats)
+>   where
+>     applyBattleEffect (stats,totalMagicMultiplier) (index,(card,_))
+>     -- undefined: placeholder code
+>       | card == HeroCard AmazonArcher = (stats,totalMagicMultiplier)
+>       | card == HeroCard AmazonHuntress = (stats,totalMagicMultiplier)
+>       | card == HeroCard AmazonArcher = (stats,totalMagicMultiplier)
+>       | card == HeroCard DwarfGuardian = (stats,totalMagicMultiplier)
+>       | card == HeroCard DwarfJanissary = (stats,totalMagicMultiplier)
+>       | card == HeroCard DwarfSentinel = (stats,totalMagicMultiplier)
+>       | card == HeroCard FeaynArcher
+>             || card == HeroCard FeaynMarksman
+>             || card == HeroCard FeaynSniper =
+>                 (stats,totalMagicMultiplier)
+>       | card == HeroCard SelurinWarlock || card == HeroCard SelurinWarlock =
+>                 (stats,totalMagicMultiplier*2)
+>       | card == HeroCard ThyrianKnight = (stats,totalMagicMultiplier)
+>       | card == HeroCard ThyrianLord = (stats,totalMagicMultiplier)
+>       | card == VillageCard Polearm = (stats,totalMagicMultiplier)
+>       | card == VillageCard Warhammer = (stats,totalMagicMultiplier)
+>       | otherwise = (stats,totalMagicMultiplier)
 
 Archduke of Pain, Revenant: "Magic Attack Required"
 Succubus: "HALF-ATTACK without MAGIC ATTACK present"
@@ -2851,5 +2876,29 @@ Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 > battleMonster :: PlayerId -> (Int,Card)
 >               -> (Bool -> Thunderstone [ThunderstoneEvent])
 >               -> Thunderstone [ThunderstoneEvent]
-> battleMonster playerId (rank,card) battleResolved = do
->     undefined
+> battleMonster playerId (rank,monster) battleResolved = do
+>     hand <- getHand playerId
+>     initialPartyStats <- fmap dungeonEffectsStats (getPlayerState playerId)
+>     let (partyStats,magicAttackMultiplier) =
+>             applyPartyBattleEffects (zip hand initialPartyStats)
+>                                     (rank,monster)
+> -- undefined: temporary code follows
+>     battleResolved (totalAttack partyStats magicAttackMultiplier
+>                     >= cardMonsterHealth monster + lightPenalty partyStats)
+>   where
+>     lightPenalty partyStats = max 0 (2*rank - totalLight partyStats)
+>     totalAttack stats magicAttackMultiplier =
+>         attack + magicAttackMultiplier*magicAttack
+>       where
+>         (attack,magicAttack) = foldl addAttacks (0,0) $ map getAttacks stats
+>         addAttacks (attack1,magicAttack1) (attack2,magicAttack2) =
+>             (attack1+attack2,magicAttack1+magicAttack2)
+>         getAttacks (_,cardStats)
+>           | dungeonPartyNotAttacking cardStats = (0,0)
+>           | otherwise = (dungeonPartyAttack cardStats,
+>                          dungeonPartyMagicAttack cardStats)
+>     totalLight stats = sum (map getLight stats)
+>       where
+>         getLight (_,cardStats)
+>           | dungeonPartyNotAttacking cardStats = 0
+>           | otherwise = dungeonPartyLight cardStats
