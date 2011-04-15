@@ -1324,13 +1324,15 @@ Generic choose option:
 >             setPlayerState playerId Waiting
 >           else
 >             setPlayerState playerId
->                 (ChoosingOption WhichMonster
->                                 (map chooseOption monsterOptions)
->                                 (Just (setPlayerState playerId playerState)))
+>                 (ChoosingOption
+>                      WhichMonster
+>                      (map (chooseOption playerState) monsterOptions)
+>                      (Just (setPlayerState playerId playerState)))
 >         return (Just [])
 >       where
->         chooseOption (rank,monster) =
+>         chooseOption playerState (rank,monster) =
 >             ((rank,show monster,Nothing),do
+>                 setPlayerState playerId playerState
 >                 battleEvents <- battleMonster playerId (rank,monster)
 >                                               (battleResolved rank monster)
 >                 return (ThunderstoneEventAttack playerId rank monster
@@ -1368,7 +1370,7 @@ Generic choose option:
 >             return (events ++ breachEvents)
 >         battleBreachResolved canTakeThunderstone = do
 >             disbandDungeonParty playerId
->             if not canTakeThunderstone
+>             events <- if not canTakeThunderstone
 >               then return []
 >               else do
 >                 dungeon <- getDungeon
@@ -1377,6 +1379,8 @@ Generic choose option:
 >                 return [ThunderstoneEventGainDungeonCard
 >                             playerId 1 (dungeon !! 0),
 >                         ThunderstoneEventDungeonHallChanged]
+>             Just events <- endTurn events
+>             return events
 
 Low level game mechanics
 
@@ -1833,6 +1837,7 @@ one turn, i.e. from Level 1 to 3, and you may never skip a Level.
 >   where
 >     getAttack "ATTACK +1" = 1
 >     getAttack "ATTACK +2" = 2
+>     getAttack "ATTACK +2, or ATTACK +6 when attached to a Hero with 8 or more Strength." = 2
 >     getAttack "ATTACK +3" = 3
 >     getAttack "ATTACK +4" = 4
 >     getAttack "ATTACK +5" = 5
@@ -2481,7 +2486,7 @@ Non-repeat effects call markEffectUsed, which also does markCardUsed.
 >             -- will have to be destroyed.  Can't really check before
 >             -- activating the effect, because a breach effect can
 >             -- destroy or discard cards.
->             let cardsAvailableToDestroy hand UsingDungeonEffects {
+>             let cardsAvailableToDestroy hand UsingDungeonEffectsCard {
 >                         dungeonEffectsUsed = used,
 >                         dungeonEffectsStats = stats
 >                         } =
@@ -2809,6 +2814,7 @@ Dwarf Guardian: "Additional ATTACK +3 when equipped with an Edged Weapon."
 Dwarf Janissary: "Additional ATTACK +4 when equipped with an Edged Weapon."
 Dwarf Sentinel: "Additional ATTACK +5 when equipped with an Edged Weapon."
 Feayn Archer, Feayn Marksman, Feayn Sniper: "Cannot attack Rank 1."
+Selurin Magician: "All Items and Magic Attack Spells gain MAGIC ATTACK +1."
 Selurin Warlock, Selurin Theurge: "Total MAGIC ATTACK x2* (apply last)"
 Thyrian Knight: "All Militia gain ATTACK +1."
 Thyrian Lord: "All Heroes other than Fighters gain ATTACK +2."
@@ -2835,6 +2841,7 @@ Warhammer: "Clerics gain an additional ATTACK +3 against "
 >             || card == HeroCard FeaynMarksman
 >             || card == HeroCard FeaynSniper =
 >                 (stats,totalMagicMultiplier)
+>       | card == HeroCard SelurinMagician = (stats,totalMagicMultiplier)
 >       | card == HeroCard SelurinWarlock || card == HeroCard SelurinWarlock =
 >                 (stats,totalMagicMultiplier*2)
 >       | card == HeroCard ThyrianKnight = (stats,totalMagicMultiplier)
@@ -2886,7 +2893,7 @@ Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 >     battleResolved (totalAttack partyStats magicAttackMultiplier
 >                     >= cardMonsterHealth monster + lightPenalty partyStats)
 >   where
->     lightPenalty partyStats = max 0 (2*rank - totalLight partyStats)
+>     lightPenalty partyStats = max 0 (2*(rank - totalLight partyStats))
 >     totalAttack stats magicAttackMultiplier =
 >         attack + magicAttackMultiplier*magicAttack
 >       where
