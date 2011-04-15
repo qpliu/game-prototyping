@@ -2830,25 +2830,110 @@ Warhammer: "Clerics gain an additional ATTACK +3 against "
 >     foldl applyBattleEffect (stats,1) (zip [0..] stats)
 >   where
 >     applyBattleEffect (stats,totalMagicMultiplier) (index,(card,_))
->     -- undefined: placeholder code
->       | card == HeroCard AmazonArcher = (stats,totalMagicMultiplier)
->       | card == HeroCard AmazonHuntress = (stats,totalMagicMultiplier)
->       | card == HeroCard AmazonArcher = (stats,totalMagicMultiplier)
->       | card == HeroCard DwarfGuardian = (stats,totalMagicMultiplier)
->       | card == HeroCard DwarfJanissary = (stats,totalMagicMultiplier)
->       | card == HeroCard DwarfSentinel = (stats,totalMagicMultiplier)
+>       | card == HeroCard AmazonArcher =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                             statIndex == index && rank > 1)
+>                         (addAttack 2),
+>              totalMagicMultiplier)
+>       | card == HeroCard AmazonHuntress =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                             statIndex == index && rank > 1)
+>                         (addAttack 3),
+>              totalMagicMultiplier)
+>       | card == HeroCard AmazonArcher =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                             statIndex == index && rank > 1)
+>                         (addAttack 4),
+>              totalMagicMultiplier)
+>       | card == HeroCard DwarfGuardian =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                             statIndex == index
+>                                 && indexHasClass
+>                                         (dungeonPartyEquippedWith stat)
+>                                         ClassEdged)
+>                         (addAttack 3),
+>              totalMagicMultiplier)
+>       | card == HeroCard DwarfJanissary =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                             statIndex == index
+>                                 && indexHasClass
+>                                         (dungeonPartyEquippedWith stat)
+>                                         ClassEdged)
+>                         (addAttack 4),
+>              totalMagicMultiplier)
+>       | card == HeroCard DwarfSentinel =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                             statIndex == index
+>                                 && indexHasClass
+>                                         (dungeonPartyEquippedWith stat)
+>                                         ClassEdged)
+>                         (addAttack 5),
+>              totalMagicMultiplier)
 >       | card == HeroCard FeaynArcher
->             || card == HeroCard FeaynMarksman
->             || card == HeroCard FeaynSniper =
->                 (stats,totalMagicMultiplier)
->       | card == HeroCard SelurinMagician = (stats,totalMagicMultiplier)
+>                 || card == HeroCard FeaynMarksman
+>                 || card == HeroCard FeaynSniper =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                             statIndex == index
+>                                 || dungeonPartyEquippedBy stat == Just index)
+>                         (\ stat -> stat {
+>                             dungeonPartyNotAttacking =
+>                                 dungeonPartyNotAttacking stat || rank == 1
+>                                 }),
+>              totalMagicMultiplier)
+>       | card == HeroCard SelurinMagician =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                             card `hasClass` ClassItem
+>                                 || (card `hasClass` ClassSpell
+>                                     && dungeonPartyMagicAttack stat > 0))
+>                         (\ stat -> stat {
+>                             dungeonPartyMagicAttack =
+>                                 dungeonPartyMagicAttack stat + 1
+>                                 }),
+>              totalMagicMultiplier)
 >       | card == HeroCard SelurinWarlock || card == HeroCard SelurinWarlock =
 >                 (stats,totalMagicMultiplier*2)
->       | card == HeroCard ThyrianKnight = (stats,totalMagicMultiplier)
->       | card == HeroCard ThyrianLord = (stats,totalMagicMultiplier)
->       | card == VillageCard Polearm = (stats,totalMagicMultiplier)
->       | card == VillageCard Warhammer = (stats,totalMagicMultiplier)
+>       | card == HeroCard ThyrianKnight =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                              card == HeroCard Militia)
+>                         (addAttack 1),
+>              totalMagicMultiplier)
+>       | card == HeroCard ThyrianLord =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                              isHero card
+>                                  && not (card `hasClass` ClassFighter))
+>                         (addAttack 2),
+>              totalMagicMultiplier)
+>       | card == VillageCard Polearm =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                             statIndex == index
+>                                 && indexStrength
+>                                         (dungeonPartyEquippedBy stat) >= 8)
+>                         (addAttack 4),
+>              totalMagicMultiplier)
+>       | card == VillageCard Warhammer =
+>             (modifyWhen (\ (statIndex,(card,stat)) ->
+>                             statIndex == index
+>                                 && indexHasClass
+>                                         (dungeonPartyEquippedBy stat)
+>                                         ClassCleric
+>                                 && (monster `hasClass` ClassDoomknight
+>                                     || monster `hasClass` ClassUndead))
+>                         (addAttack 3),
+>              totalMagicMultiplier)
 >       | otherwise = (stats,totalMagicMultiplier)
+>     modifyWhen test modify = map update (zip [0..] stats)
+>       where
+>         update (index,(card,stat)) =
+>             if test (index,(card,stat))
+>               then (card,modify stat) else (card,stat)
+>     indexHasClass Nothing testClass = False
+>     indexHasClass (Just index) testClass =
+>         fst (stats !! index) `hasClass` testClass
+>     indexStrength Nothing = 0
+>     indexStrength (Just index) = dungeonPartyStrength (snd (stats !! index))
+>     addAttack attack stat = stat {
+>         dungeonPartyAttack = dungeonPartyAttack stat + attack
+>         }
 
 Archduke of Pain, Revenant: "Magic Attack Required"
 Succubus: "HALF-ATTACK without MAGIC ATTACK present"
