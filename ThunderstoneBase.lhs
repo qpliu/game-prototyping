@@ -48,7 +48,7 @@ Game mechanics:
 > where
 
 > import Control.Monad(filterM,mapM,mapM_,replicateM,unless,when)
-> import Data.List(intersperse,nub,partition,permutations,sortBy,zip4,(\\))
+> import Data.List(intersperse,nub,partition,sortBy,zip4,(\\))
 > import Data.Maybe(catMaybes,isNothing,listToMaybe)
 > import System.Random(StdGen)
 
@@ -2909,3 +2909,15 @@ Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 >         getLight (_,cardStats)
 >           | dungeonPartyNotAttacking cardStats = 0
 >           | otherwise = dungeonPartyLight cardStats
+
+GHC 6.8 does not have Data.List.permutations
+
+> permutations :: [a] -> [[a]]
+> permutations xs0        =  xs0 : perms xs0 []
+>   where
+>     perms []     _  = []
+>     perms (t:ts) is = foldr interleave (perms ts (t:is)) (permutations is)
+>       where interleave    xs     r = let (_,zs) = interleave' id xs r in zs
+>             interleave' _ []     r = (ts, r)
+>             interleave' f (y:ys) r = let (us,zs) = interleave' (f . (y:)) ys r
+>                                      in  (y:us, f (t:y:us) : zs)
