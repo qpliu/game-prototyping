@@ -2992,9 +2992,12 @@ Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 >       | text == "Light -2" =
 >             (stats,attackDivisor,magicDivisor,lightPenalty+2)
 >       | text == "BATTLE: All Heroes suffer Strength -2 and ATTACK -1." =
->             undefined
+>             (disableHeavyWeapons $ map (reduceHeroStrength 2)
+>                                  $ map (reduceHeroAttack 1) stats,
+>              attackDivisor,magicDivisor,lightPenalty)
 >       | text == "BATTLE: All Heroes suffer Strength -2." =
->             undefined
+>             (disableHeavyWeapons $ map (reduceHeroStrength 2) stats,
+>              attackDivisor,magicDivisor,lightPenalty)
 >       | text == "Magic Attack Only" =
 >             let (attack,magicAttack) = addAttacks stats
 >             in  (stats,attack+1,magicDivisor,lightPenalty)
@@ -3019,7 +3022,9 @@ Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 >                  attackDivisor,magicDivisor,lightPenalty)
 >       | text == "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 >                     ++ "with Strength 0 or less are Destroyed." =
->             undefined
+>             (map destroyWeakHero $ disableHeavyWeapons
+>                                  $ map (reduceHeroStrength 4) stats,
+>              attackDivisor,magicDivisor,lightPenalty)
 >       | otherwise = (stats,attackDivisor,magicDivisor,lightPenalty)
 >     addAttacks stats = foldl addAttack (0,0) stats
 >       where
@@ -3028,6 +3033,31 @@ Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 >           | otherwise =
 >                 (attack + dungeonPartyAttack stat,
 >                  magicAttack + dungeonPartyMagicAttack stat)
+>     disableHeavyWeapons stats = map disableHeavyWeapon stats
+>       where
+>         disableHeavyWeapon (card,stat)
+>           | fmap ((< dungeonPartyWeight stat) . dungeonPartyStrength
+>                                               . snd . (stats !!))
+>                  (dungeonPartyEquippedBy stat) /= Just True =
+>                 (card,stat)
+>           | otherwise =
+>                 (card,stat { dungeonPartyNotAttacking = True })
+>     destroyWeakHero (card,stat)
+>       | isHero card && dungeonPartyStrength stat <= 0 =
+>             (card,stat { dungeonPartyDestroyed = True })
+>       | otherwise = (card,stat)
+>     reduceHeroStrength reduction (card,stat)
+>       | isHero card =
+>             (card,stat {
+>                 dungeonPartyStrength = dungeonPartyStrength stat - reduction
+>                 })
+>       | otherwise = (card,stat)
+>     reduceHeroAttack reduction (card,stat)
+>       | isHero card =
+>             (card,stat {
+>                 dungeonPartyAttack = dungeonPartyAttack stat - reduction
+>                 })
+>       | otherwise = (card,stat)
 
 > battleMonster :: PlayerId -> (Int,Card)
 >               -> (Bool -> Thunderstone [ThunderstoneEvent])
