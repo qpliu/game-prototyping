@@ -417,12 +417,12 @@
 >     formatEvent getPlayerName (ThunderstoneEventReshuffle playerId) =
 >         [getPlayerName playerId ++ " reshuffles his or her discard pile."]
 >     formatEvent getPlayerName (ThunderstoneEventPurchase playerId card) =
->         [getPlayerName playerId ++ " purchases card: " ++ show card]
+>         [getPlayerName playerId ++ " purchases " ++ show card ++ "."]
 >     formatEvent getPlayerName
 >                 (ThunderstoneEventUpgrade playerId oldHero newHero) =
 >         [getPlayerName playerId ++ " levels up Hero from: "
 >                                 ++ show (HeroCard oldHero) ++ " to: "
->                                 ++ show (HeroCard newHero)]
+>                                 ++ show (HeroCard newHero) ++ "."]
 >     formatEvent getPlayerName (ThunderstoneEventDiscard playerId card) =
 >         [getPlayerName playerId ++ " discards a card."]
 >     formatEvent getPlayerName (ThunderstoneEventDestroyCard playerId card) =
@@ -441,12 +441,15 @@
 >         [getPlayerName playerId ++ " equips " ++ show hero
 >                                 ++ " with " ++ show weapon ++ "."]
 >     formatEvent getPlayerName
->                 (ThunderstoneEventGainDungeonCard playerId rank card) =
+>                 (ThunderstoneEventGainDungeonCard playerId rank card)
+>       | rank > 0 =
 >         [getPlayerName playerId ++ " gains from Rank " ++ show rank
->                                 ++ ": " ++ show card]
+>                                 ++ ": " ++ show card ++ "."]
+>       | otherwise =
+>         [getPlayerName playerId ++ " gains " ++ show card ++ "."]
 >     formatEvent getPlayerName (ThunderstoneEventReturnMonster rank card) =
 >         ["Returned from Rank " ++ show rank ++ " to bottom of Dungeon Deck: "
->                                ++ show card]
+>                                ++ show card ++ "."]
 >     formatEvent getPlayerName (ThunderstoneEventBreach card text) =
 >         [show card ++ ", " ++ text]
 >     formatEvent getPlayerName ThunderstoneEventDungeonHallChanged =
@@ -454,14 +457,14 @@
 >     formatEvent getPlayerName (ThunderstoneEventWinBattle
 >                                    playerId rank card) =
 >         [getPlayerName playerId ++ " defeats Rank " ++ show rank ++ ": "
->                                 ++ show card]
+>                                 ++ show card ++ "."]
 >     formatEvent getPlayerName (ThunderstoneEventLoseBattle
 >                                    playerId rank card) =
 >         [getPlayerName playerId ++ " is defeated by Rank "
->                                 ++ show rank ++ ": " ++ show card]
+>                                 ++ show rank ++ ": " ++ show card ++ "."]
 >     formatEvent getPlayerName (ThunderstoneEventAttack playerId rank card) =
 >         [getPlayerName playerId ++ " attacks Rank " ++ show rank ++ ": "
->                                 ++ show card]
+>                                 ++ show card ++ "."]
 >     formatEvent getPlayerName (ThunderstoneEventGameOver scores) =
 >         ["Game over.  Scores:"]
 >         ++ [" " ++ getPlayerName playerId ++ ": " ++ show score

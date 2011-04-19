@@ -1337,14 +1337,15 @@ Generic choose option:
 >                                               (battleResolved rank monster)
 >                 return (ThunderstoneEventAttack playerId rank monster
 >                         : battleEvents))
->         battleResolved rank monster win
+>         battleResolved rank monster win events
 >           | not win = do
 >                 dungeon <- getDungeon
 >                 setDungeon (removeIndex (rank - 1) dungeon ++ [monster])
 >                 resolveBattleBreachEffects
 >                     False rank
->                     [ThunderstoneEventLoseBattle playerId rank monster,
->                      ThunderstoneEventDungeonHallChanged]
+>                     (events
+>                      ++ [ThunderstoneEventLoseBattle playerId rank monster,
+>                          ThunderstoneEventDungeonHallChanged])
 >           | otherwise = do
 >                 discard playerId [monster]
 >                 xp <- getXP playerId
@@ -1358,10 +1359,11 @@ Generic choose option:
 >                 -- undefined: temporary code follows
 >                 resolveBattleBreachEffects
 >                     canTakeThunderstone rank
->                     [ThunderstoneEventWinBattle playerId rank monster,
->                      ThunderstoneEventGainDungeonCard
->                             playerId rank (dungeon !! (rank - 1)),
->                      ThunderstoneEventDungeonHallChanged]
+>                     (events
+>                      ++ [ThunderstoneEventWinBattle playerId rank monster,
+>                          ThunderstoneEventGainDungeonCard
+>                                 playerId rank (dungeon !! (rank - 1)),
+>                          ThunderstoneEventDungeonHallChanged])
 >         resolveBattleBreachEffects canTakeThunderstone rank events = do
 >             breachEvents <- if rank == 1
 >               then triggerBreachEffects
@@ -2934,38 +2936,43 @@ Warhammer: "Clerics gain an additional ATTACK +3 against "
 >         dungeonPartyAttack = dungeonPartyAttack stat + attack
 >         }
 
+The Unchained, Deadbone Troll, Famine, Kingdom, Suffering: "BATTLE: Gain one Disease."
+Lord of Death: "BATTLE: Gain two Diseases."
+
+> gainDiseaseBattleEffects :: PlayerId -> Card
+>                          -> Thunderstone [ThunderstoneEvent]
+> gainDiseaseBattleEffects playerId monster =
+>     fmap concat (mapM applyBattleEffect (cardCardText monster))
+>   where
+>     applyBattleEffect text
+>       | text == "BATTLE: Gain one Disease." = do
+>             discard playerId [DiseaseCard]
+>             return [ThunderstoneEventGainDungeonCard playerId 0 DiseaseCard]
+>       | text == "BATTLE: Gain two Diseases." = do
+>             discard playerId [DiseaseCard,DiseaseCard]
+>             return [ThunderstoneEventGainDungeonCard playerId 0 DiseaseCard,
+>                     ThunderstoneEventGainDungeonCard playerId 0 DiseaseCard]
+>       | otherwise = return []
+
 Archduke of Pain, Revenant: "Magic Attack Required"
 Succubus, Uyril Unending, Ghost: "HALF-ATTACK without MAGIC ATTACK present"
 Tormenter: "HALF-ATTACK without a Weapon present"
-Tormenter: "BATTLE: Destroy one Cleric."
-The Unchained, Deadbone Troll, Famine, Kingdom, Suffering: "BATTLE: Gain one Disease."
 Darkness: "Unequipped Heroes cannot attack"
 Darkness, Lord Mortis, Blink Dog: "Light -1"
 Judgement: "BATTLE: All Heroes suffer Strength -2 and ATTACK -1."
 Knightmare: "Light -2"
-Knightmare, The Prince: "BATTLE: Destroy one Fighter."
 The Prince, Suffering, Ghost: "BATTLE: All Heroes suffer Strength -2."
 Ebon Fume: "Immune to Magic Attack"
-Ebon Fume: "BATTLE: Destroy one Hero with the highest Strength."
-Mythlurian: "BATTLE: Destroy one Hero."
-Skaladak, Red Jelly: "BATTLE: Destroy one Weapon."
-Uyril Unending, Black Slime, Spirit, Wraith: "BATTLE: Destroy one Militia."
 Sphinx: "Magic Attack Only"
 Grayskin Lizard: "BATTLE: Heroes with Weapons equipped gain ATTACK +1."
-Gray Ooze: "BATTLE: Destroy one Hero unless at least one Weapon "
-                ++ "is attached to the Party."
-Green Blob: "BATTLE: Destroy one Food."
 Noxious Slag: "HALF-ATTACK from MAGIC ATTACK"
 Noxious Slag: "Immune to Edged Weapons"
-Harbinger: "BATTLE: Destroy one Spell."
-Lord of Death: "BATTLE: Gain two Diseases."
-Haunt: "BATTLE: One Hero cannot attack."
 Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
                 ++ "with Strength 0 or less are Destroyed."
 
-> applySomeMonsterBattleEffects :: [(Card,DungeonPartyStats)] -> Card
->                               -> ([(Card,DungeonPartyStats)],Int,Int,Int)
-> applySomeMonsterBattleEffects stats monster =
+> noninteractiveBattleEffects :: [(Card,DungeonPartyStats)] -> Card
+>                             -> ([(Card,DungeonPartyStats)],Int,Int,Int)
+> noninteractiveBattleEffects stats monster =
 >     foldl applyBattleEffect (stats,1,1,0) (cardCardText monster)
 >   where
 >     applyBattleEffect (stats,attackDivisor,magicDivisor,lightPenalty) text
@@ -2979,6 +2986,12 @@ Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 >             in  if magicAttack > 0
 >                   then (stats,attackDivisor,magicDivisor,lightPenalty)
 >                   else (stats,attackDivisor*2,magicDivisor,lightPenalty)
+>       | text == "HALF-ATTACK without a Weapon present"
+>                 && null (filter (\ (card,stat) ->
+>                                     not (dungeonPartyNotAttacking stat)
+>                                         && card `hasClass` ClassWeapon)
+>                                 stats) =
+>             (stats,attackDivisor*2,magicDivisor*2,lightPenalty)
 >       | text == "Unequipped Heroes cannot attack" =
 >             let removeUnequipped (card,stat)
 >                   | isHero card
@@ -2989,15 +3002,18 @@ Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 >                  attackDivisor,magicDivisor,lightPenalty)
 >       | text == "Light -1" =
 >             (stats,attackDivisor,magicDivisor,lightPenalty+1)
->       | text == "Light -2" =
->             (stats,attackDivisor,magicDivisor,lightPenalty+2)
 >       | text == "BATTLE: All Heroes suffer Strength -2 and ATTACK -1." =
 >             (disableHeavyWeapons $ map (reduceHeroStrength 2)
 >                                  $ map (reduceHeroAttack 1) stats,
 >              attackDivisor,magicDivisor,lightPenalty)
+>       | text == "Light -2" =
+>             (stats,attackDivisor,magicDivisor,lightPenalty+2)
 >       | text == "BATTLE: All Heroes suffer Strength -2." =
 >             (disableHeavyWeapons $ map (reduceHeroStrength 2) stats,
 >              attackDivisor,magicDivisor,lightPenalty)
+>       | text == "Immune to Magic Attack" =
+>             let (attack,magicAttack) = addAttacks stats
+>             in  (stats,attackDivisor,magicAttack+1,lightPenalty)
 >       | text == "Magic Attack Only" =
 >             let (attack,magicAttack) = addAttacks stats
 >             in  (stats,attack+1,magicDivisor,lightPenalty)
@@ -3059,32 +3075,59 @@ Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 >                 })
 >       | otherwise = (card,stat)
 
+Tormenter: "BATTLE: Destroy one Cleric."
+Knightmare, The Prince: "BATTLE: Destroy one Fighter."
+Ebon Fume: "BATTLE: Destroy one Hero with the highest Strength."
+Mythlurian: "BATTLE: Destroy one Hero."
+Skaladak, Red Jelly: "BATTLE: Destroy one Weapon."
+Uyril Unending, Black Slime, Spirit, Wraith: "BATTLE: Destroy one Militia."
+Gray Ooze: "BATTLE: Destroy one Hero unless at least one Weapon "
+                ++ "is attached to the Party."
+Green Blob: "BATTLE: Destroy one Food."
+Harbinger: "BATTLE: Destroy one Spell."
+Haunt: "BATTLE: One Hero cannot attack."
+
+> interactiveBattleEffects :: PlayerId -> (Int,Card) -> [ThunderstoneEvent]
+>                          -> ([ThunderstoneEvent]
+>                                      -> Thunderstone [ThunderstoneEvent])
+>                          -> Thunderstone [ThunderstoneEvent]
+> interactiveBattleEffects playerId (rank,monster) events resolveBattle = do
+>     undefined
+
 > battleMonster :: PlayerId -> (Int,Card)
->               -> (Bool -> Thunderstone [ThunderstoneEvent])
+>               -> (Bool -> [ThunderstoneEvent]
+>                        -> Thunderstone [ThunderstoneEvent])
 >               -> Thunderstone [ThunderstoneEvent]
 > battleMonster playerId (rank,monster) battleResolved = do
 >     hand <- getHand playerId
 >     playerState <- getPlayerState playerId
->     let (partyStats1,magicAttackMultiplier) =
+>     let (partyStats,magicAttackMultiplier) =
 >             applyPartyBattleEffects
 >                 (zip hand (dungeonEffectsStats playerState))
 >                 (rank,monster)
->     let (partyStats2,attackDivisor,magicDivisor,lightPenalty) =
->             applySomeMonsterBattleEffects partyStats1 monster
 >     setPlayerState playerId playerState {
->         dungeonEffectsStats = map snd partyStats2
+>         dungeonEffectsStats = map snd partyStats
 >         }
-> -- undefined: temporary code follows
->     battleResolved (totalAttack partyStats2 magicAttackMultiplier
->                         attackDivisor magicDivisor
->                     >= cardMonsterHealth monster
->                             + lightDefense lightPenalty partyStats2)
+>     events <- gainDiseaseBattleEffects playerId monster
+>     interactiveBattleEffects playerId (rank,monster) events
+>                              (resolveBattle magicAttackMultiplier)
 >   where
+>     resolveBattle magicAttackMultiplier events = do
+>         hand <- getHand playerId
+>         playerState <- getPlayerState playerId
+>         let (partyStats,attackDivisor,magicDivisor,lightPenalty) =
+>                 noninteractiveBattleEffects
+>                     (zip hand (dungeonEffectsStats playerState)) monster
+>         battleResolved (totalAttack partyStats magicAttackMultiplier
+>                             attackDivisor magicDivisor
+>                         >= cardMonsterHealth monster
+>                                 + lightDefense lightPenalty partyStats)
+>                        events
 >     lightDefense lightPenalty partyStats =
 >         max 0 (2*(rank + lightPenalty - totalLight partyStats))
 >     totalAttack stats magicAttackMultiplier attackDivisor magicDivisor =
 >         (attack `div` attackDivisor)
->             + ((magicAttackMultiplier*magicAttack) `div` magicDivisor)
+>             + (magicAttackMultiplier*(magicAttack `div` magicDivisor))
 >       where
 >         (attack,magicAttack) = foldl addAttacks (0,0) $ map getAttacks stats
 >         addAttacks (attack1,magicAttack1) (attack2,magicAttack2) =
