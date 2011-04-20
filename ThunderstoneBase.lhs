@@ -3103,7 +3103,47 @@ Haunt: "BATTLE: One Hero cannot attack."
 >             destroyOneCard (`hasClass` ClassCleric) text
 >       | text == "BATTLE: Destroy one Fighter." =
 >             destroyOneCard (`hasClass` ClassFighter) text
->       | text == "BATTLE: Destroy one Hero with the highest Strength." = undefined
+>       | text == "BATTLE: Destroy one Hero with the highest Strength." = do
+>             playerState <- getPlayerState playerId
+>             hand <- getHand playerId
+>             let stats = dungeonEffectsStats playerState
+>             let strength = maximum (map dungeonPartyStrength stats)
+>             let eligible (_,card,stat) =
+>                     isHero card && strength == dungeonPartyStrength stat
+>             case filter eligible (zip3 [0..] hand stats) of
+>               [] -> resolveBattle events
+>               [(index,_,_)] -> do
+>                     setPlayerState playerId playerState {
+>                         dungeonEffectsStats =
+>                             updateIndex
+>                                 index
+>                                (dungeonEffectsStats playerState)
+>                                (\ stat -> stat {
+>                                     dungeonPartyDestroyed = True
+>                                     })
+>                         }
+>                     resolveBattle (events ++ [ThunderstoneEventBattleEffect
+>                                                   playerId monster text])
+>               options -> do
+>                     setPlayerState playerId
+>                         (ChoosingOption WhichCardToDestroy
+>                              [((index,show card,Nothing),do
+>                                    setPlayerState playerId playerState {
+>                                        dungeonEffectsStats =
+>                                            updateIndex
+>                                                index
+>                                                (dungeonEffectsStats
+>                                                     playerState)
+>                                                (\ stat -> stat {
+>                                                     dungeonPartyDestroyed =
+>                                                         True
+>                                                     })
+>                                        }
+>                                    resolveBattle [])
+>                               | (index,card,_) <- options]
+>                              Nothing)
+>                     return (events ++ [ThunderstoneEventBattleEffect
+>                                            playerId monster text])
 >       | text == "BATTLE: Destroy one Hero." =
 >             destroyOneCard isHero text
 >       | text == "BATTLE: Destroy one Weapon." =
@@ -3120,7 +3160,34 @@ Haunt: "BATTLE: One Hero cannot attack."
 >             destroyOneCard (`hasClass` ClassFood) text
 >       | text == "BATTLE: Destroy one Spell." =
 >             destroyOneCard (`hasClass` ClassSpell) text
->       | text == "BATTLE: One Hero cannot attack." = undefined
+>       | text == "BATTLE: One Hero cannot attack." = do
+>             stats <- fmap dungeonEffectsStats (getPlayerState playerId)
+>             hand <- getHand playerId
+>             let eligible (card,stat) =
+>                     isHero card && not (dungeonPartyNotAttacking stat)
+>             if not (any eligible (zip hand stats))
+>               then resolveBattle events
+>               else do
+>                 playerState <- getPlayerState playerId
+>                 setPlayerState playerId
+>                     (ChoosingOption WhichCardToDestroy
+>                          [((index,show card,Nothing),do
+>                                setPlayerState playerId playerState {
+>                                    dungeonEffectsStats =
+>                                        updateIndex
+>                                            index
+>                                            (dungeonEffectsStats playerState)
+>                                            (\ stat -> stat {
+>                                                 dungeonPartyNotAttacking =
+>                                                     True
+>                                                 })
+>                                    }
+>                                resolveBattle [])
+>                           | (index,card,stat) <- zip3 [0..] hand stats,
+>                             eligible (card,stat)]
+>                      Nothing)
+>                 return (events ++ [ThunderstoneEventBattleEffect
+>                                        playerId monster text])
 >       | otherwise = resolveBattle events
 >     destroyOneCard test text = do
 >         cards <- fmap (filter (test . snd) . zip [0..]) (getHand playerId)
@@ -3133,19 +3200,20 @@ Haunt: "BATTLE: One Hero cannot attack."
 >                      [((index,show card,Nothing),do
 >                            setPlayerState playerId playerState {
 >                                dungeonEffectsStats =
->                                    setIndexDestroyed
+>                                    updateIndex
 >                                        index
 >                                        (dungeonEffectsStats playerState)
+>                                        (\ stat -> stat {
+>                                             dungeonPartyDestroyed = True
+>                                             })
 >                                }
 >                            resolveBattle [])
 >                       | (index,card) <- cards]
 >                      Nothing)
 >             return (events ++ [ThunderstoneEventBattleEffect
 >                                    playerId monster text])
->     setIndexDestroyed index stats =
->         map (\ (i,stat) -> if index == i
->                              then stat { dungeonPartyDestroyed = True }
->                              else stat)
+>     updateIndex index stats update =
+>         map (\ (i,stat) -> if index == i then update stat else stat)
 >             (zip [0..] stats)
 
 > battleMonster :: PlayerId -> (Int,Card)
