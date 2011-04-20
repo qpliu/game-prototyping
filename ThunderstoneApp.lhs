@@ -432,6 +432,10 @@
 >         [getPlayerName playerId ++ " uses a card Effect: "
 >                                 ++ show card ++ " " ++ text]
 >     formatEvent getPlayerName
+>                 (ThunderstoneEventBattleEffect playerId card text) =
+>         [getPlayerName playerId ++ " activates a Battle Effect: "
+>                                 ++ show card ++ " " ++ text]
+>     formatEvent getPlayerName
 >                 (ThunderstoneEventBorrowCard playerId card otherPlayerId) =
 >         [getPlayerName playerId ++ " borrows " ++ show card
 >                                 ++ " from " ++ getPlayerName otherPlayerId]

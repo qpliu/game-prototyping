@@ -470,6 +470,7 @@ Rest
 >   | ThunderstoneEventDiscard PlayerId Card
 >   | ThunderstoneEventDestroyCard PlayerId Card
 >   | ThunderstoneEventUseEffect PlayerId Card String
+>   | ThunderstoneEventBattleEffect PlayerId Card String
 >   | ThunderstoneEventBorrowCard PlayerId Card PlayerId
 >   | ThunderstoneEventPlayerStartsTurn PlayerId
 >   | ThunderstoneEventEquip PlayerId Card Card
@@ -3075,6 +3076,9 @@ Revenant: "BATTLE: All Heroes suffer Strength -4.  Any Heroes "
 >                 })
 >       | otherwise = (card,stat)
 
+Any cards destroyed by a Battle Effect remain in play until the end of
+the battle -- Heroes fight until the bitter end!
+
 Tormenter: "BATTLE: Destroy one Cleric."
 Knightmare, The Prince: "BATTLE: Destroy one Fighter."
 Ebon Fume: "BATTLE: Destroy one Hero with the highest Strength."
@@ -3092,7 +3096,57 @@ Haunt: "BATTLE: One Hero cannot attack."
 >                                      -> Thunderstone [ThunderstoneEvent])
 >                          -> Thunderstone [ThunderstoneEvent]
 > interactiveBattleEffects playerId (rank,monster) events resolveBattle = do
->     undefined
+>     fmap concat (mapM applyEffects (cardCardText monster))
+>   where
+>     applyEffects text
+>       | text == "BATTLE: Destroy one Cleric." =
+>             destroyOneCard (`hasClass` ClassCleric) text
+>       | text == "BATTLE: Destroy one Fighter." =
+>             destroyOneCard (`hasClass` ClassFighter) text
+>       | text == "BATTLE: Destroy one Hero with the highest Strength." = undefined
+>       | text == "BATTLE: Destroy one Hero." =
+>             destroyOneCard isHero text
+>       | text == "BATTLE: Destroy one Weapon." =
+>             destroyOneCard (`hasClass` ClassWeapon) text
+>       | text == "BATTLE: Destroy one Militia." =
+>             destroyOneCard (== HeroCard Militia) text
+>       | text == "BATTLE: Destroy one Hero unless at least one Weapon "
+>                     ++ "is attached to the Party." = do
+>             stats <- fmap dungeonEffectsStats (getPlayerState playerId)
+>             if any (not . isNothing . dungeonPartyEquippedBy) stats
+>               then resolveBattle events
+>               else destroyOneCard isHero text
+>       | text == "BATTLE: Destroy one Food." =
+>             destroyOneCard (`hasClass` ClassFood) text
+>       | text == "BATTLE: Destroy one Spell." =
+>             destroyOneCard (`hasClass` ClassSpell) text
+>       | text == "BATTLE: One Hero cannot attack." = undefined
+>       | otherwise = resolveBattle events
+>     destroyOneCard test text = do
+>         cards <- fmap (filter (test . snd) . zip [0..]) (getHand playerId)
+>         if null cards
+>           then resolveBattle events
+>           else do
+>             playerState <- getPlayerState playerId
+>             setPlayerState playerId
+>                 (ChoosingOption WhichCardToDestroy
+>                      [((index,show card,Nothing),do
+>                            setPlayerState playerId playerState {
+>                                dungeonEffectsStats =
+>                                    setIndexDestroyed
+>                                        index
+>                                        (dungeonEffectsStats playerState)
+>                                }
+>                            resolveBattle [])
+>                       | (index,card) <- cards]
+>                      Nothing)
+>             return (events ++ [ThunderstoneEventBattleEffect
+>                                    playerId monster text])
+>     setIndexDestroyed index stats =
+>         map (\ (i,stat) -> if index == i
+>                              then stat { dungeonPartyDestroyed = True }
+>                              else stat)
+>             (zip [0..] stats)
 
 > battleMonster :: PlayerId -> (Int,Card)
 >               -> (Bool -> [ThunderstoneEvent]
