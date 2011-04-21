@@ -3290,15 +3290,45 @@ Gray Oooze: "Spoils (Food)"
 >       then concatMap effects (cardCardText card)
 >       else []
 >   where
->     availableGold = sum (map cardVillageGold hand)
 >     effects text
->       | text == "Spoils (Village)." = buySpoils (const True)
->       | text == "Spoils (Weapon)." = buySpoils (`hasClass` ClassWeapon)
->       | text == "Spoils (Food)." = buySpoils (`hasClass` ClassFood)
+>       | text == "Spoils (Village)." = [buySpoils (const True)]
+>       | text == "Spoils (Weapon)." = [buySpoils (`hasClass` ClassWeapon)]
+>       | text == "Spoils (Food)." = [buySpoils (`hasClass` ClassFood)]
 >       | text == "Spoils (Reveal six cards from your deck and destroy "
 >                   ++ "any of these cards you choose.  Discard the rest.)" =
 >             undefined
->     buySpoils eligible = undefined
+>       | otherwise = []
+>     availableGold = sum (map cardVillageGold hand)
+>     getVillageCards eligible = do
+>         village <- fmap (map fst . filter ((> 0) . snd)) getVillage
+>         heroes <- fmap catMaybes $ mapM topHero [minBound..maxBound]
+>         return $ filter eligible
+>                $ filter ((> availableGold) . cardVillagePrice)
+>                $ map VillageCard village ++ map HeroCard heroes
+>     buySpoils eligible events onEffectResolved = do
+>         availableSpoils <- getVillageCards eligible
+>         if null availableSpoils
+>           then onEffectResolved events
+>           else do
+>             playerState <- getPlayerState playerId
+>             setPlayerState playerId
+>                 (ChoosingOption WhichCardToBuy
+>                      [((index,show availableCard,Nothing),do
+>                           setPlayerState playerId playerState
+>                           discard playerId [availableCard]
+>                           case availableCard of
+>                             VillageCard villageCard -> do
+>                               drawVillage villageCard
+>                               return ()
+>                             HeroCard heroCard -> do
+>                               drawHero (cardType $ heroDetails heroCard)
+>                               return ()
+>                             _ -> return ()
+>                           onEffectResolved [ThunderstoneEventPurchase
+>                                                 playerId availableCard])
+>                       | (index,availableCard) <- zip [1..] availableSpoils]
+>                      (Just (setPlayerState playerId playerState)))
+>             return events
 
 GHC 6.8 does not have Data.List.permutations
 
