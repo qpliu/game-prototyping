@@ -1355,16 +1355,26 @@ Generic choose option:
 >                 setDungeon (removeIndex (rank - 1) dungeon)
 >                 let canTakeThunderstone =
 >                         rank == 1 && isThunderstone (dungeon !! 1)
->                 -- undefined: resolve spoils effects
->                 -- undefined: resolve breach effects
->                 -- undefined: temporary code follows
->                 resolveBattleBreachEffects
->                     canTakeThunderstone rank
+>                 hand <- getHand playerId
+>                 stats <- fmap dungeonEffectsStats $ getPlayerState playerId
+>                 let survivingHand =
+>                         map fst $ filter (not . dungeonPartyDestroyed . snd)
+>                                 $ zip hand stats
+>                 resolvePostBattleEffects
+>                     (concatMap (spoilsEffect playerId survivingHand False)
+>                                survivingHand
+>                         ++ spoilsEffect playerId survivingHand True monster)
+>                     (resolveBattleBreachEffects canTakeThunderstone rank)
 >                     (events
 >                      ++ [ThunderstoneEventWinBattle playerId rank monster,
 >                          ThunderstoneEventGainDungeonCard
 >                                 playerId rank (dungeon !! (rank - 1)),
 >                          ThunderstoneEventDungeonHallChanged])
+>         resolvePostBattleEffects effects resolveBreach events
+>           | null effects = resolveBreach events
+>           | otherwise =
+>                 head effects events
+>                      (resolvePostBattleEffects (tail effects) resolveBreach)
 >         resolveBattleBreachEffects canTakeThunderstone rank events = do
 >             breachEvents <- if rank == 1
 >               then triggerBreachEffects
@@ -3263,6 +3273,32 @@ Haunt: "BATTLE: One Hero cannot attack."
 >         getLight (_,cardStats)
 >           | dungeonPartyNotAttacking cardStats = 0
 >           | otherwise = dungeonPartyLight cardStats
+
+Chalice Paladin: "Spoils (Village)."
+Dwarf Janissary: "Spoils (Weapon)."
+
+Sphinx: "Spoils (Reveal six cards from your deck and destroy "
+                ++ "any of these cards you choose.  Discard the rest.)"
+Gray Oooze: "Spoils (Food)"
+
+> spoilsEffect :: PlayerId -> [Card] -> Bool -> Card
+>              -> [[ThunderstoneEvent]
+>                  -> ([ThunderstoneEvent] -> Thunderstone [ThunderstoneEvent])
+>                  -> Thunderstone [ThunderstoneEvent]]
+> spoilsEffect playerId hand defeatedMonster card =
+>     if not (isMonster card) || defeatedMonster
+>       then concatMap effects (cardCardText card)
+>       else []
+>   where
+>     availableGold = sum (map cardVillageGold hand)
+>     effects text
+>       | text == "Spoils (Village)." = buySpoils (const True)
+>       | text == "Spoils (Weapon)." = buySpoils (`hasClass` ClassWeapon)
+>       | text == "Spoils (Food)." = buySpoils (`hasClass` ClassFood)
+>       | text == "Spoils (Reveal six cards from your deck and destroy "
+>                   ++ "any of these cards you choose.  Discard the rest.)" =
+>             undefined
+>     buySpoils eligible = undefined
 
 GHC 6.8 does not have Data.List.permutations
 
