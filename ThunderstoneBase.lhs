@@ -48,7 +48,7 @@ Game mechanics:
 > where
 
 > import Control.Monad(filterM,mapM,mapM_,replicateM,unless,when)
-> import Data.List(intersperse,nub,partition,sortBy,zip4,(\\))
+> import Data.List(intersperse,nub,partition,sort,sortBy,zip4,(\\))
 > import Data.Maybe(catMaybes,isNothing,listToMaybe)
 > import System.Random(StdGen)
 
@@ -187,7 +187,7 @@ choose among the specified cards.
 >   | VillageCard VillageCard
 >   | DiseaseCard
 >   | ThunderstoneCard ThunderstoneCard
->   deriving Eq
+>   deriving (Eq,Ord)
 
 > instance Show Card where
 >     show (MonsterCard card) = cardName $ monsterDetails card
@@ -471,6 +471,7 @@ Rest
 >   | ThunderstoneEventDestroyCard PlayerId Card
 >   | ThunderstoneEventUseEffect PlayerId Card String
 >   | ThunderstoneEventBattleEffect PlayerId Card String
+>   | ThunderstoneEventSpoilsEffect PlayerId Card String
 >   | ThunderstoneEventBorrowCard PlayerId Card PlayerId
 >   | ThunderstoneEventPlayerStartsTurn PlayerId
 >   | ThunderstoneEventEquip PlayerId Card Card
@@ -3291,12 +3292,35 @@ Gray Oooze: "Spoils (Food)"
 >       else []
 >   where
 >     effects text
->       | text == "Spoils (Village)." = [buySpoils (const True)]
->       | text == "Spoils (Weapon)." = [buySpoils (`hasClass` ClassWeapon)]
->       | text == "Spoils (Food)." = [buySpoils (`hasClass` ClassFood)]
+>       | text == "Spoils (Village)." = [buySpoils text (const True)]
+>       | text == "Spoils (Weapon)." =
+>             [buySpoils text (`hasClass` ClassWeapon)]
+>       | text == "Spoils (Food)." = [buySpoils text (`hasClass` ClassFood)]
 >       | text == "Spoils (Reveal six cards from your deck and destroy "
->                   ++ "any of these cards you choose.  Discard the rest.)" =
->             undefined
+>                     ++ "any of these cards you choose.  Discard the rest.)" =
+>             [\ events onEffectResolved -> do
+>                 playerState <- getPlayerState playerId
+>                 drawnCards <- multiple 6 $ drawCard playerId
+>                 setPlayerState playerId
+>                     (ChoosingOption WhichCardToDestroy
+>                          [((index,
+>                             "Destroy: " ++ show toDestroy
+>                                 ++ " Discard: " ++ show toDiscard,
+>                             Nothing),do
+>                             setPlayerState playerId playerState
+>                             discard playerId toDiscard
+>                             onEffectResolved
+>                                 (map (ThunderstoneEventDestroyCard playerId)
+>                                      toDestroy
+>                                  ++ map (ThunderstoneEventDiscard playerId)
+>                                         toDiscard))
+>                           | (index,(toDestroy,toDiscard)) <-
+>                                 zip [1..] (partitionOptions drawnCards)]
+>                          Nothing)
+>                 return
+>                     (events
+>                      ++ [ThunderstoneEventSpoilsEffect playerId card text,
+>                          ThunderstoneEventRevealCards playerId drawnCards])]
 >       | otherwise = []
 >     availableGold = sum (map cardVillageGold hand)
 >     getVillageCards eligible = do
@@ -3305,7 +3329,7 @@ Gray Oooze: "Spoils (Food)"
 >         return $ filter eligible
 >                $ filter ((> availableGold) . cardVillagePrice)
 >                $ map VillageCard village ++ map HeroCard heroes
->     buySpoils eligible events onEffectResolved = do
+>     buySpoils text eligible events onEffectResolved = do
 >         availableSpoils <- getVillageCards eligible
 >         if null availableSpoils
 >           then onEffectResolved events
@@ -3324,11 +3348,21 @@ Gray Oooze: "Spoils (Food)"
 >                               drawHero (cardType $ heroDetails heroCard)
 >                               return ()
 >                             _ -> return ()
->                           onEffectResolved [ThunderstoneEventPurchase
+>                           onEffectResolved [ThunderstoneEventSpoilsEffect
+>                                                 playerId card text,
+>                                             ThunderstoneEventPurchase
 >                                                 playerId availableCard])
 >                       | (index,availableCard) <- zip [1..] availableSpoils]
 >                      (Just (setPlayerState playerId playerState)))
 >             return events
+
+> partitionOptions :: (Eq a,Ord a) => [a] -> [([a],[a])]
+> partitionOptions items = nub $ map sortParts $ partitions items
+>   where
+>     sortParts (a,b) = (sort a,sort b)
+>     partitions [] = [([],[])]
+>     partitions (a:as) = concatMap (add a) (partitions as)
+>     add a (as,bs) = [(a:as,bs),(as,a:bs)]
 
 GHC 6.8 does not have Data.List.permutations
 

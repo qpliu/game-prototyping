@@ -142,7 +142,7 @@ Dragonspire:
 
 Promotional:
 
->   deriving (Bounded,Enum,Eq,Read,Show)
+>   deriving (Bounded,Enum,Eq,Ord,Read,Show)
 
 
 
@@ -168,7 +168,7 @@ Dragonspire (2):
 >   | StoneOfTerror
 >   | StoneOfScorn
 
->   deriving (Bounded,Enum,Eq,Read,Show)
+>   deriving (Bounded,Enum,Eq,Ord,Read,Show)
 
 > data GuardianCard =
 
@@ -189,7 +189,7 @@ Promotional:
 
 >   | DeathSentinel
 
->   deriving (Bounded,Enum,Eq,Read,Show)
+>   deriving (Bounded,Enum,Eq,Ord,Read,Show)
 
 > data HeroCard =
 >     Militia
@@ -323,7 +323,7 @@ Promotional:
 >   | HarruliSpellsword
 >   | HarruliAvatar
 
->   deriving (Bounded,Enum,Eq,Read,Show)
+>   deriving (Bounded,Enum,Eq,Ord,Read,Show)
 
 > data VillageCard =
 >     Dagger
@@ -406,7 +406,7 @@ Dragonspire (18):
 >   | TorynGauntlet
 >   | Trader
 
->   deriving (Bounded,Enum,Eq,Read,Show)
+>   deriving (Bounded,Enum,Eq,Ord,Read,Show)
 
 > data MonsterCard =
 
@@ -585,7 +585,7 @@ Promotional:
 >   | TheVision
 >   | Mammoth
 
->   deriving (Bounded,Enum,Eq,Read,Show)
+>   deriving (Bounded,Enum,Eq,Ord,Read,Show)
 
 > data DungeonFeatureCard =
 
@@ -624,7 +624,7 @@ Promotional:
 
 >   | BladeTrap
 
->   deriving (Bounded,Enum,Eq,Read,Show)
+>   deriving (Bounded,Enum,Eq,Ord,Read,Show)
 
 > data DiseaseCard =
 
@@ -640,7 +640,7 @@ Doomgate Legion:
 >   | Malaise
 >   | ThundersCurse
 
->   deriving (Bounded,Enum,Eq,Read,Show)
+>   deriving (Bounded,Enum,Eq,Ord,Read,Show)
 
 > data SettingCard =
 >     SettingBarrowsdale

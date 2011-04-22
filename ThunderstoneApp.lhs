@@ -436,6 +436,10 @@
 >         [getPlayerName playerId ++ " activates a Battle Effect: "
 >                                 ++ show card ++ " " ++ text]
 >     formatEvent getPlayerName
+>                 (ThunderstoneEventSpoilsEffect playerId card text) =
+>         [getPlayerName playerId ++ " activates a Spoils Effect: "
+>                                 ++ show card ++ " " ++ text]
+>     formatEvent getPlayerName
 >                 (ThunderstoneEventBorrowCard playerId card otherPlayerId) =
 >         [getPlayerName playerId ++ " borrows " ++ show card
 >                                 ++ " from " ++ getPlayerName otherPlayerId]
