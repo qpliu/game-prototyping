@@ -2663,6 +2663,7 @@ monsterDetails RedJelly = initCardDetails {
     cardCount = 2,
     cardClasses = [ClassOoze],
     cardGold = Just 2,
+    cardLight = Just 1,
     cardVictoryPoints = Just 2,
     cardHealth = Just 6,
     cardXP = Just 2,
