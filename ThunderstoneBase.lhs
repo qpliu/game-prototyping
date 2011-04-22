@@ -3107,7 +3107,7 @@ Haunt: "BATTLE: One Hero cannot attack."
 >                                      -> Thunderstone [ThunderstoneEvent])
 >                          -> Thunderstone [ThunderstoneEvent]
 > interactiveBattleEffects playerId (rank,monster) events resolveBattle = do
->     fmap concat (mapM applyEffects (cardCardText monster))
+>     head (map applyEffects (cardCardText monster) ++ [resolveBattle events])
 >   where
 >     applyEffects text
 >       | text == "BATTLE: Destroy one Cleric." =
