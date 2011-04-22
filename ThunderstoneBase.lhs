@@ -3107,14 +3107,15 @@ Haunt: "BATTLE: One Hero cannot attack."
 >                                      -> Thunderstone [ThunderstoneEvent])
 >                          -> Thunderstone [ThunderstoneEvent]
 > interactiveBattleEffects playerId (rank,monster) events resolveBattle = do
->     head (map applyEffects (cardCardText monster) ++ [resolveBattle events])
+>     head (concatMap applyEffects (cardCardText monster)
+>           ++ [resolveBattle events])
 >   where
 >     applyEffects text
 >       | text == "BATTLE: Destroy one Cleric." =
->             destroyOneCard (`hasClass` ClassCleric) text
+>             [destroyOneCard (`hasClass` ClassCleric) text]
 >       | text == "BATTLE: Destroy one Fighter." =
->             destroyOneCard (`hasClass` ClassFighter) text
->       | text == "BATTLE: Destroy one Hero with the highest Strength." = do
+>             [destroyOneCard (`hasClass` ClassFighter) text]
+>       | text == "BATTLE: Destroy one Hero with the highest Strength." = [do
 >             playerState <- getPlayerState playerId
 >             hand <- getHand playerId
 >             let stats = dungeonEffectsStats playerState
@@ -3154,24 +3155,24 @@ Haunt: "BATTLE: One Hero cannot attack."
 >                               | (index,card,_) <- options]
 >                              Nothing)
 >                     return (events ++ [ThunderstoneEventBattleEffect
->                                            playerId monster text])
+>                                            playerId monster text])]
 >       | text == "BATTLE: Destroy one Hero." =
->             destroyOneCard isHero text
+>             [destroyOneCard isHero text]
 >       | text == "BATTLE: Destroy one Weapon." =
->             destroyOneCard (`hasClass` ClassWeapon) text
+>             [destroyOneCard (`hasClass` ClassWeapon) text]
 >       | text == "BATTLE: Destroy one Militia." =
->             destroyOneCard (== HeroCard Militia) text
+>             [destroyOneCard (== HeroCard Militia) text]
 >       | text == "BATTLE: Destroy one Hero unless at least one Weapon "
->                     ++ "is attached to the Party." = do
+>                     ++ "is attached to the Party." = [do
 >             stats <- fmap dungeonEffectsStats (getPlayerState playerId)
 >             if any (not . isNothing . dungeonPartyEquippedBy) stats
 >               then resolveBattle events
->               else destroyOneCard isHero text
+>               else destroyOneCard isHero text]
 >       | text == "BATTLE: Destroy one Food." =
->             destroyOneCard (`hasClass` ClassFood) text
+>             [destroyOneCard (`hasClass` ClassFood) text]
 >       | text == "BATTLE: Destroy one Spell." =
->             destroyOneCard (`hasClass` ClassSpell) text
->       | text == "BATTLE: One Hero cannot attack." = do
+>             [destroyOneCard (`hasClass` ClassSpell) text]
+>       | text == "BATTLE: One Hero cannot attack." = [do
 >             stats <- fmap dungeonEffectsStats (getPlayerState playerId)
 >             hand <- getHand playerId
 >             let eligible (card,stat) =
@@ -3198,8 +3199,8 @@ Haunt: "BATTLE: One Hero cannot attack."
 >                             eligible (card,stat)]
 >                      Nothing)
 >                 return (events ++ [ThunderstoneEventBattleEffect
->                                        playerId monster text])
->       | otherwise = resolveBattle events
+>                                        playerId monster text])]
+>       | otherwise = []
 >     destroyOneCard test text = do
 >         cards <- fmap (filter (test . snd) . zip [0..]) (getHand playerId)
 >         if null cards
