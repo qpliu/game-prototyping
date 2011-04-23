@@ -2814,10 +2814,10 @@ Blink Dog: "Cannot be attacked if a Light Penalty persists."
 
 > canAttack :: [(Card,DungeonPartyStats)] -> (Int,Card) -> Bool
 > canAttack stats dungeon@(rank,MonsterCard BlinkDog) =
->     rank + 1 < sum [dungeonPartyLight stat
->                     | (_,stat) <- fst (applyPartyBattleEffects
->                                            stats dungeon),
->                       not (dungeonPartyNotAttacking stat)]
+>     rank + 1 <= sum [dungeonPartyLight stat
+>                      | (_,stat) <- fst (applyPartyBattleEffects
+>                                             stats dungeon),
+>                        not (dungeonPartyNotAttacking stat)]
 > canAttack _ (rank,card) = isMonster card
 
 Amazon Archer: "Additional ATTACK +2 at Rank 2 or 3."
