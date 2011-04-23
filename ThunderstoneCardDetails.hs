@@ -2508,6 +2508,7 @@ monsterDetails BloodskullOrc = initCardDetails {
     cardCount = 2,
     cardClasses = [ClassHumanoid],
     cardGold = Just 3,
+    cardVictoryPoints = Just 0,
     cardHealth = Just 5,
     cardXP = Just 1,
     cardGlossary =
