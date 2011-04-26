@@ -1,9 +1,9 @@
 > module ThunderstoneApp(thunderstoneApp) where
 
 > import Control.Monad(when,unless)
-> import Data.List(find,isInfixOf,nub)
+> import Data.List(find,isInfixOf,nub,(\\))
 > import Data.Maybe(isNothing)
-> import System.Random(getStdGen)
+> import System.Random(StdGen,getStdGen,mkStdGen,next)
 
 > import GameApp
 >     (GameApp(..),gameApp,
@@ -29,23 +29,28 @@
 >      diseaseDetails)
 
 > thunderstoneApp :: IO App
-> thunderstoneApp =
->     getStdGen >>= gameApp . thunderstoneGame . thunderstoneInit
+> thunderstoneApp = do
+>     stdGen <- getStdGen
+>     let (seed,stdGen1) = next stdGen
+>     let stdGen2 = mkStdGen seed
+>     gameApp $ thunderstoneGame stdGen2 $ thunderstoneInit stdGen1
 
-> thunderstoneGame :: ThunderstoneState -> ThunderstoneGame
-> thunderstoneGame state =
+> thunderstoneGame :: StdGen -> ThunderstoneState -> ThunderstoneGame
+> thunderstoneGame stdGen state =
 >     ThunderstoneGame {
 >         tsPlayers = [],
 >         tsBots = [],
 >         tsState = state,
->         tsGameStarted = False
+>         tsGameStarted = False,
+>         tsStdGen = stdGen
 >         }
 
 > data ThunderstoneGame = ThunderstoneGame {
 >     tsPlayers :: [Player],
 >     tsBots :: [Bot],
 >     tsState :: ThunderstoneState,
->     tsGameStarted :: Bool
+>     tsGameStarted :: Bool,
+>     tsStdGen :: StdGen
 >     }
 
 > data Player = Player {
@@ -55,7 +60,8 @@
 
 > data Bot = Bot {
 >     botName :: String,
->     botId :: PlayerId
+>     botId :: PlayerId,
+>     botState :: BotState
 >     }
 
 > instance GameApp ThunderstoneGame where
@@ -87,11 +93,13 @@
 >                     tsPlayers = filter ((/= uid) . userId) (tsPlayers state)
 >                     })
 >     gameAppCommands = [("/play",playCmd),
+>                        ("/bot",botCmd),
 >                        ("/start",startCmd),
 >                        ("/game",gameCmd),
 >                        ("/g",gameCmd),
 >                        ("/do",doCmd),
 >                        ("/d",doCmd),
+>                        ("/",doCmd),
 >                        ("/inspect",inspectCmd),
 >                        ("/i",inspectCmd)]
 >                       ++ [("/" ++ show i,doIndexCmd i) | i <- [1..10]]
@@ -124,6 +132,34 @@
 >         playerId = error "game not started"
 >         }
 
+> botCmd :: UserId -> [String] -> Game ThunderstoneGame ()
+> botCmd uid args = do
+>     state <- gameGetState
+>     doBot state
+>   where
+>     doBot state
+>       | tsGameStarted state =
+>             gameMessageToUser uid ["The game is already in progress."]
+>       | length (tsPlayers state) + length (tsBots state) >= 5 =
+>             gameMessageToUser uid
+>                 ["The game is full. (Maximum of 5 players and bots)."]
+>       | length args /= 1 || isNothing maybeBot =
+>             gameMessageToUser uid
+>                 ["Specify bot: " ++ unwords (map fst botList)]
+>       | otherwise = do
+>             state <- gameGetState
+>             gameSetState state {
+>                 tsBots = tsBots state ++ [Bot {
+>                                             botName = getBotName state,
+>                                             botId = error "game not started",
+>                                             botState = botState
+>                                             }]
+>                 }
+>     maybeBot = lookup (head args) botList
+>     Just botState = maybeBot
+>     getBotName state = head args ++ show (length (tsPlayers state)
+>                                           + length (tsBots state))
+
 > startCmd :: UserId -> [String] -> Game ThunderstoneGame ()
 > startCmd uid _ = do
 >     state <- gameGetState
@@ -139,12 +175,16 @@
 >             name <- gameGetName uid
 >             gameMessageToAll [name ++ " starts the game."]
 >             state <- gameGetState
+>             stdGens <- sequence (replicate (length (tsBots state))
+>                                  getNewStdGen)
+>             state <- gameGetState
 >             gameSetState state {
 >                 tsPlayers = setPlayerIds,
->                 tsBots = setBotIds,
+>                 tsBots = initBots stdGens,
 >                 tsState = thunderstoneState,
 >                 tsGameStarted = True
 >                 }
+>             runBots
 >           where
 >             (thunderstoneState,playerIds) =
 >                 thunderstoneStartGame (tsState state)
@@ -153,10 +193,17 @@
 >                 length (tsPlayers state) + length (tsBots state)
 >             setPlayerIds = zipWith setPlayerId playerIds (tsPlayers state)
 >             setPlayerId playerId player = player { playerId = playerId }
->             setBotIds = zipWith setBotId
->                                 (drop (length (tsPlayers state)) playerIds)
->                                 (tsBots state)
->             setBotId botId bot = bot { botId = botId }
+>             initBots stdGens =
+>                 zipWith3 initBot
+>                          stdGens
+>                          (drop (length (tsPlayers state)) playerIds)
+>                          (tsBots state)
+>             initBot stdGen botId bot = bot {
+>                 botId = botId,
+>                 botState = botInit (botState bot) stdGen
+>                                                   botId
+>                                                   (playerIds \\ [botId])
+>                 }
 
 > gameCmd :: UserId -> [String] -> Game ThunderstoneGame ()
 > gameCmd uid _ = do
@@ -312,8 +359,17 @@
 >               then gameMessageToUser uid ["(Nothing to do)"]
 >               else gameMessageToUser uid listOptions
 >       | otherwise = do
->             gameSetState state { tsState = newState }
 >             broadcastEvents events
+>             if publicStateGameOver $ thunderstonePublicState newState
+>               then
+>                 gameSetState state {
+>                     tsPlayers = [],
+>                     tsBots = [],
+>                     tsGameStarted = False
+>                     }
+>               else do
+>                 gameSetState state { tsState = newState }
+>                 runBots
 >       where
 >         Just playerId = getPlayerId state uid
 >         selectedOption = lookup (head args) (zip (map show [1..]) options)
@@ -404,6 +460,10 @@
 > broadcastEvents events = do
 >     getPlayerName <- getPlayerNames
 >     gameMessageToAll (concatMap (formatEvent getPlayerName) events)
+>     state <- gameGetState
+>     gameSetState state {
+>         tsBots = map handleBotEvents (tsBots state)
+>         }
 >   where
 >     formatEvent getPlayerName
 >                 (ThunderstoneEventPlayerAction playerId action) =
@@ -477,6 +537,9 @@
 >         ["Game over.  Scores:"]
 >         ++ [" " ++ getPlayerName playerId ++ ": " ++ show score
 >             | (playerId,score) <- scores]
+>     handleBotEvents bot = bot {
+>         botState = botHandleEvents (botState bot) events
+>         }
 
 > userInGame :: ThunderstoneGame -> UserId -> Bool
 > userInGame state uid = uid `elem` [userId player | player <- tsPlayers state]
@@ -496,3 +559,84 @@
 >         name <- gameGetName (userId player)
 >         return (playerId player,name)
 >     getBotName bot = (botId bot,botName bot)
+
+> runBots :: Game ThunderstoneGame ()
+> runBots = do
+>     state <- gameGetState
+>     runBot (tsBots state)
+>   where
+>     runBot [] = return ()
+>     runBot (bot:bots) = do
+>         state <- gameGetState
+>         maybe (runBot bots)
+>               (botRan bot)
+>               (botPerformActions (botState bot) (tsState state))
+>     botRan bot (newBotState,events,newTsState) = do
+>         updateBot bot { botState = newBotState }
+>         state <- gameGetState
+>         gameSetState state { tsState = newTsState }
+>         broadcastEvents events
+>         runBots
+>     updateBot newBot = do
+>         state <- gameGetState
+>         gameSetState state { tsBots = map update (tsBots state) }
+>       where
+>         update oldBot
+>           | botId oldBot == botId newBot = newBot
+>           | otherwise = oldBot
+
+> getNewStdGen :: Game ThunderstoneGame StdGen
+> getNewStdGen = do
+>     state <- gameGetState
+>     let (seed,stdGen) = next (tsStdGen state)
+>     gameSetState state { tsStdGen = stdGen  }
+>     return (mkStdGen seed)
+
+> data BotState = BotState {
+>     botInit :: StdGen -> PlayerId -> [PlayerId] -> BotState,
+>     botHandleEvents :: [ThunderstoneEvent] -> BotState,
+>     botPerformActions :: ThunderstoneState -> Maybe (BotState,
+>                                                      [ThunderstoneEvent],
+>                                                      ThunderstoneState)
+>     }
+
+> botList :: [(String,BotState)]
+> botList = [("random bot",randomBotFactory)]
+
+> randomBotFactory :: BotState
+> randomBotFactory = BotState {
+>     botInit = randomBotInit,
+>     botHandleEvents = error "randomBotFactory:botHandleEvents",
+>     botPerformActions = error "randomBotFactory:botPerformActions"
+>     }
+
+> data RandomBot = RandomBot {
+>     randomBotId :: PlayerId,
+>     randomBotStdGen :: StdGen
+>     }
+
+> randomBotInit :: StdGen -> PlayerId -> [PlayerId] -> BotState
+> randomBotInit stdGen botId playerIds =
+>     randomBotState RandomBot {
+>         randomBotId = botId,
+>         randomBotStdGen = stdGen
+>         }
+
+Random Bot ignores all game events.
+
+> randomBotHandleEvents :: RandomBot -> [ThunderstoneEvent] -> BotState
+> randomBotHandleEvents randomBot events = randomBotState randomBot
+
+> randomBotPerformActions :: RandomBot -> ThunderstoneState
+>                                      -> Maybe (BotState,
+>                                                [ThunderstoneEvent],
+>                                                ThunderstoneState)
+> randomBotPerformActions randomBot tsState = undefined
+
+> randomBotState :: RandomBot -> BotState
+> randomBotState randomBot = BotState {
+>     botInit = error "randomBotState:botInit",
+>     botHandleEvents = randomBotHandleEvents randomBot,
+>     botPerformActions = randomBotPerformActions randomBot
+>     }
+
