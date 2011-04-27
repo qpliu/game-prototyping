@@ -3,7 +3,7 @@
 > import Control.Monad(when,unless)
 > import Data.List(find,isInfixOf,nub,(\\))
 > import Data.Maybe(isNothing)
-> import System.Random(StdGen,getStdGen,mkStdGen,next)
+> import System.Random(StdGen,getStdGen,mkStdGen,next,randomR)
 
 > import GameApp
 >     (GameApp(..),gameApp,
@@ -631,7 +631,19 @@ Random Bot ignores all game events.
 >                                      -> Maybe (BotState,
 >                                                [ThunderstoneEvent],
 >                                                ThunderstoneState)
-> randomBotPerformActions randomBot tsState = undefined
+> randomBotPerformActions randomBot tsState
+>   | null options || isNothing result =
+>         Nothing
+>   | otherwise =
+>         Just (randomBotState randomBot { randomBotStdGen = newStdGen },
+>               events,newTsState)
+>   where
+>     options = playerStateOptions $ thunderstonePlayerState tsState playerId
+>     playerId = randomBotId randomBot
+>     (randomIndex,newStdGen) =
+>         randomR (0,length options - 1) (randomBotStdGen randomBot)
+>     result = thunderstoneTakeAction tsState playerId (options !! randomIndex)
+>     Just (newTsState,events) = result
 
 > randomBotState :: RandomBot -> BotState
 > randomBotState randomBot = BotState {
@@ -639,4 +651,3 @@ Random Bot ignores all game events.
 >     botHandleEvents = randomBotHandleEvents randomBot,
 >     botPerformActions = randomBotPerformActions randomBot
 >     }
-
