@@ -14,7 +14,7 @@
 > import ThunderstoneBase
 >     (ThunderstoneState,PlayerId,
 >      Card(..),ThunderstonePublicState(..),ThunderstonePlayerState(..),
->      ThunderstoneEvent(..),PlayerStateInfo(..),
+>      ThunderstoneEvent(..),PlayerStateInfo(..),PlayerAction(..),
 >      thunderstoneInit,
 >      thunderstoneStartGame,randomizedGame,
 >      thunderstonePublicState,thunderstonePlayerState,
@@ -601,53 +601,110 @@
 >     }
 
 > botList :: [(String,BotState)]
-> botList = [("random bot",randomBotFactory)]
+> botList = [("random",simpleBotFactory randomBotInit),
+>            ("shopper",simpleBotFactory shopperBotInit),
+>            ("battler",simpleBotFactory battlerBotInit)]
 
-> randomBotFactory :: BotState
-> randomBotFactory = BotState {
->     botInit = randomBotInit,
->     botHandleEvents = error "randomBotFactory:botHandleEvents",
->     botPerformActions = error "randomBotFactory:botPerformActions"
+> data SimpleBot = SimpleBot {
+>     simpleBotId :: PlayerId,
+>     simpleBotStdGen :: StdGen
 >     }
 
-> data RandomBot = RandomBot {
->     randomBotId :: PlayerId,
->     randomBotStdGen :: StdGen
+> simpleBotFactory :: (StdGen -> PlayerId -> [PlayerId] -> BotState)
+>                  -> BotState
+> simpleBotFactory init = BotState {
+>     botInit = init,
+>     botHandleEvents = error "simpleBotFactory:botHandleEvents",
+>     botPerformActions = error "simpleBotFactory:botPerformActions"
 >     }
 
-> randomBotInit :: StdGen -> PlayerId -> [PlayerId] -> BotState
-> randomBotInit stdGen botId playerIds =
->     randomBotState RandomBot {
->         randomBotId = botId,
->         randomBotStdGen = stdGen
+> simpleBotInit :: (SimpleBot -> BotState)
+>               -> StdGen -> PlayerId -> [PlayerId] -> BotState
+> simpleBotInit makeBotState stdGen botId playerIds =
+>     makeBotState SimpleBot {
+>         simpleBotId = botId,
+>         simpleBotStdGen = stdGen
 >         }
 
-Random Bot ignores all game events.
-
-> randomBotHandleEvents :: RandomBot -> [ThunderstoneEvent] -> BotState
-> randomBotHandleEvents randomBot events = randomBotState randomBot
-
-> randomBotPerformActions :: RandomBot -> ThunderstoneState
->                                      -> Maybe (BotState,
->                                                [ThunderstoneEvent],
->                                                ThunderstoneState)
-> randomBotPerformActions randomBot tsState
->   | null options || isNothing result =
->         Nothing
->   | otherwise =
->         Just (randomBotState randomBot { randomBotStdGen = newStdGen },
->               events,newTsState)
+> randomBotInit :: StdGen -> PlayerId -> [PlayerId] -> BotState
+> randomBotInit = simpleBotInit botState
 >   where
->     options = playerStateOptions $ thunderstonePlayerState tsState playerId
->     playerId = randomBotId randomBot
->     (randomIndex,newStdGen) =
->         randomR (0,length options - 1) (randomBotStdGen randomBot)
->     result = thunderstoneTakeAction tsState playerId (options !! randomIndex)
->     Just (newTsState,events) = result
+>     botState bot = BotState {
+>         botInit = error "randomBotInit:botInit",
+>         botHandleEvents = handleEvents bot,
+>         botPerformActions = performActions bot
+>         }
+>     handleEvents bot events = botState bot
+>     performActions bot tsState
+>       | null options = Nothing
+>       | otherwise =
+>             doAction (options !! randomIndex)
+>       where
+>         options =
+>             playerStateOptions $ thunderstonePlayerState tsState playerId
+>         playerId = simpleBotId bot
+>         (randomIndex,newStdGen) =
+>             randomR (0,length options - 1) (simpleBotStdGen bot)
+>         doAction action =
+>             maybe Nothing
+>                   (\ (newTsState,events) ->
+>                           Just (botState bot { simpleBotStdGen = newStdGen },
+>                                 events,newTsState))
+>                   (thunderstoneTakeAction tsState playerId action)
 
-> randomBotState :: RandomBot -> BotState
-> randomBotState randomBot = BotState {
->     botInit = error "randomBotState:botInit",
->     botHandleEvents = randomBotHandleEvents randomBot,
->     botPerformActions = randomBotPerformActions randomBot
->     }
+> shopperBotInit :: StdGen -> PlayerId -> [PlayerId] -> BotState
+> shopperBotInit = simpleBotInit botState
+>   where
+>     botState bot = BotState {
+>         botInit = error "shopperBotState:botInit",
+>         botHandleEvents = handleEvents bot,
+>         botPerformActions = performActions bot
+>         }
+>     handleEvents bot events = botState bot
+>     performActions bot tsState
+>       | null options = Nothing
+>       | VisitVillage `elem` options = doAction VisitVillage
+>       | FinishUsingVillageEffects `elem` options =
+>             doAction FinishUsingVillageEffects
+>       | PurchaseCard `elem` options =
+>             doAction PurchaseCard
+>       | EndTurn `elem` options =
+>             doAction EndTurn
+>       | otherwise =
+>             doAction (last options)
+>       where
+>         options =
+>             playerStateOptions $ thunderstonePlayerState tsState playerId
+>         playerId = simpleBotId bot
+>         doAction action =
+>             maybe Nothing
+>                   (\ (newTsState,events) ->
+>                           Just (botState bot,events,newTsState))
+>                   (thunderstoneTakeAction tsState playerId action)
+
+> battlerBotInit :: StdGen -> PlayerId -> [PlayerId] -> BotState
+> battlerBotInit = simpleBotInit botState
+>   where
+>     botState bot = BotState {
+>         botInit = error "battlerBotState:botInit",
+>         botHandleEvents = handleEvents bot,
+>         botPerformActions = performActions bot
+>         }
+>     handleEvents bot events = botState bot
+>     performActions bot tsState
+>       | null options = Nothing
+>       | EnterDungeon `elem` options = doAction EnterDungeon
+>       | AttackMonster `elem` options = doAction AttackMonster
+>       | EndTurn `elem` options =
+>             doAction EndTurn
+>       | otherwise =
+>             doAction (last options)
+>       where
+>         options =
+>             playerStateOptions $ thunderstonePlayerState tsState playerId
+>         playerId = simpleBotId bot
+>         doAction action =
+>             maybe Nothing
+>                   (\ (newTsState,events) ->
+>                           Just (botState bot,events,newTsState))
+>                   (thunderstoneTakeAction tsState playerId action)
